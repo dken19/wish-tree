@@ -1,36 +1,52 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# 🌳 Cây Ước Nguyện
 
-## Getting Started
+Trang chủ là một **cây 3D** treo những tờ giấy đỏ ghi điều ước. Người dùng chạm vào tờ giấy lấp lánh để đọc, hoặc viết điều ước của riêng mình treo lên cây. Có hiệu ứng gió và **đổi cảnh theo thời tiết thật của Hà Nội**.
 
-First, run the development server:
+Xây bằng **Next.js (App Router) + React Three Fiber + Firebase Firestore**.
+
+## Tính năng
+
+- Cây 3D low-poly, giấy/hoa dùng `InstancedMesh` (nhẹ trên mobile).
+- Click tờ giấy → đọc điều ước (raycast theo `instanceId`).
+- Viết điều ước → lọc từ tục + rate-limit → vào hàng chờ **duyệt** → hiện realtime trên cây.
+- Thời tiết Hà Nội qua Open-Meteo (đổi trời/ánh sáng/mưa/đêm); gió theo tốc độ gió thật.
+- Điều khiển camera orbit + pinch tự viết; tự xoay nhẹ khi rảnh.
+
+## Bắt đầu
 
 ```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+npm install
+cp .env.local.example .env.local   # điền cấu hình Firebase (xem bên dưới)
+npm run dev                        # http://localhost:3000
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+> Chưa cấu hình Firebase vẫn chạy được: cây hiển thị **8 điều ước mẫu**, nút "Viết điều ước" sẽ báo máy chủ chưa cấu hình lưu trữ.
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+## Cấu hình Firebase
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+1. Tạo project tại [Firebase Console](https://console.firebase.google.com), bật **Firestore**.
+2. Lấy config web app → điền các biến `NEXT_PUBLIC_FIREBASE_*`.
+3. Vào *Project settings > Service accounts > Generate new private key* → điền `FIREBASE_PROJECT_ID`, `FIREBASE_CLIENT_EMAIL`, `FIREBASE_PRIVATE_KEY`.
+4. Đặt `ADMIN_SECRET` (mã đăng nhập trang duyệt).
+5. Triển khai security rules: nội dung trong `firestore.rules` (client chỉ đọc bản `approved`).
 
-## Learn More
+## Duyệt điều ước
 
-To learn more about Next.js, take a look at the following resources:
+- Truy cập `/admin`, nhập `ADMIN_SECRET`.
+- Danh sách điều ước đang chờ → **Duyệt** (hiện lên cây) hoặc **Bỏ**.
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+## Cấu trúc
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+- `components/three/*` — các phần của scene 3D (Tree, DecorPapers, WishPapers, Petals, Rain, CameraRig, SceneEnv…).
+- `components/ui/*` — lớp giao diện (huy hiệu thời tiết, thẻ đọc, bảng viết, toast, loader).
+- `lib/*` — themes, tree (hình học + anchor tất định), weather, profanity, firebase, wishes.
+- `app/api/*` — proxy thời tiết, POST điều ước, duyệt (admin).
+- `store/useScene.ts` — state (Zustand).
 
-## Deploy on Vercel
+## Mô hình dữ liệu (collection `wishes`)
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+```ts
+{ text, theme, author?, status: 'pending'|'approved'|'rejected', createdAt }
+```
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+Mỗi `theme` là một "zone" treo trên cây; vị trí từng tờ là **tất định** theo id (không nhảy giữa các lần load).
