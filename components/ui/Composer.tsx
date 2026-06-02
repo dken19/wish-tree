@@ -3,6 +3,7 @@ import { useState } from 'react'
 import { THEMES, THEME_KEYS, type ThemeKey } from '@/lib/themes'
 import { MAX_WISH_LEN, validateWish } from '@/lib/profanity'
 import { useScene } from '@/store/useScene'
+import LacBird from './LacBird'
 
 // Bảng viết điều ước -> POST /api/wishes (vào hàng chờ duyệt).
 export default function Composer() {
@@ -44,7 +45,11 @@ export default function Composer() {
 
   return (
     <div className={`composer${open ? ' show' : ''}`}>
-      <h3>Gửi một điều ước</h3>
+      <div className="composer-head">
+        <LacBird className="lac" title="chim Lạc" />
+        <h3>Gửi một điều ước</h3>
+        <LacBird className="lac" flip title="chim Lạc" />
+      </div>
       <p className="sub">Chọn nơi treo, rồi viết điều mình mong nhất.</p>
       <div className="themes">
         {THEME_KEYS.map((k) => {
@@ -61,12 +66,15 @@ export default function Composer() {
           )
         })}
       </div>
-      <textarea
-        maxLength={MAX_WISH_LEN}
-        placeholder="Mình ước rằng…"
-        value={text}
-        onChange={(e) => setText(e.target.value)}
-      />
+      <div className="wish-field">
+        <LacBird className="lac-watermark" />
+        <textarea
+          maxLength={MAX_WISH_LEN}
+          placeholder="Mình ước rằng…"
+          value={text}
+          onChange={(e) => setText(e.target.value)}
+        />
+      </div>
       <div className="row">
         <button
           className="btn-cancel"

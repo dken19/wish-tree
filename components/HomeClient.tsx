@@ -1,6 +1,5 @@
 'use client'
 import dynamic from 'next/dynamic'
-import { useScene } from '@/store/useScene'
 import DataBridge from './DataBridge'
 import SkyBackdrop from './ui/SkyBackdrop'
 import WeatherPanel from './ui/WeatherPanel'
@@ -16,8 +15,6 @@ const WishTreeCanvas = dynamic(() => import('./WishTreeCanvas'), {
 })
 
 export default function HomeClient() {
-  const setComposerOpen = useScene((s) => s.setComposerOpen)
-
   return (
     <>
       <SkyBackdrop />
@@ -34,13 +31,7 @@ export default function HomeClient() {
       <WeatherPanel />
 
       <div className="ui hint">
-        ✨ Chạm vào tờ giấy <b>lấp lánh</b> để đọc điều ước
-      </div>
-
-      <div className="ui write">
-        <button onClick={() => setComposerOpen(true)}>
-          🪶&nbsp; Viết điều ước
-        </button>
+        ✨ Chạm <b>tờ giấy</b> để đọc · chạm <b>bàn thư pháp</b> để viết điều ước
       </div>
 
       <WishCard />

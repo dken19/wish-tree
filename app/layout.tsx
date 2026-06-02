@@ -1,5 +1,5 @@
 import type { Metadata, Viewport } from "next";
-import { Playfair_Display, Be_Vietnam_Pro } from "next/font/google";
+import { Playfair_Display, Be_Vietnam_Pro, Dancing_Script } from "next/font/google";
 import "./globals.css";
 
 const playfair = Playfair_Display({
@@ -7,6 +7,14 @@ const playfair = Playfair_Display({
   subsets: ["latin", "vietnamese"],
   weight: ["500", "600"],
   style: ["normal", "italic"],
+  display: "swap",
+});
+
+// Font thư pháp/viết tay, hỗ trợ đầy đủ dấu tiếng Việt
+const calli = Dancing_Script({
+  variable: "--font-calli",
+  subsets: ["latin", "vietnamese"],
+  weight: ["500", "600", "700"],
   display: "swap",
 });
 
@@ -37,7 +45,10 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="vi" className={`${beVietnam.variable} ${playfair.variable}`}>
+    <html
+      lang="vi"
+      className={`${beVietnam.variable} ${playfair.variable} ${calli.variable}`}
+    >
       <body>{children}</body>
     </html>
   );

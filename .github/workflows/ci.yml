@@ -1,0 +1,35 @@
+name: CI
+
+# Pipeline: chạy lint + build mỗi khi push hoặc mở PR vào master.
+# (Vercel lo phần deploy tự động khi kết nối GitHub repo.)
+
+on:
+  push:
+    branches: [master]
+  pull_request:
+    branches: [master]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node 22
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Lint
+        run: npm run lint
+
+      - name: Build
+        run: npm run build
+        env:
+          # Build không cần Firebase thật (code có fallback), nên để trống là đủ.
+          NEXT_TELEMETRY_DISABLED: '1'

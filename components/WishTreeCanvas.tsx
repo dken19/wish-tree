@@ -4,6 +4,11 @@ import { AdaptiveDpr } from '@react-three/drei'
 import * as THREE from 'three'
 import Tree from './three/Tree'
 import Ground from './three/Ground'
+import Scenery from './three/Scenery'
+import Meadow from './three/Meadow'
+import Dew from './three/Dew'
+import Critters from './three/Critters'
+import CalligraphyDesk from './three/CalligraphyDesk'
 import Blossoms from './three/Blossoms'
 import DecorPapers from './three/DecorPapers'
 import WishPapers from './three/WishPapers'
@@ -30,13 +35,18 @@ export default function WishTreeCanvas() {
       <AdaptiveDpr pixelated={false} />
       <SceneEnv />
       <CameraRig />
+      <Scenery />
       <Ground />
+      <Meadow />
       <Tree />
       <Blossoms />
       <DecorPapers />
       <WishPapers />
+      <CalligraphyDesk />
       <Petals />
       <Rain />
+      <Dew />
+      <Critters />
     </Canvas>
   )
 }

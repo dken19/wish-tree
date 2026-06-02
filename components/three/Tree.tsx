@@ -36,8 +36,9 @@ export default function Tree() {
     <group>
       {segments.map((s, i) => (
         <mesh key={i} position={s.position} quaternion={s.quaternion}>
-          <cylinderGeometry args={[s.r1, s.r0, s.len, 6, 1]} />
-          <meshLambertMaterial color={0x6b5135} flatShading />
+          {/* nhiều cạnh + bo nhẹ hai đầu cho thân mượt, bớt thô */}
+          <cylinderGeometry args={[s.r1, s.r0, s.len, 10, 1]} />
+          <meshLambertMaterial color={0x6f5238} />
         </mesh>
       ))}
     </group>

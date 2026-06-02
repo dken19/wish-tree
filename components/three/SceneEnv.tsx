@@ -15,7 +15,8 @@ export default function SceneEnv() {
 
   useEffect(() => {
     if (!fogRef.current) {
-      fogRef.current = new THREE.Fog(preset.fog, 9, 22)
+      // near đủ xa để cây rõ; far rộng để đồi/núi mờ dần vào trời
+      fogRef.current = new THREE.Fog(preset.fog, 12, 38)
       scene.fog = fogRef.current
     }
     fogRef.current.color.setHex(preset.fog)

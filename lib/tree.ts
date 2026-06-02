@@ -62,13 +62,21 @@ export function mulberry32(seed: number): () => number {
   }
 }
 
-/** Vị trí treo tất định cho một điều ước, tỏa quanh ngọn cành của theme. */
+/** Ngọn cành (điểm neo trên cây) cho một điều ước. */
+export function tipFor(theme: ThemeKey): Vec3 {
+  return THEME_ZONE[theme]
+}
+
+/**
+ * Vị trí treo tất định cho một điều ước: nằm NGAY DƯỚI ngọn cành của theme,
+ * lệch ngang rất nhẹ -> đọc ra là "treo lủng lẳng từ cành".
+ */
 export function anchorFor(seed: string, theme: ThemeKey): Vec3 {
   const t = THEME_ZONE[theme]
   const rnd = mulberry32(hashString(seed))
   return [
-    t[0] + (rnd() - 0.5) * 1.1,
-    t[1] + (rnd() - 0.2) * 0.7 - 0.1,
-    t[2] + (rnd() - 0.5) * 1.1,
+    t[0] + (rnd() - 0.5) * 0.6,
+    t[1] - (0.35 + rnd() * 0.85), // treo bên dưới ngọn cành
+    t[2] + (rnd() - 0.5) * 0.6,
   ]
 }

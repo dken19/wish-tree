@@ -2,7 +2,7 @@
 import { useLayoutEffect, useMemo, useRef } from 'react'
 import { useFrame, type ThreeEvent } from '@react-three/fiber'
 import * as THREE from 'three'
-import { anchorFor } from '@/lib/tree'
+import { anchorFor, tipFor } from '@/lib/tree'
 import { windRef, pointer } from '@/lib/runtime'
 import { useScene } from '@/store/useScene'
 import { THEMES } from '@/lib/themes'
@@ -32,6 +32,7 @@ export default function WishPapers() {
 
   const paperRef = useRef<THREE.InstancedMesh>(null)
   const stringRef = useRef<THREE.InstancedMesh>(null)
+  const linkRef = useRef<THREE.InstancedMesh>(null)
   const count = wishes.length
 
   const paperGeo = useMemo(() => {
@@ -44,15 +45,23 @@ export default function WishPapers() {
     g.translate(0, -STRING_LEN / 2, 0)
     return g
   }, [])
+  // Dây nối cành -> tờ giấy: trụ đơn vị, pivot ở ĐỈNH (y: 0 -> -1)
+  const linkGeo = useMemo(() => {
+    const g = new THREE.CylinderGeometry(0.006, 0.006, 1, 5, 1)
+    g.translate(0, -0.5, 0)
+    return g
+  }, [])
 
   // Vị trí + nhịp lắc tất định cho từng điều ước
   const data = useMemo(
     () =>
       wishes.map((w) => {
         const anchor = anchorFor(w.id, w.theme)
+        const tip = tipFor(w.theme)
         const seed = (anchor[0] * 53 + anchor[2] * 17) % (Math.PI * 2)
         return {
           anchor: new THREE.Vector3(...anchor),
+          tip: new THREE.Vector3(...tip),
           yaw: seed,
           phase: Math.abs(seed) * 3,
           swing: 0.8 + (Math.abs(seed) % 0.4),
@@ -71,6 +80,24 @@ export default function WishPapers() {
     const col = new THREE.Color()
     data.forEach((d, i) => paper.setColorAt(i, col.set(d.color)))
     if (paper.instanceColor) paper.instanceColor.needsUpdate = true
+
+    // Dây nối: từ ngọn cành (tip) xuống điểm treo (anchor) — tĩnh
+    const link = linkRef.current
+    if (link) {
+      const m = new THREE.Object3D()
+      const down = new THREE.Vector3(0, -1, 0)
+      const dir = new THREE.Vector3()
+      data.forEach((d, i) => {
+        dir.subVectors(d.anchor, d.tip)
+        const len = Math.max(dir.length(), 0.001)
+        m.position.copy(d.tip)
+        m.quaternion.setFromUnitVectors(down, dir.clone().normalize())
+        m.scale.set(1, len, 1)
+        m.updateMatrix()
+        link.setMatrixAt(i, m.matrix)
+      })
+      link.instanceMatrix.needsUpdate = true
+    }
   }, [data, count])
 
   const dummy = useMemo(() => new THREE.Object3D(), [])
@@ -105,6 +132,10 @@ export default function WishPapers() {
 
   return (
     <group>
+      {/* Dây nối cành -> giấy (cố định, tạo liên kết với cành) */}
+      <instancedMesh ref={linkRef} args={[linkGeo, undefined, count]}>
+        <meshBasicMaterial color={0x6e4a2c} />
+      </instancedMesh>
       <instancedMesh ref={stringRef} args={[stringGeo, undefined, count]}>
         <meshBasicMaterial color={0x7a4a2a} side={THREE.DoubleSide} />
       </instancedMesh>
