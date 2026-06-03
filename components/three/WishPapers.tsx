@@ -54,8 +54,11 @@ export default function WishPapers() {
   }, [])
   // Hộp va chạm VÔ HÌNH (to hơn tờ giấy, có chiều sâu) để bấm trúng từ mọi góc:
   // mặt phẳng giấy quá nhỏ & hay nghiêng cạnh -> raycast trượt. Box thì không.
+  // Nới rộng vừa phải vì tờ giấy ở xa chiếu ra màn hình rất nhỏ (~8-18px) lại
+  // đung đưa + camera tự xoay -> con trỏ dễ trôi; vẫn nhỏ hơn khoảng cách giữa
+  // các tờ nên không bấm nhầm tờ bên cạnh.
   const hitGeo = useMemo(() => {
-    const g = new THREE.BoxGeometry(0.34, 0.5, 0.22)
+    const g = new THREE.BoxGeometry(0.46, 0.64, 0.34)
     g.translate(0, -(STRING_LEN + PH / 2), 0)
     return g
   }, [])
@@ -128,7 +131,15 @@ export default function WishPapers() {
     }
     paper.instanceMatrix.needsUpdate = true
     string.instanceMatrix.needsUpdate = true
-    if (hit) hit.instanceMatrix.needsUpdate = true
+    if (hit) {
+      hit.instanceMatrix.needsUpdate = true
+      // Ma trận thể hiện đổi mỗi frame (tờ giấy đung đưa) nhưng three CHỈ tính
+      // boundingSphere 1 lần (lazy). Nếu lần tính rơi vào frame 0 (ma trận còn
+      // identity) thì cầu kẹt ở gốc toạ độ, raycast loại tia sớm -> KHÔNG tờ nào
+      // bấm được (click xuyên qua, trúng thiền viện/bàn phía sau -> đổi cảnh).
+      // Đặt null để raycast tự tính lại từ ma trận hiện tại mỗi lần bấm.
+      hit.boundingSphere = null
+    }
   })
 
   const handleClick = (e: ThreeEvent<MouseEvent>) => {
@@ -166,6 +177,7 @@ export default function WishPapers() {
       <instancedMesh
         ref={hitRef}
         args={[hitGeo, undefined, count]}
+        frustumCulled={false}
         onClick={handleClick}
         onPointerOver={() => setCursor('pointer')}
         onPointerOut={() => setCursor('auto')}
