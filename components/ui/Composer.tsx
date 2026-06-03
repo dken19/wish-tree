@@ -3,17 +3,30 @@ import { useState } from 'react'
 import { THEMES, THEME_KEYS, type ThemeKey } from '@/lib/themes'
 import { MAX_WISH_LEN, validateWish } from '@/lib/profanity'
 import { useScene } from '@/store/useScene'
+import { isFirebaseConfigured } from '@/lib/firebase.client'
+import { signInGoogle, signInFacebook, signOutUser, getIdToken } from '@/lib/auth'
 import LacBird from './LacBird'
 
-// Bảng viết điều ước -> POST /api/wishes (vào hàng chờ duyệt).
+// Bảng viết điều ước -> POST /api/wishes.
+// Người đăng nhập Google/Facebook: điều ước hiện NGAY; ẩn danh: vào hàng chờ duyệt.
 export default function Composer() {
   const open = useScene((s) => s.composerOpen)
   const setOpen = useScene((s) => s.setComposerOpen)
   const showToast = useScene((s) => s.showToast)
+  const user = useScene((s) => s.user)
 
   const [theme, setTheme] = useState<ThemeKey>('thi')
   const [text, setText] = useState('')
   const [sending, setSending] = useState(false)
+
+  async function login(provider: 'google' | 'facebook') {
+    try {
+      if (provider === 'google') await signInGoogle()
+      else await signInFacebook()
+    } catch {
+      showToast('Đăng nhập chưa thành công, thử lại nhé')
+    }
+  }
 
   async function send() {
     const v = validateWish(text)
@@ -23,9 +36,13 @@ export default function Composer() {
     }
     setSending(true)
     try {
+      const token = user ? await getIdToken() : null
       const r = await fetch('/api/wishes', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: {
+          'Content-Type': 'application/json',
+          ...(token ? { Authorization: `Bearer ${token}` } : {}),
+        },
         body: JSON.stringify({ text: text.trim(), theme }),
       })
       const data = await r.json().catch(() => ({}))
@@ -35,7 +52,11 @@ export default function Composer() {
       }
       setOpen(false)
       setText('')
-      showToast('Đã gửi điều ước ✨ (chờ duyệt rồi sẽ hiện trên cây)')
+      showToast(
+        data?.status === 'approved'
+          ? 'Đã treo điều ước lên cây ✨'
+          : 'Đã gửi điều ước ✨ (chờ duyệt rồi sẽ hiện trên cây)'
+      )
     } catch {
       showToast('Mất kết nối, thử lại sau nhé')
     } finally {
@@ -51,6 +72,33 @@ export default function Composer() {
         <LacBird className="lac" flip title="chim Lạc" />
       </div>
       <p className="sub">Chọn nơi treo, rồi viết điều mình mong nhất.</p>
+
+      {isFirebaseConfigured &&
+        (user ? (
+          <div className="auth-row">
+            <span className="auth-who">
+              Đang đăng nhập: <b>{user.name}</b> · điều ước sẽ hiện ngay
+            </span>
+            <button className="auth-out" onClick={() => signOutUser()}>
+              Đăng xuất
+            </button>
+          </div>
+        ) : (
+          <div className="auth-row">
+            <span className="auth-hint">
+              Đăng nhập để điều ước hiển thị ngay, khỏi chờ duyệt:
+            </span>
+            <div className="auth-btns">
+              <button className="auth-in g" onClick={() => login('google')}>
+                Google
+              </button>
+              <button className="auth-in f" onClick={() => login('facebook')}>
+                Facebook
+              </button>
+            </div>
+          </div>
+        ))}
+
       <div className="themes">
         {THEME_KEYS.map((k) => {
           const on = k === theme

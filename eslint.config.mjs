@@ -30,6 +30,7 @@ const eslintConfig = defineConfig([
     files: [
       "components/ui/Toast.tsx",
       "app/admin/page.tsx",
+      "app/dieu-uoc/WishesView.tsx",
       "components/PresenceBridge.tsx",
       "components/ui/FocusHUD.tsx",
     ],

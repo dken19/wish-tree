@@ -1131,3 +1131,218 @@ canvas {
   margin-top: 28px;
 }
 
+/* ---------- Đăng nhập trong bảng viết (Composer) ---------- */
+.auth-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  margin: 2px 0 14px;
+  padding: 10px 12px;
+  border: 1px dashed rgba(202, 164, 90, 0.5);
+  border-radius: 12px;
+  background: rgba(255, 247, 235, 0.6);
+}
+.auth-hint,
+.auth-who {
+  font-size: 12.5px;
+  color: #6e6253;
+  flex: 1 1 auto;
+}
+.auth-who b {
+  color: var(--ink);
+}
+.auth-btns {
+  display: flex;
+  gap: 6px;
+}
+.auth-in,
+.auth-out {
+  font: inherit;
+  font-size: 12.5px;
+  font-weight: 600;
+  padding: 7px 12px;
+  border-radius: 9px;
+  border: 1px solid #d8ccbd;
+  background: #fff;
+  color: var(--ink);
+  cursor: pointer;
+}
+.auth-in.g {
+  border-color: #d8ccbd;
+}
+.auth-in.f {
+  background: #1877f2;
+  border-color: #1877f2;
+  color: #fff;
+}
+.auth-in:active,
+.auth-out:active {
+  transform: scale(0.97);
+}
+
+/* ---------- Trang Tất cả điều ước (/dieu-uoc) ---------- */
+.wishes-page {
+  position: fixed;
+  inset: 0;
+  z-index: 30;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+  background: linear-gradient(180deg, #e7d7e6 0%, #f1e7d6 40%, #fbf4ea 100%);
+  color: var(--ink);
+}
+.wishes-inner {
+  max-width: 760px;
+  margin: 0 auto;
+  padding: max(20px, env(safe-area-inset-top)) 20px
+    calc(40px + env(safe-area-inset-bottom));
+}
+.wishes-back {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 13px;
+  font-weight: 600;
+  color: #7a5a72;
+  text-decoration: none;
+  background: rgba(255, 255, 255, 0.7);
+  border: 1px solid rgba(255, 255, 255, 0.7);
+  padding: 8px 14px;
+  border-radius: 30px;
+  box-shadow: var(--shadow);
+}
+.wishes-back:active {
+  transform: scale(0.97);
+}
+.wishes-hero {
+  margin: 22px 2px 18px;
+}
+.wishes-hero h1 {
+  font-family: var(--font-calli), "Dancing Script", cursive;
+  font-weight: 700;
+  font-size: clamp(34px, 9vw, 50px);
+  line-height: 1.05;
+  color: #6b3a5f;
+}
+.wishes-hero p {
+  font-size: 14px;
+  font-weight: 300;
+  color: #5e5346;
+  margin-top: 6px;
+  line-height: 1.5;
+}
+
+/* thanh lọc chủ đề */
+.wishes-filters {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 18px;
+}
+.wf-chip {
+  font: inherit;
+  font-size: 13px;
+  font-weight: 600;
+  color: #6b5a4f;
+  background: rgba(255, 255, 255, 0.7);
+  border: 1px solid rgba(255, 255, 255, 0.8);
+  padding: 8px 14px;
+  border-radius: 30px;
+  cursor: pointer;
+  transition: 0.18s;
+}
+.wf-chip.on {
+  color: #fff;
+  background: var(--red);
+  border-color: var(--red);
+  box-shadow: 0 6px 16px -8px rgba(120, 40, 60, 0.6);
+}
+
+/* lưới thẻ điều ước */
+.wishes-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+  gap: 12px;
+}
+.wish-tile {
+  display: flex;
+  flex-direction: column;
+  background: var(--paper);
+  border: 1px solid rgba(202, 164, 90, 0.3);
+  border-top: 3px solid var(--gold);
+  border-radius: 14px;
+  padding: 14px 15px;
+  box-shadow: var(--shadow);
+}
+.wt-theme {
+  font-size: 11.5px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  margin-bottom: 7px;
+}
+.wt-text {
+  margin: 0;
+  font-size: 14.5px;
+  line-height: 1.55;
+  color: var(--ink);
+}
+.wt-author {
+  margin-top: 10px;
+  font-size: 12.5px;
+  font-style: italic;
+  color: #9a8472;
+}
+
+/* phân trang số */
+.wishes-pager {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  align-items: center;
+  gap: 6px;
+  margin: 22px 0 6px;
+}
+.wp-btn {
+  font: inherit;
+  font-size: 14px;
+  font-weight: 600;
+  min-width: 38px;
+  height: 38px;
+  padding: 0 10px;
+  border-radius: 10px;
+  border: 1px solid rgba(202, 164, 90, 0.4);
+  background: rgba(255, 255, 255, 0.7);
+  color: var(--ink);
+  cursor: pointer;
+  transition: 0.15s;
+}
+.wp-btn.on {
+  background: var(--red);
+  border-color: var(--red);
+  color: #fff;
+}
+.wp-btn:disabled {
+  opacity: 0.4;
+  cursor: default;
+}
+.wp-gap {
+  color: #9a8472;
+  padding: 0 2px;
+}
+.wishes-status {
+  text-align: center;
+  color: #6e6253;
+  font-size: 14px;
+  margin: 28px 0;
+}
+.wishes-status.err {
+  color: var(--red);
+}
+.wishes-count {
+  text-align: center;
+  font-size: 12.5px;
+  color: #9a8472;
+  margin-top: 8px;
+}
+

@@ -8,6 +8,7 @@ import {
   type App,
 } from 'firebase-admin/app'
 import { getFirestore, type Firestore } from 'firebase-admin/firestore'
+import { getAuth, type Auth } from 'firebase-admin/auth'
 
 function readServiceAccount() {
   const projectId = process.env.FIREBASE_PROJECT_ID
@@ -21,14 +22,27 @@ function readServiceAccount() {
 export const isAdminConfigured = Boolean(readServiceAccount())
 
 let adminDb: Firestore | null = null
+let adminAuth: Auth | null = null
 
-export function getAdminDb(): Firestore | null {
+function getAdminApp(): App | null {
   const sa = readServiceAccount()
   if (!sa) return null
+  return getApps().length ? getApp() : initializeApp({ credential: cert(sa) })
+}
+
+export function getAdminDb(): Firestore | null {
   if (adminDb) return adminDb
-  const app: App = getApps().length
-    ? getApp()
-    : initializeApp({ credential: cert(sa) })
+  const app = getAdminApp()
+  if (!app) return null
   adminDb = getFirestore(app)
   return adminDb
+}
+
+// Admin Auth: xác minh ID token người đăng nhập (Google/Facebook) phía server.
+export function getAdminAuth(): Auth | null {
+  if (adminAuth) return adminAuth
+  const app = getAdminApp()
+  if (!app) return null
+  adminAuth = getAuth(app)
+  return adminAuth
 }

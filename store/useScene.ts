@@ -3,6 +3,7 @@ import { create } from 'zustand'
 import type { Condition } from '@/lib/weather'
 import type { Wish } from '@/lib/wishes'
 import type { Session } from '@/lib/presence'
+import type { AuthUser } from '@/lib/auth'
 
 type SceneState = {
   // Thời tiết
@@ -25,6 +26,10 @@ type SceneState = {
   setSessions: (s: Session[]) => void
   nickname: string
   setNickname: (n: string) => void
+
+  // Đăng nhập (Google/Facebook) — null = ẩn danh
+  user: AuthUser | null
+  setUser: (u: AuthUser | null) => void
 
   // Điều hướng (menu dock)
   navOpen: boolean
@@ -58,6 +63,9 @@ export const useScene = create<SceneState>((set) => ({
   setSessions: (s) => set({ sessions: s }),
   nickname: '',
   setNickname: (n) => set({ nickname: n }),
+
+  user: null,
+  setUser: (u) => set({ user: u }),
 
   navOpen: false,
   setNavOpen: (v) => set({ navOpen: v }),

@@ -54,6 +54,15 @@ const ITEMS: Item[] = [
       router.push('/ky-nang')
     },
   },
+  {
+    key: 'all',
+    icon: '📜',
+    label: 'Tất cả ước nguyện',
+    hint: 'Xem & lọc theo chủ đề',
+    run: (router) => {
+      router.push('/dieu-uoc')
+    },
+  },
 ]
 
 export default function NavDock() {

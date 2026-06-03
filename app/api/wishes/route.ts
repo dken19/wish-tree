@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server'
 import { FieldValue } from 'firebase-admin/firestore'
-import { getAdminDb, isAdminConfigured } from '@/lib/firebase.admin'
+import { getAdminDb, getAdminAuth, isAdminConfigured } from '@/lib/firebase.admin'
 import { validateWish } from '@/lib/profanity'
 import { isThemeKey } from '@/lib/themes'
 import { ipFromHeaders, rateLimit } from '@/lib/ratelimit'
@@ -41,14 +41,32 @@ export async function POST(req: Request) {
     )
   }
 
+  // Người đăng nhập (Google/Facebook): xác minh ID token -> đăng NGAY (approved).
+  // Token sai/hết hạn/không có -> giữ hành vi cũ: vào hàng chờ duyệt (pending).
+  let uid: string | null = null
+  let authorName = author
+  const bearer = req.headers.get('authorization')
+  const token = bearer?.startsWith('Bearer ') ? bearer.slice(7) : null
+  if (token) {
+    try {
+      const decoded = await getAdminAuth()!.verifyIdToken(token)
+      uid = decoded.uid
+      if (decoded.name) authorName = String(decoded.name).slice(0, 40)
+    } catch {
+      uid = null // token không hợp lệ -> coi như ẩn danh
+    }
+  }
+  const status = uid ? 'approved' : 'pending'
+
   const db = getAdminDb()!
   const doc = await db.collection('wishes').add({
     text: text.trim(),
     theme,
-    ...(author ? { author } : {}),
-    status: 'pending',
+    ...(authorName ? { author: authorName } : {}),
+    ...(uid ? { uid } : {}),
+    status,
     createdAt: FieldValue.serverTimestamp(),
   })
 
-  return NextResponse.json({ ok: true, id: doc.id })
+  return NextResponse.json({ ok: true, id: doc.id, status })
 }

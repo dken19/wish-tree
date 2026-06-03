@@ -2,6 +2,7 @@
 import dynamic from 'next/dynamic'
 import DataBridge from './DataBridge'
 import PresenceBridge from './PresenceBridge'
+import AuthBridge from './AuthBridge'
 import SkyBackdrop from './ui/SkyBackdrop'
 import WeatherPanel from './ui/WeatherPanel'
 import WishCard from './ui/WishCard'
@@ -25,6 +26,7 @@ export default function HomeClient() {
       <WishTreeCanvas />
       <DataBridge />
       <PresenceBridge />
+      <AuthBridge />
 
       {/* Lớp giao diện */}
       <div className="ui brand">

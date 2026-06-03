@@ -34,9 +34,13 @@ app/
   ky-nang/
     page.tsx           # server: metadata + render <SkillsView/> (route /ky-nang, KHÔNG Canvas)
     SkillsView.tsx     # client: 4 tab (Nấu/Trồng/Chụp ảnh/Chăm sóc da) + thẻ accordion có ẢNH minh hoạ + link NGUỒN (đọc lib/skills); ảnh hỏng tự ẩn (onError)
+  dieu-uoc/
+    page.tsx           # server: metadata + <Suspense><WishesView/></Suspense> (route /dieu-uoc, KHÔNG Canvas)
+    WishesView.tsx     # client: lọc theo chủ đề + phân trang SỐ (state qua URL ?theme=&page=) -> fetch /api/wishes/list
   api/
     weather/route.ts   # GET: proxy Open-Meteo (Hà Nội), cache 10'
-    wishes/route.ts    # POST: validate+lọc từ+rate-limit -> ghi pending (Admin SDK)
+    wishes/route.ts    # POST: validate+lọc từ+rate-limit -> nếu có Bearer ID token hợp lệ thì approved (đăng ngay), không thì pending (Admin SDK)
+    wishes/list/route.ts # GET ?page=&theme=: liệt kê approved, phân trang SERVER (count + orderBy createdAt + offset/limit); fallback SEED khi chưa cấu hình
     admin/wishes/route.ts # GET list pending / PATCH duyệt|từ chối (header x-admin-secret)
     presence/route.ts  # POST: heartbeat|leave phòng Rừng Trúc -> ghi `sessions` (Admin SDK)
 components/
@@ -44,6 +48,7 @@ components/
   WishTreeCanvas.tsx   # <Canvas> R3F: dpr cap; GATE cảnh cây (visible) vs <FocusRoom/> theo roomOpen
   DataBridge.tsx       # render rỗng: subscribe điều ước + fetch thời tiết -> đẩy vào store
   PresenceBridge.tsx   # render rỗng: CHỈ khi roomOpen — heartbeat + subscribe sessions + leave (sendBeacon)
+  AuthBridge.tsx       # render rỗng: onAuthStateChanged (Firebase Auth) -> ghi user vào store
   three/
     Tree.tsx           # thân+rễ+cành cổ thụ: ống cong bezier (a->bend->b) thuôn, gộp 1 mesh
     Ground.tsx         # nền (đỉnh núi) + gò + tảng đá (<Rock> mỗi viên 1 makeRock, lún vào đất)
@@ -77,6 +82,7 @@ components/
     LacBird.tsx        # <img> chim Lạc (public/chim-lac.jpg) + mix-blend-mode
     Toast.tsx, Loader.tsx
 lib/
+  auth.ts              # client: watchAuth/signInGoogle/signInFacebook/signOutUser/getIdToken + type AuthUser (Firebase Auth)
   themes.ts            # THEMES (8 chủ đề) + ThemeKey + isThemeKey
   skills.ts            # SKILL_CATEGORIES (4 nhóm: Nấu/Trồng/Chụp ảnh/Chăm sóc da) cho /ky-nang — mỗi kỹ năng có img (Wikimedia Commons, đã verify 200) + source (Wikipedia, ad-free). Thuần dữ liệu
   peaks.ts             # RINGS/VALLEY_FLOOR + peakCenter(ri,i): vị trí đỉnh núi xa (Scenery dựng mesh, Monastery đặt thiền viện)
@@ -92,30 +98,38 @@ lib/
   ratelimit.ts         # rate-limit theo IP (in-memory)
   runtime.ts           # windRef {current,target} + pointer {moved,dragging} — chia sẻ KHÔNG re-render
   wishes.ts            # type Wish, SEED_WISHES, subscribeApproved() (onSnapshot, sort client)
-  firebase.client.ts   # init client SDK (null nếu thiếu env -> dùng seed)
-  firebase.admin.ts    # init Admin SDK (server-only)
+  firebase.client.ts   # init client SDK: getDb (đọc Firestore) + getAuthClient (Auth); null nếu thiếu env
+  firebase.admin.ts    # init Admin SDK (server-only): getAdminDb + getAdminAuth (verifyIdToken)
 store/
-  useScene.ts          # zustand: autoCond/manual/temp, wishes, openWish, composerOpen, toast, loaded, roomOpen, sessions, nickname, navOpen
+  useScene.ts          # zustand: autoCond/manual/temp, wishes, openWish, composerOpen, toast, loaded, roomOpen, sessions, nickname, navOpen, user
 scripts/seed.mjs       # seed vài điều ước 'approved' vào Firestore
 firestore.rules        # client read 'approved' (wishes) + read sessions; write = false (ghi qua Admin SDK)
+firestore.indexes.json # composite index cho /api/wishes/list: (status,createdAt) + (status,theme,createdAt)
 .github/workflows/ci.yml # CI: lint + build mỗi push/PR vào master
 ```
 
 ## 4. Luồng dữ liệu
 
 ### Điều hướng (menu dock)
-`NavDock` (góc dưới-phải) là **trung tâm chuyển cảnh**: nút mở là **cuộn giấy bí kíp** (dựng thuần CSS — thân giấy + 2 trục gỗ + triện đỏ chữ thư pháp "Bí" + quầng sáng vàng, KHÔNG ảnh ngoài; KHÔNG dùng chữ Hán), bấm để mở (`navOpen`), chọn 1 trong 4 mục:
+`NavDock` (góc dưới-phải) là **trung tâm chuyển cảnh**: nút mở là **cuộn giấy bí kíp** (dựng thuần CSS — thân giấy + 2 trục gỗ + triện đỏ chữ thư pháp "Bí" + quầng sáng vàng, KHÔNG ảnh ngoài; KHÔNG dùng chữ Hán), bấm để mở (`navOpen`), chọn 1 trong 5 mục:
 - **Cây ước nguyện** → `roomOpen=false`, đóng composer/wish (đổi state).
 - **Viết điều ước** → `composerOpen=true` (giống bấm bàn thư pháp).
 - **Phòng ôn bài** → `roomOpen=true` (giống bấm thiền viện); lúc này NavDock tự ẩn (FocusHUD trượt lên thay).
-- **Kỹ năng sống** → `router.push('/ky-nang')` (đây là mục DUY NHẤT đổi **route** thật). Trang `/ky-nang` (`SkillsView`) là trang tĩnh đọc `lib/skills`, **không mount Canvas** → rời cảnh 3D khi đọc để tiết kiệm pin; bấm "← Về cây ước nguyện" để quay lại (Canvas dựng lại từ loader). 3 mục đầu vẫn giữ nguyên 1 Canvas (chỉ đổi state). **Ảnh kỹ năng** hotlink trực tiếp từ `upload.wikimedia.org` (Wikimedia Commons — ad-free, ổn định) bằng thẻ `<img>` thường (KHÔNG `next/image` → khỏi cấu hình `remotePatterns`); `onError` ẩn ảnh để không vỡ layout. Mọi URL ảnh + nguồn đã verify trả 200 trước khi đưa vào `lib/skills.ts`.
+- **Kỹ năng sống** → `router.push('/ky-nang')` (đổi **route** thật).
+- **Tất cả ước nguyện** → `router.push('/dieu-uoc')` (đổi **route** thật — trang danh sách phân trang, KHÔNG Canvas). Trang `/ky-nang` (`SkillsView`) là trang tĩnh đọc `lib/skills`, **không mount Canvas** → rời cảnh 3D khi đọc để tiết kiệm pin; bấm "← Về cây ước nguyện" để quay lại (Canvas dựng lại từ loader). 3 mục đầu vẫn giữ nguyên 1 Canvas (chỉ đổi state). **Ảnh kỹ năng** hotlink trực tiếp từ `upload.wikimedia.org` (Wikimedia Commons — ad-free, ổn định) bằng thẻ `<img>` thường (KHÔNG `next/image` → khỏi cấu hình `remotePatterns`); `onError` ẩn ảnh để không vỡ layout. Mọi URL ảnh + nguồn đã verify trả 200 trước khi đưa vào `lib/skills.ts`.
 
 ### Điều ước (chính)
 1. **Đọc**: `DataBridge` gọi `subscribeApproved()` (lib/wishes) → `onSnapshot` Firestore `wishes` where `status=='approved'` → `useScene.setWishes`. `WishPapers` đọc `wishes` từ store, render InstancedMesh, vị trí **tất định** theo `anchorFor(id, theme)` (lib/tree, PRNG seed theo id → không nhảy giữa các lần load). Mỗi `theme` = một "zone" (ngọn cành). Dây nối từ ngọn cành (`tipFor`) xuống tờ giấy.
-2. **Ghi**: `Composer` validate client (`validateWish`) → `POST /api/wishes` → server: kiểm theme, `validateWish` (lọc từ), `rateLimit` theo IP → ghi doc `status:'pending'` bằng Admin SDK.
-3. **Duyệt**: `/admin` (nhập `ADMIN_SECRET`) → `GET/PATCH /api/admin/wishes` (header `x-admin-secret`) → đặt `approved`/`rejected`. Khi `approved`, client `onSnapshot` tự thêm tờ mới → cây cập nhật realtime.
+2. **Ghi**: `Composer` validate client (`validateWish`) → `POST /api/wishes` → server: kiểm theme, `validateWish` (lọc từ), `rateLimit` theo IP. Sau đó đọc header `Authorization: Bearer <ID token>`:
+   - **Có token hợp lệ** (đăng nhập Google/Facebook) → `getAdminAuth().verifyIdToken` → ghi doc `status:'approved'` + `uid` + `author=tên` → **hiện ngay** trên cây, KHỎI chờ duyệt.
+   - **Không/ token lỗi** (ẩn danh) → ghi `status:'pending'` như cũ.
+   - Lọc từ + rate-limit GIỮ NGUYÊN cho cả hai (auto-approve chỉ bỏ qua hàng chờ tay).
+3. **Duyệt** (chỉ cho ước ẩn danh): `/admin` (nhập `ADMIN_SECRET`) → `GET/PATCH /api/admin/wishes` (header `x-admin-secret`) → đặt `approved`/`rejected`. Khi `approved`, client `onSnapshot` tự thêm tờ mới → cây cập nhật realtime.
+4. **Xem tất cả** (`/dieu-uoc`, `WishesView`): trang KHÔNG Canvas, gọi `GET /api/wishes/list?page=&theme=` (Admin SDK) → phân trang **ở server** (`count()` cho tổng số trang + `orderBy('createdAt','desc').offset().limit()`), lọc theo chủ đề. State đọc/ghi qua URL (`?theme=&page=`) để share link + nút back hoạt động.
 
-Chưa cấu hình Firebase: `getDb()` trả null → dùng `SEED_WISHES`; `/api/wishes` trả 503 gọn.
+**Đăng nhập (Google/Facebook):** `AuthBridge` (`onAuthStateChanged`) → `useScene.user`. `Composer` hiện nút đăng nhập/đăng xuất; khi gửi, đính `getIdToken()` vào header. Client KHÔNG bao giờ tự ghi Firestore — server `verifyIdToken` mới là nơi quyết định `approved`.
+
+Chưa cấu hình Firebase: `getDb()`/`getAuthClient()` trả null → dùng `SEED_WISHES`, Composer ẩn nút đăng nhập; `/api/wishes` trả 503 gọn; `/api/wishes/list` phân trang SEED trong JS.
 
 ### Thời tiết
 `DataBridge` `fetch('/api/weather')` (proxy Open-Meteo, cache 10') → `codeToCond` + `windFromSpeed` → `useScene.setAuto(cond,temp)` và **`windRef.target`** (lib/runtime). `WeatherPanel` cho ghi đè manual. `useCondition()` = `manual ?? autoCond`. `SkyBackdrop`/`SceneEnv` đọc điều kiện đổi nền trời, đèn, fog, bật/tắt mưa.
@@ -148,9 +162,10 @@ Chưa cấu hình Firebase: `getDb()` null → `subscribeSessions` trả về 1 
 
 ```ts
 { text: string(<=160), theme: ThemeKey, author?: string,
+  uid?: string,  // có khi gửi bởi người đăng nhập Google/Facebook (-> auto-approve)
   status: 'pending'|'approved'|'rejected', createdAt: serverTimestamp }
 ```
-Rules (`firestore.rules`): client `read` chỉ khi `status=='approved'`; `write:false` (mọi ghi qua Admin SDK). Query client **không orderBy** (tránh composite index) — sort theo `createdAt` ở client.
+Rules (`firestore.rules`): client `read` chỉ khi `status=='approved'`; `write:false` (mọi ghi qua Admin SDK). Query realtime của cây **không orderBy** (tránh composite index) — sort theo `createdAt` ở client. **Ngoại lệ:** trang `/dieu-uoc` phân trang ở server (`/api/wishes/list`) DÙNG `orderBy('createdAt')` + `where` → cần composite index, khai báo ở `firestore.indexes.json` (xem Gotchas).
 
 ### Firestore `sessions` (presence phòng Rừng Trúc)
 
@@ -169,7 +184,9 @@ Rules: `read: if true` (không chứa PII), `write: false` (ghi qua `/api/presen
 - `FIREBASE_PROJECT_ID` / `FIREBASE_CLIENT_EMAIL` / `FIREBASE_PRIVATE_KEY` — Admin SDK (server-only). Code xử lý `\n` an toàn (`.replace(/\\n/g,'\n')`).
 - `ADMIN_SECRET` — mã đăng nhập `/admin`.
 
-Vercel: import `.env.local` khi tạo project. App **không dùng Firebase Auth** → KHÔNG cần "Authorized domains".
+**Đăng nhập Google/Facebook KHÔNG cần biến env mới** — dùng lại `NEXT_PUBLIC_FIREBASE_*` (client) + creds Admin (`verifyIdToken`). Nhưng **CẦN cấu hình Firebase Console**: bật provider Google & Facebook (Facebook cần tạo Facebook Developer App, dán App ID/secret + OAuth redirect), và thêm **Authorized domains** (localhost + domain Vercel). Presence phòng Rừng Trúc vẫn ẩn danh, không liên quan Auth này.
+
+Vercel: import `.env.local` khi tạo project.
 
 ## 8. Gotchas (đọc trước khi sửa)
 
@@ -187,6 +204,11 @@ Vercel: import `.env.local` khi tạo project. App **không dùng Firebase Auth*
 - **Presence ghi/ma**: heartbeat 18s, ẩn phiên nếu `now-lastSeen ≥ 40s` (lọc ở client). Đóng tab cứng không kịp `leave` → biến mất sau ≤40s. `sendBeacon` gửi `text/plain` nên route `/api/presence` đọc `req.text()` rồi `JSON.parse`. Rate-limit presence nới rộng (`30/phút`, key theo `clientId:ip`) — mặc định 5/10ph sẽ chặn nhầm heartbeat.
 - **Nhãn avatar = sprite canvas, KHÔNG drei `<Html>`**: mỗi avatar 1 `CanvasTexture` vẽ lại **1 lần/giây** (throttle trong `useFrame`) → không tạo DOM/giây/avatar gây jank mobile. Số avatar cap `CAP=24` (dư ẩn).
 - **ESLint**: thêm `components/PresenceBridge.tsx` + `components/ui/FocusHUD.tsx` vào danh sách tắt `set-state-in-effect` (đồng bộ localStorage/timer). Ghi ref trong render bị `react-hooks/refs` chặn → cập nhật ref trong `useEffect`.
+- **Auto-approve do SERVER quyết định, KHÔNG tin client**: client chỉ đính `Authorization: Bearer <ID token>`; `/api/wishes` `verifyIdToken` rồi mới đặt `status:'approved'`. Token sai/hết hạn → tự rớt về `pending`. Đừng để client gửi thẳng `status` (sẽ bị giả mạo). Client vẫn KHÔNG bao giờ ghi Firestore trực tiếp (`firestore.rules` `write:false`).
+- **`/dieu-uoc` cần composite index (ngoại lệ có chủ đích)**: cây dùng query không-orderBy để né index, nhưng phân trang số ở server BẮT BUỘC `orderBy('createdAt')` + `where('status')` [+ `where('theme')`] → 2 composite index trong `firestore.indexes.json`. Tạo bằng `firebase deploy --only firestore:indexes` HOẶC bấm link Console mà Firestore tự gợi ý ở lần query đầu (báo lỗi `FAILED_PRECONDITION`). Thiếu index → `/api/wishes/list` lỗi.
+- **`offset()` của Firestore tính phí cả doc bị skip**: phân trang `/api/wishes/list` dùng `offset((page-1)*PAGE_SIZE)`; trang càng sâu càng tốn đọc. Chấp nhận ở quy mô này; nếu dữ liệu lớn hẳn, đổi sang cursor `startAfter`.
+- **`/dieu-uoc` dùng `useSearchParams` → phải bọc `<Suspense>`** (Next App Router yêu cầu) — đã bọc trong `app/dieu-uoc/page.tsx`. Trang này KHÔNG mount Canvas (giống `/ky-nang`) để nhẹ pin. `WishesView.tsx` được thêm vào danh sách tắt `set-state-in-effect` trong `eslint.config.mjs` (đặt `loading` đồng bộ khi đổi `page`/`theme` — pattern fetch giống `app/admin/page.tsx`).
+- **App GIỜ CÓ dùng Firebase Auth**: phải thêm Authorized domains trong Firebase Console (localhost + domain Vercel) nếu không `signInWithPopup` báo `auth/unauthorized-domain`. (Ghi chú cũ "không dùng Auth" đã hết hiệu lực.)
 
 ## 8b. Nhật ký lỗi đã sửa (ghi NGAY sau mỗi lần sửa)
 
