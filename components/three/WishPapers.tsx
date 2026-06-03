@@ -33,6 +33,7 @@ export default function WishPapers() {
   const paperRef = useRef<THREE.InstancedMesh>(null)
   const stringRef = useRef<THREE.InstancedMesh>(null)
   const linkRef = useRef<THREE.InstancedMesh>(null)
+  const hitRef = useRef<THREE.InstancedMesh>(null)
   const count = wishes.length
 
   const paperGeo = useMemo(() => {
@@ -49,6 +50,13 @@ export default function WishPapers() {
   const linkGeo = useMemo(() => {
     const g = new THREE.CylinderGeometry(0.006, 0.006, 1, 5, 1)
     g.translate(0, -0.5, 0)
+    return g
+  }, [])
+  // Hộp va chạm VÔ HÌNH (to hơn tờ giấy, có chiều sâu) để bấm trúng từ mọi góc:
+  // mặt phẳng giấy quá nhỏ & hay nghiêng cạnh -> raycast trượt. Box thì không.
+  const hitGeo = useMemo(() => {
+    const g = new THREE.BoxGeometry(0.34, 0.5, 0.22)
+    g.translate(0, -(STRING_LEN + PH / 2), 0)
     return g
   }, [])
 
@@ -106,6 +114,7 @@ export default function WishPapers() {
     const wind = windRef.current
     const paper = paperRef.current
     const string = stringRef.current
+    const hit = hitRef.current
     if (!paper || !string) return
     for (let i = 0; i < data.length; i++) {
       const d = data[i]
@@ -115,9 +124,11 @@ export default function WishPapers() {
       dummy.updateMatrix()
       paper.setMatrixAt(i, dummy.matrix)
       string.setMatrixAt(i, dummy.matrix)
+      hit?.setMatrixAt(i, dummy.matrix)
     }
     paper.instanceMatrix.needsUpdate = true
     string.instanceMatrix.needsUpdate = true
+    if (hit) hit.instanceMatrix.needsUpdate = true
   })
 
   const handleClick = (e: ThreeEvent<MouseEvent>) => {
@@ -126,6 +137,9 @@ export default function WishPapers() {
     e.stopPropagation()
     const w: Wish | undefined = wishes[e.instanceId]
     if (w) setOpenWish(w)
+  }
+  const setCursor = (c: string) => {
+    if (typeof document !== 'undefined') document.body.style.cursor = c
   }
 
   if (count === 0) return null
@@ -139,17 +153,24 @@ export default function WishPapers() {
       <instancedMesh ref={stringRef} args={[stringGeo, undefined, count]}>
         <meshBasicMaterial color={0x7a4a2a} side={THREE.DoubleSide} />
       </instancedMesh>
-      <instancedMesh
-        ref={paperRef}
-        args={[paperGeo, undefined, count]}
-        onClick={handleClick}
-      >
+      <instancedMesh ref={paperRef} args={[paperGeo, undefined, count]}>
         <meshLambertMaterial
           color={0xffffff}
           side={THREE.DoubleSide}
           emissive={0x7a0d1a}
           emissiveIntensity={0.35}
         />
+      </instancedMesh>
+      {/* Hộp bấm vô hình (to hơn, có chiều sâu) — nhận click thay cho mặt giấy.
+          KHÔNG dùng visible={false} vì raycaster bỏ qua object ẩn. */}
+      <instancedMesh
+        ref={hitRef}
+        args={[hitGeo, undefined, count]}
+        onClick={handleClick}
+        onPointerOver={() => setCursor('pointer')}
+        onPointerOut={() => setCursor('auto')}
+      >
+        <meshBasicMaterial transparent opacity={0} depthWrite={false} />
       </instancedMesh>
       <FeaturedGlow tex={glowTex} items={featured} />
     </group>
