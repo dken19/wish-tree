@@ -23,7 +23,10 @@ jobs:
           cache: 'npm'
 
       - name: Install dependencies
-        run: npm ci
+        # Dùng `npm install` (không phải `npm ci`) để CI không fail khi
+        # package-lock.json lệch nhẹ do hoisting khác nhau giữa macOS (máy dev)
+        # và Linux (runner) — ví dụ picomatch 2.x/4.x của micromatch vs fdir/tinyglobby.
+        run: npm install --no-audit --no-fund
 
       - name: Lint
         run: npm run lint
