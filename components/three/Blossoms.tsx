@@ -51,7 +51,7 @@ function makeFlowerTexture(): THREE.CanvasTexture {
 // Hoa trang trí quanh tán (point sprites mềm, billboard luôn hướng camera).
 export default function Blossoms() {
   const isMobile = useIsMobile()
-  const N = isMobile ? 110 : 200
+  const N = isMobile ? 90 : 160
   const ref = useRef<THREE.Points>(null)
   const tex = useMemo(() => makeFlowerTexture(), [])
 

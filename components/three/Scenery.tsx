@@ -1,73 +1,119 @@
 'use client'
 import { useMemo } from 'react'
 import * as THREE from 'three'
+import { terrainHeight } from '@/lib/terrain'
 import { useIsMobile } from './useIsMobile'
 
-// Phông nền thung lũng yên bình bao quanh cây: sàn thung lũng + đồi gần,
-// núi xa (kiểu khí quyển, mờ vào trời), rừng thông và một xóm nhà nhỏ.
-// Tất cả low-poly, tĩnh -> rất nhẹ.
-
+// Cảnh xa: VÀI dãy núi xanh (rừng phủ) THẤP & XA hơn đỉnh ta đứng, mờ vào sương.
 const TAU = Math.PI * 2
+
+// gradient theo độ cao: rừng tối -> rừng sáng -> đá xám lam -> tuyết
+const C_FOREST_LO = new THREE.Color(0x35522f)
+const C_FOREST_HI = new THREE.Color(0x5c7d42)
+const C_ROCK = new THREE.Color(0x6b7686)
+const C_SNOW = new THREE.Color(0xeef3f8)
+const LIGHT_DIR = new THREE.Vector3(0.45, 0.72, 0.5).normalize()
+const VALLEY_FLOOR = -32
+
+function mountainColor(out: THREE.Color, fy: number, tall: boolean) {
+  if (fy < 0.5) {
+    out.copy(C_FOREST_LO).lerp(C_FOREST_HI, fy / 0.5)
+  } else if (fy < 0.8) {
+    out.copy(C_FOREST_HI).lerp(C_ROCK, (fy - 0.5) / 0.3)
+  } else {
+    out.copy(C_ROCK)
+    if (tall) out.lerp(C_SNOW, (fy - 0.8) / 0.2)
+  }
+}
+
+// Đỉnh núi gồ ghề: nón bị nhiễu bán kính theo góc/độ cao -> sống núi, khe.
+function makePeak(baseR: number, height: number, seed: number): THREE.BufferGeometry {
+  const g = new THREE.ConeGeometry(baseR, height, 12, 7)
+  const p = g.attributes.position as THREE.BufferAttribute
+  for (let i = 0; i < p.count; i++) {
+    const x = p.getX(i)
+    const y = p.getY(i)
+    const z = p.getZ(i)
+    const ang = Math.atan2(z, x)
+    const fy = (y + height / 2) / height
+    const n =
+      Math.sin(ang * 3 + seed) * 0.5 +
+      Math.sin(ang * 7 + fy * 5 + seed * 1.7) * 0.3 +
+      Math.sin(ang * 13 + seed * 2.3) * 0.2
+    const k = 1 + n * 0.34 * (1 - fy * 0.5)
+    p.setX(i, x * k)
+    p.setZ(i, z * k)
+    p.setY(i, y + Math.sin(ang * 5 + seed) * 0.5 * height * 0.03)
+  }
+  g.computeVertexNormals()
+  return g
+}
 
 export default function Scenery() {
   const isMobile = useIsMobile()
 
-  // ----- Đồi gần (mounds tròn, xanh) thành vòng quanh -----
-  const hills = useMemo(() => {
-    const out: { pos: [number, number, number]; scale: [number, number, number]; color: number }[] = []
-    const greens = [0x9ec089, 0x8fb57e, 0xa7c894, 0x82a972]
-    const n = 14
-    for (let i = 0; i < n; i++) {
-      const a = (i / n) * TAU + (Math.random() - 0.5) * 0.25
-      const r = 11 + Math.random() * 4
-      const h = 1.6 + Math.random() * 2.2
-      const w = 3 + Math.random() * 2.5
-      out.push({
-        pos: [Math.cos(a) * r, h * 0.35 - 1.2, Math.sin(a) * r],
-        scale: [w, h, w],
-        color: greens[(Math.random() * greens.length) | 0],
-      })
-    }
+  const mountainGeo = useMemo(() => {
+    const positions: number[] = []
+    const colors: number[] = []
+    // ÍT núi: 2 lớp, lớp xa nhiều hơn chút. Đỉnh đều THẤP hơn ta (top < ~0).
+    const rings = [
+      { n: 4, r: 80, rj: 18, h0: 20, hj: 8, base: 16, snowAt: 28 },
+      { n: 6, r: 124, rj: 30, h0: 26, hj: 12, base: 22, snowAt: 32 },
+    ]
+    const col = new THREE.Color()
+    const nrm = new THREE.Vector3()
+    rings.forEach((ring, ri) => {
+      for (let i = 0; i < ring.n; i++) {
+        const a = (i / ring.n) * TAU + (i * 2.3 + ri * 1.9) * 0.21
+        const r = ring.r + ((Math.sin(i * 53.7 + ri * 11.3) + 1) / 2) * ring.rj
+        const height = ring.h0 + ((Math.sin(i * 19.1 + ri) + 1) / 2) * ring.hj
+        const baseR = ring.base + ((Math.cos(i * 7.3) + 1) / 2) * 6
+        const seed = i * 3.1 + ri * 7.7
+        const tall = height > ring.snowAt
+        const peak = makePeak(baseR, height, seed).toNonIndexed()
+        const pp = peak.attributes.position as THREE.BufferAttribute
+        const pn = peak.attributes.normal as THREE.BufferAttribute
+        const sx = 0.9 + ((Math.sin(seed) + 1) / 2) * 0.5
+        const sz = 0.9 + ((Math.cos(seed) + 1) / 2) * 0.5
+        const cx = Math.cos(a) * r
+        const cz = Math.sin(a) * r
+        const baseY = VALLEY_FLOOR + height / 2
+        for (let v = 0; v < pp.count; v++) {
+          const x = pp.getX(v) * sx
+          const y = pp.getY(v)
+          const z = pp.getZ(v) * sz
+          positions.push(cx + x, baseY + y, cz + z)
+          const fy = (y + height / 2) / height
+          mountainColor(col, THREE.MathUtils.clamp(fy, 0, 1), tall)
+          nrm.set(pn.getX(v), pn.getY(v), pn.getZ(v))
+          const shade = 0.62 + 0.38 * Math.max(0, nrm.dot(LIGHT_DIR))
+          colors.push(col.r * shade, col.g * shade, col.b * shade)
+        }
+        peak.dispose()
+      }
+    })
+    const out = new THREE.BufferGeometry()
+    out.setAttribute('position', new THREE.Float32BufferAttribute(positions, 3))
+    out.setAttribute('color', new THREE.Float32BufferAttribute(colors, 3))
     return out
   }, [])
 
-  // ----- Núi xa (cone, hơi xanh xám, có chỏm tuyết) -----
-  const mountains = useMemo(() => {
-    const out: {
-      pos: [number, number, number]
-      baseR: number
-      height: number
-      color: number
-      snow: boolean
-    }[] = []
-    const blues = [0x8aa6b8, 0x9fb6c4, 0x7e9bad, 0xa9c0cc]
-    const n = 11
-    for (let i = 0; i < n; i++) {
-      const a = (i / n) * TAU + (Math.random() - 0.5) * 0.3
-      const r = 19 + Math.random() * 6
-      const height = 7 + Math.random() * 5
-      const baseR = 3.5 + Math.random() * 2.5
-      out.push({
-        pos: [Math.cos(a) * r, height / 2 - 1.8, Math.sin(a) * r],
-        baseR,
-        height,
-        color: blues[(Math.random() * blues.length) | 0],
-        snow: height > 9,
-      })
-    }
-    return out
-  }, [])
-
-  // ----- Rừng thông rải rác (instanced cone) -----
-  const pineCount = isMobile ? 36 : 64
+  // RỪNG THÔNG XA: phủ kín sườn núi + thung lũng quanh đỉnh (r 16..60), KHÔNG
+  // chạm vùng cây/cỏ ở giữa. Ngồi đúng cao độ địa hình (terrainHeight) nên không
+  // lơ lửng. Càng xa scale càng lớn để vẫn đọc được qua sương.
+  const pineCount = isMobile ? 70 : 150
   const pineData = useMemo(() => {
-    const arr: { p: THREE.Vector3; s: number }[] = []
+    const arr: { p: THREE.Vector3; s: number; yaw: number }[] = []
     for (let i = 0; i < pineCount; i++) {
       const a = Math.random() * TAU
-      const r = 8.5 + Math.random() * 8
+      const r = 16 + Math.random() * 44
+      const x = Math.cos(a) * r
+      const z = Math.sin(a) * r
+      const grow = (r - 16) / 44 // 0 gần -> 1 xa
       arr.push({
-        p: new THREE.Vector3(Math.cos(a) * r, 0, Math.sin(a) * r),
-        s: 0.7 + Math.random() * 0.8,
+        p: new THREE.Vector3(x, terrainHeight(x, z) - 0.1, z),
+        s: 1.4 + grow * 1.9 + Math.random() * 0.7,
+        yaw: Math.random() * TAU,
       })
     }
     return arr
@@ -75,65 +121,74 @@ export default function Scenery() {
 
   return (
     <group>
-      {/* Sàn thung lũng lớn lấp chân trời */}
-      <mesh rotation-x={-Math.PI / 2} position-y={-0.05}>
-        <circleGeometry args={[42, 48]} />
-        <meshLambertMaterial color={0xa9c697} />
+      {/* Núi xa xanh, unlit + vertex color (đã baked sáng) + sương mù */}
+      <mesh geometry={mountainGeo}>
+        <meshBasicMaterial vertexColors />
       </mesh>
 
-      {/* Đồi gần */}
-      {hills.map((h, i) => (
-        <mesh key={`hill-${i}`} position={h.pos} scale={h.scale}>
-          <sphereGeometry args={[1, 10, 8]} />
-          <meshLambertMaterial color={h.color} flatShading />
-        </mesh>
-      ))}
-
-      {/* Núi xa */}
-      {mountains.map((m, i) => (
-        <group key={`mtn-${i}`} position={m.pos}>
-          <mesh>
-            <coneGeometry args={[m.baseR, m.height, 6, 1]} />
-            <meshLambertMaterial color={m.color} flatShading />
-          </mesh>
-          {m.snow && (
-            <mesh position-y={m.height * 0.32}>
-              <coneGeometry args={[m.baseR * 0.42, m.height * 0.34, 6, 1]} />
-              <meshLambertMaterial color={0xeef4f7} flatShading />
-            </mesh>
-          )}
-        </group>
-      ))}
-
-      {/* Rừng thông (foliage instanced) */}
       <Pines data={pineData} />
-
-      {/* Xóm nhà nhỏ bên một sườn đồi */}
       <Village />
     </group>
   )
 }
 
-function Pines({ data }: { data: { p: THREE.Vector3; s: number }[] }) {
+// Cây thông nhiều tầng: thân nâu + 3 tầng tán nón xanh (màu baked vào vertex).
+function makeConifer(): THREE.BufferGeometry {
+  const pos: number[] = []
+  const nor: number[] = []
+  const col: number[] = []
+  const c = new THREE.Color()
+  const add = (geom: THREE.BufferGeometry, hex: number) => {
+    const ng = geom.toNonIndexed()
+    const p = ng.attributes.position as THREE.BufferAttribute
+    const n = ng.attributes.normal as THREE.BufferAttribute
+    c.set(hex)
+    for (let i = 0; i < p.count; i++) {
+      pos.push(p.getX(i), p.getY(i), p.getZ(i))
+      nor.push(n.getX(i), n.getY(i), n.getZ(i))
+      col.push(c.r, c.g, c.b)
+    }
+    ng.dispose()
+    geom.dispose()
+  }
+  const trunk = new THREE.CylinderGeometry(0.07, 0.11, 0.6, 6)
+  trunk.translate(0, 0.3, 0)
+  add(trunk, 0x5b4327)
+  const tier = (r: number, h: number, y: number, hex: number) => {
+    const g = new THREE.ConeGeometry(r, h, 9, 1)
+    g.translate(0, y, 0)
+    add(g, hex)
+  }
+  tier(0.74, 1.1, 0.95, 0x37602f)
+  tier(0.58, 0.98, 1.52, 0x437038)
+  tier(0.42, 0.86, 2.08, 0x538147)
+  const out = new THREE.BufferGeometry()
+  out.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3))
+  out.setAttribute('normal', new THREE.Float32BufferAttribute(nor, 3))
+  out.setAttribute('color', new THREE.Float32BufferAttribute(col, 3))
+  return out
+}
+
+function Pines({ data }: { data: { p: THREE.Vector3; s: number; yaw: number }[] }) {
   const N = data.length
+  const geo = useMemo(() => makeConifer(), [])
+  const mat = useMemo(
+    () => new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 0.86, metalness: 0 }),
+    []
+  )
   const ref = (mesh: THREE.InstancedMesh | null) => {
     if (!mesh) return
     const dummy = new THREE.Object3D()
     data.forEach((d, i) => {
-      dummy.position.set(d.p.x, d.s * 0.9 - 0.2, d.p.z)
-      dummy.scale.set(d.s, d.s * 1.3, d.s)
-      dummy.rotation.set(0, 0, 0)
+      dummy.position.set(d.p.x, d.p.y, d.p.z)
+      dummy.rotation.set(0, d.yaw, 0)
+      dummy.scale.set(d.s, d.s * (1.05 + (i % 3) * 0.12), d.s)
       dummy.updateMatrix()
       mesh.setMatrixAt(i, dummy.matrix)
     })
     mesh.instanceMatrix.needsUpdate = true
   }
-  return (
-    <instancedMesh ref={ref} args={[undefined, undefined, N]}>
-      <coneGeometry args={[0.55, 1.8, 6, 1]} />
-      <meshLambertMaterial color={0x5f8f6a} flatShading />
-    </instancedMesh>
-  )
+  return <instancedMesh ref={ref} args={[geo, mat, N]} castShadow receiveShadow />
 }
 
 function House({
@@ -149,31 +204,28 @@ function House({
 }) {
   return (
     <group position={position} rotation-y={rotation}>
-      <mesh position-y={0.4}>
+      <mesh position-y={0.4} castShadow receiveShadow>
         <boxGeometry args={[1, 0.8, 0.9]} />
-        <meshLambertMaterial color={wall} flatShading />
+        <meshStandardMaterial color={wall} roughness={0.9} />
       </mesh>
-      <mesh position-y={1.0} rotation-y={Math.PI / 4}>
+      <mesh position-y={1.0} rotation-y={Math.PI / 4} castShadow>
         <coneGeometry args={[0.85, 0.6, 4]} />
-        <meshLambertMaterial color={roof} flatShading />
+        <meshStandardMaterial color={roof} roughness={0.85} />
       </mesh>
     </group>
   )
 }
 
 function Village() {
-  // cụm vài nhà bên một phía (azimuth ~ -0.7rad), nép vào đồi
+  // 1 nhà nhỏ nép rìa đỉnh
   const base = useMemo(() => {
-    const cx = Math.cos(-0.7) * 10
-    const cz = Math.sin(-0.7) * 10
+    const cx = Math.cos(-1.0) * 6.6
+    const cz = Math.sin(-1.0) * 6.6
     return { cx, cz }
   }, [])
   return (
     <group>
-      <House position={[base.cx, -0.4, base.cz]} rotation={0.3} />
-      <House position={[base.cx + 1.6, -0.4, base.cz - 1.1]} rotation={-0.4} roof={0xa8502f} />
-      <House position={[base.cx - 1.4, -0.4, base.cz + 1.2]} rotation={0.6} roof={0xcf7a45} wall={0xf0e6d2} />
-      <House position={[base.cx + 0.4, -0.4, base.cz + 2.1]} rotation={-0.2} />
+      <House position={[base.cx, 0, base.cz]} rotation={0.3} />
     </group>
   )
 }

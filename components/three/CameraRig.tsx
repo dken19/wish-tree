@@ -6,18 +6,20 @@ import { pointer } from '@/lib/runtime'
 
 // Điều khiển camera orbit + pinch tự viết (nhẹ, không dùng OrbitControls).
 // Tự xoay nhẹ khi không tương tác. Port từ prototype.
-export default function CameraRig() {
+// `disabled`: khi đang ở phòng Rừng Trúc, RoomCamera tiếp quản -> rig này ngừng
+// ghi camera & bỏ qua tương tác (chỉ MỘT rig ghi camera tại một thời điểm).
+export default function CameraRig({ disabled = false }: { disabled?: boolean }) {
   const camera = useThree((s) => s.camera)
   const gl = useThree((s) => s.gl)
 
   const s = useRef({
-    target: new THREE.Vector3(0, 1.7, 0),
+    target: new THREE.Vector3(0, 2.4, 0),
     theta: 0.5,
-    phi: 1.15,
-    radius: 6.6,
+    phi: 1.12,
+    radius: 9.2,
     tTheta: 0.5,
-    tPhi: 1.15,
-    tRadius: 6.6,
+    tPhi: 1.12,
+    tRadius: 9.2,
     dragging: false,
     lastX: 0,
     lastY: 0,
@@ -28,7 +30,7 @@ export default function CameraRig() {
   useEffect(() => {
     const isMobile =
       matchMedia('(pointer:coarse)').matches || window.innerWidth < 760
-    const r = isMobile ? 7.6 : 6.6
+    const r = isMobile ? 10.4 : 9.2
     s.current.radius = r
     s.current.tRadius = r
   }, [])
@@ -39,6 +41,7 @@ export default function CameraRig() {
     const now = () => performance.now()
 
     const onDown = (e: PointerEvent) => {
+      if (disabled) return
       st.dragging = true
       pointer.moved = 0
       pointer.dragging = true
@@ -62,19 +65,21 @@ export default function CameraRig() {
       pointer.dragging = false
     }
     const onWheel = (e: WheelEvent) => {
+      if (disabled) return
       e.preventDefault()
-      st.tRadius = Math.max(4, Math.min(11, st.tRadius + e.deltaY * 0.006))
+      st.tRadius = Math.max(5, Math.min(15, st.tRadius + e.deltaY * 0.006))
       st.lastInteract = now()
     }
     const onTouchMove = (e: TouchEvent) => {
+      if (disabled) return
       if (e.touches.length === 2) {
         const dx = e.touches[0].clientX - e.touches[1].clientX
         const dy = e.touches[0].clientY - e.touches[1].clientY
         const d = Math.hypot(dx, dy)
         if (st.pinchDist)
           st.tRadius = Math.max(
-            4,
-            Math.min(11, st.tRadius + (st.pinchDist - d) * 0.02)
+            5,
+            Math.min(15, st.tRadius + (st.pinchDist - d) * 0.02)
           )
         st.pinchDist = d
         st.lastInteract = now()
@@ -90,6 +95,12 @@ export default function CameraRig() {
     el.addEventListener('wheel', onWheel, { passive: false })
     el.addEventListener('touchmove', onTouchMove, { passive: true })
     el.addEventListener('touchend', onTouchEnd)
+    // khi vào phòng giữa chừng: dừng kéo & reset cờ con trỏ
+    if (disabled) {
+      st.dragging = false
+      pointer.dragging = false
+      pointer.moved = 0
+    }
     return () => {
       el.removeEventListener('pointerdown', onDown)
       el.removeEventListener('pointermove', onMove)
@@ -98,9 +109,10 @@ export default function CameraRig() {
       el.removeEventListener('touchmove', onTouchMove)
       el.removeEventListener('touchend', onTouchEnd)
     }
-  }, [gl])
+  }, [gl, disabled])
 
   useFrame((state, dt) => {
+    if (disabled) return
     const st = s.current
     const d = Math.min(dt, 0.05)
     // tự xoay nhẹ khi rảnh

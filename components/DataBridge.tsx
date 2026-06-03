@@ -1,7 +1,7 @@
 'use client'
 import { useEffect } from 'react'
 import { subscribeApproved } from '@/lib/wishes'
-import { codeToCond, windFromSpeed, type Condition } from '@/lib/weather'
+import { condFromCurrent, windFromSpeed, type Condition } from '@/lib/weather'
 import { windRef } from '@/lib/runtime'
 import { useScene } from '@/store/useScene'
 
@@ -25,7 +25,11 @@ export default function DataBridge() {
         if (!r.ok) throw new Error('weather fetch failed')
         const c = await r.json()
         if (!alive) return
-        const cond: Condition = codeToCond(c.weather_code, c.is_day)
+        const cond: Condition = condFromCurrent({
+          precipitation: c.precipitation ?? 0,
+          cloudCover: c.cloud_cover ?? 0,
+          isDay: c.is_day,
+        })
         windRef.target = windFromSpeed(c.wind_speed_10m)
         setAuto(cond, Math.round(c.temperature_2m))
       } catch {

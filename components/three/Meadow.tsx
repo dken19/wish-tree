@@ -62,8 +62,9 @@ export default function Meadow() {
   // ---------- Cỏ thường (instanced, gió GPU) ----------
   const grassRef = useRef<THREE.InstancedMesh>(null)
   const grassGeo = useMemo(() => {
-    const g = new THREE.PlaneGeometry(0.06, 0.5, 1, 4)
-    g.translate(0, 0.25, 0)
+    // cỏ thấp hơn để cây cổ thụ nổi bật trên đỉnh núi
+    const g = new THREE.PlaneGeometry(0.06, 0.28, 1, 4)
+    g.translate(0, 0.14, 0)
     return g
   }, [])
   const grassMat = useMemo(
@@ -75,12 +76,12 @@ export default function Meadow() {
       []
     for (let i = 0; i < GRASS; i++) {
       const a = Math.random() * Math.PI * 2
-      const r = 1.3 + Math.random() * 7.4
+      const r = 1.3 + Math.random() * 5.8
       arr.push({
         x: Math.cos(a) * r,
         z: Math.sin(a) * r,
         yaw: Math.random() * Math.PI,
-        h: 0.7 + Math.random() * 1.0,
+        h: 0.55 + Math.random() * 0.7,
         color: GREENS[(Math.random() * GREENS.length) | 0],
       })
     }
@@ -92,13 +93,13 @@ export default function Meadow() {
   const plumeRef = useRef<THREE.InstancedMesh>(null)
   const plumeTex = useMemo(() => softPlume(), [])
   const stalkGeo = useMemo(() => {
-    const g = new THREE.PlaneGeometry(0.04, 1.25, 1, 5)
-    g.translate(0, 0.62, 0)
+    const g = new THREE.PlaneGeometry(0.04, 0.8, 1, 5)
+    g.translate(0, 0.4, 0)
     return g
   }, [])
   const plumeGeo = useMemo(() => {
-    const g = new THREE.PlaneGeometry(0.22, 0.5, 1, 1)
-    g.translate(0, 1.4, 0) // bông ở đỉnh thân -> gió uốn mạnh (wH lớn)
+    const g = new THREE.PlaneGeometry(0.18, 0.36, 1, 1)
+    g.translate(0, 0.9, 0) // bông ở đỉnh thân -> gió uốn mạnh (wH lớn)
     return g
   }, [])
   const stalkMat = useMemo(
@@ -116,12 +117,12 @@ export default function Meadow() {
     const arr: { x: number; z: number; yaw: number; s: number }[] = []
     for (let i = 0; i < REED; i++) {
       const a = Math.random() * Math.PI * 2
-      const r = 3 + Math.random() * 6
+      const r = 3 + Math.random() * 4
       arr.push({
         x: Math.cos(a) * r,
         z: Math.sin(a) * r,
         yaw: Math.random() * Math.PI,
-        s: 0.8 + Math.random() * 0.7,
+        s: 0.7 + Math.random() * 0.5,
       })
     }
     return arr

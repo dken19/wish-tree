@@ -1,20 +1,122 @@
 'use client'
-// Mặt đất low-poly + gò đất + bóng đổ giả (đĩa mềm, không dùng shadow map cho nhẹ).
+import { useMemo } from 'react'
+import * as THREE from 'three'
+import { makeGrass } from '@/lib/textures'
+import { terrainHeight } from '@/lib/terrain'
+
+// ĐỈNH NÚI: đỉnh phẳng (nơi cây/cỏ/bàn), rìa GỒ GHỀ không tròn đều, sườn đổ dốc
+// xuống thung lũng sâu có sống núi/khe. Sườn có vệt màu đậm-nhạt + rải đá tảng.
+// Cao độ địa hình ở lib/terrain.ts (dùng chung với Scenery để đặt thông/nhà).
+
 export default function Ground() {
+  const grass = useMemo(() => {
+    const g = makeGrass()
+    g.map.repeat.set(60, 60)
+    g.normal.repeat.set(60, 60)
+    return g
+  }, [])
+
+  const geo = useMemo(() => {
+    const g = new THREE.PlaneGeometry(420, 420, 130, 130)
+    const p = g.attributes.position as THREE.BufferAttribute
+    const colors = new Float32Array(p.count * 3)
+    // tint nhạt (nhân với texture cỏ) -> chỉ điều sắc, không làm tối
+    const top = new THREE.Color(0xf2f7e8) // cỏ đỉnh tươi sáng
+    const slope = new THREE.Color(0xc4d6a0) // sườn xanh hơi đậm
+    const rock = new THREE.Color(0xd8cda4) // chỗ dốc/đá khô ngả vàng
+    const col = new THREE.Color()
+    for (let i = 0; i < p.count; i++) {
+      const x = p.getX(i)
+      const z = p.getY(i)
+      const h = terrainHeight(x, z)
+      p.setZ(i, h)
+      // màu theo độ sâu + đốm khô ngẫu nhiên -> sườn không phẳng một màu
+      const depth = THREE.MathUtils.clamp(-h / 28, 0, 1)
+      col.copy(top).lerp(slope, THREE.MathUtils.clamp(depth * 1.5, 0, 1))
+      const dry = Math.sin(x * 0.4 + 1.3) * Math.sin(z * 0.37) * 0.5 + 0.5
+      if (depth > 0.25) col.lerp(rock, depth * dry * 0.5)
+      colors[i * 3] = col.r
+      colors[i * 3 + 1] = col.g
+      colors[i * 3 + 2] = col.b
+    }
+    g.setAttribute('color', new THREE.BufferAttribute(colors, 3))
+    g.rotateX(-Math.PI / 2)
+    g.computeVertexNormals()
+    return g
+  }, [])
+
+  // Đá tảng rải trên sườn + rìa đỉnh, bám theo địa hình.
+  const rocks = useMemo(() => {
+    const arr: { pos: [number, number, number]; s: number; rot: number }[] = []
+    for (let i = 0; i < 26; i++) {
+      const a = Math.random() * Math.PI * 2
+      const r = 10 + Math.random() * 30
+      const x = Math.cos(a) * r
+      const z = Math.sin(a) * r
+      arr.push({
+        pos: [x, terrainHeight(x, z) + 0.1, z],
+        s: 0.35 + Math.random() * 1.1,
+        rot: Math.random() * Math.PI * 2,
+      })
+    }
+    return arr
+  }, [])
+
   return (
     <group>
-      <mesh rotation-x={-Math.PI / 2} position-y={-0.02}>
-        <circleGeometry args={[9, 7]} />
-        <meshLambertMaterial color={0xb9d2a6} flatShading />
+      <mesh geometry={geo} receiveShadow>
+        <meshStandardMaterial
+          map={grass.map}
+          normalMap={grass.normal}
+          normalScale={new THREE.Vector2(0.7, 0.7)}
+          vertexColors
+          roughness={1}
+          metalness={0}
+        />
       </mesh>
-      <mesh position-y={-0.2}>
-        <coneGeometry args={[1.5, 0.5, 8]} />
-        <meshLambertMaterial color={0xc7b596} flatShading />
+
+      {/* gò đất nhỏ ngay chân cây */}
+      <mesh position-y={-0.12} receiveShadow>
+        <coneGeometry args={[1.7, 0.5, 16]} />
+        <meshStandardMaterial color={0x7d6b46} roughness={1} metalness={0} />
       </mesh>
-      <mesh rotation-x={-Math.PI / 2} position-y={0.01}>
-        <circleGeometry args={[2.4, 24]} />
-        <meshBasicMaterial color={0x000000} transparent opacity={0.12} />
-      </mesh>
+
+      <Rocks data={rocks} />
     </group>
+  )
+}
+
+function Rocks({
+  data,
+}: {
+  data: { pos: [number, number, number]; s: number; rot: number }[]
+}) {
+  const N = data.length
+  const geo = useMemo(() => {
+    const g = new THREE.IcosahedronGeometry(1, 0)
+    const p = g.attributes.position as THREE.BufferAttribute
+    for (let i = 0; i < p.count; i++) {
+      const f = 0.7 + Math.random() * 0.5
+      p.setXYZ(i, p.getX(i) * f, p.getY(i) * 0.7 * f, p.getZ(i) * f)
+    }
+    g.computeVertexNormals()
+    return g
+  }, [])
+  const ref = (mesh: THREE.InstancedMesh | null) => {
+    if (!mesh) return
+    const dummy = new THREE.Object3D()
+    data.forEach((d, i) => {
+      dummy.position.set(...d.pos)
+      dummy.rotation.set(0, d.rot, 0)
+      dummy.scale.setScalar(d.s)
+      dummy.updateMatrix()
+      mesh.setMatrixAt(i, dummy.matrix)
+    })
+    mesh.instanceMatrix.needsUpdate = true
+  }
+  return (
+    <instancedMesh ref={ref} args={[geo, undefined, N]} castShadow receiveShadow>
+      <meshStandardMaterial color={0x8d8472} roughness={0.95} metalness={0} flatShading />
+    </instancedMesh>
   )
 }

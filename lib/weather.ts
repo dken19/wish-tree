@@ -29,46 +29,71 @@ export type LightPreset = {
   sun: { intensity: number; color: number }
   ambient: number
   rain: boolean
+  // bầu trời tả thực (drei Sky) + phơi sáng tone-mapping
+  sky: {
+    elevation: number // độ cao mặt trời (độ); <0 -> trời tối
+    azimuth: number // phương vị (độ)
+    turbidity: number
+    rayleigh: number
+    exposure: number
+  }
 }
 
 // Cấu hình ánh sáng/fog cho từng điều kiện (port từ applyWeather)
 export const PRESETS: Record<Condition, LightPreset> = {
   clear: {
     fog: 0xcfe0f0,
-    hemi: { intensity: 0.95, color: 0xffffff, ground: 0x9bbf8f },
-    sun: { intensity: 1.15, color: 0xfff0d8 },
-    ambient: 0.25,
+    hemi: { intensity: 0.6, color: 0xddeeff, ground: 0x6b8f4f },
+    sun: { intensity: 2.4, color: 0xfff2dc },
+    ambient: 0.18,
     rain: false,
+    sky: { elevation: 26, azimuth: 135, turbidity: 5, rayleigh: 1.3, exposure: 1.0 },
   },
   cloud: {
     fog: 0xc8d2da,
-    hemi: { intensity: 0.85, color: 0xeaf0f5, ground: 0x9bbf8f },
-    sun: { intensity: 0.55, color: 0xfdf4e6 },
-    ambient: 0.3,
+    hemi: { intensity: 0.7, color: 0xeaf0f5, ground: 0x70875c },
+    sun: { intensity: 1.1, color: 0xfdf4e6 },
+    ambient: 0.28,
     rain: false,
+    sky: { elevation: 34, azimuth: 130, turbidity: 11, rayleigh: 2.4, exposure: 0.92 },
   },
   rain: {
     fog: 0x8794a0,
-    hemi: { intensity: 0.7, color: 0xc9d4dd, ground: 0x7c8a78 },
-    sun: { intensity: 0.45, color: 0xd8e2ea },
-    ambient: 0.35,
+    hemi: { intensity: 0.6, color: 0xc9d4dd, ground: 0x67746a },
+    sun: { intensity: 0.7, color: 0xd8e2ea },
+    ambient: 0.32,
     rain: true,
+    sky: { elevation: 22, azimuth: 120, turbidity: 14, rayleigh: 3.2, exposure: 0.7 },
   },
   night: {
     fog: 0x223055,
-    hemi: { intensity: 0.45, color: 0x9fb8e0, ground: 0x223055 },
-    sun: { intensity: 0.35, color: 0x9db4e8 },
-    ambient: 0.25,
+    hemi: { intensity: 0.35, color: 0x9fb8e0, ground: 0x1a2440 },
+    sun: { intensity: 0.5, color: 0x9db4e8 },
+    ambient: 0.16,
     rain: false,
+    sky: { elevation: -4, azimuth: 110, turbidity: 3, rayleigh: 0.8, exposure: 0.5 },
   },
 }
 
-// Map weather_code của Open-Meteo -> nhóm điều kiện
+// Map weather_code của Open-Meteo -> nhóm điều kiện (giữ cho tương thích cũ)
 export function codeToCond(code: number, isDay: boolean | number): Condition {
   if (!isDay) return 'night'
   if (code === 0 || code === 1) return 'clear'
   if (code >= 51) return 'rain'
   return 'cloud'
+}
+
+// Điều kiện THỰC TẾ: ưu tiên lượng mưa đang rơi + độ mây, BỎ QUA weather_code
+// (mã 95 "giông" gây hiểu nhầm: trời 0mm mưa vẫn báo Mưa). Ban đêm -> 'night'.
+export function condFromCurrent(opts: {
+  precipitation: number
+  cloudCover: number
+  isDay: boolean | number
+}): Condition {
+  if (!opts.isDay) return 'night'
+  if (opts.precipitation >= 0.15) return 'rain' // chỉ Mưa khi thực sự có mưa
+  if (opts.cloudCover >= 65) return 'cloud'
+  return 'clear'
 }
 
 // Quy đổi tốc độ gió (m/s ~ km/h từ Open-Meteo) -> hệ số gió cho hiệu ứng

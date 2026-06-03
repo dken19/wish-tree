@@ -1,18 +1,18 @@
 'use client'
 import { Canvas } from '@react-three/fiber'
-import { AdaptiveDpr } from '@react-three/drei'
+import { AdaptiveDpr, ContactShadows } from '@react-three/drei'
 import * as THREE from 'three'
 import Tree from './three/Tree'
 import Ground from './three/Ground'
 import Scenery from './three/Scenery'
+import Clouds from './three/Clouds'
 import Meadow from './three/Meadow'
+import Foliage from './three/Foliage'
 import Dew from './three/Dew'
 import Critters from './three/Critters'
 import CalligraphyDesk from './three/CalligraphyDesk'
-import Blossoms from './three/Blossoms'
 import DecorPapers from './three/DecorPapers'
 import WishPapers from './three/WishPapers'
-import Petals from './three/Petals'
 import Rain from './three/Rain'
 import CameraRig from './three/CameraRig'
 import SceneEnv from './three/SceneEnv'
@@ -26,24 +26,41 @@ export default function WishTreeCanvas() {
     <Canvas
       style={{ position: 'fixed', inset: 0, zIndex: 1, touchAction: 'none' }}
       dpr={[1, isMobile ? 1.5 : 2]}
-      gl={{ antialias: !isMobile, alpha: true }}
-      camera={{ fov: 46, near: 0.1, far: 100, position: [0, 1.7, 6.6] }}
+      shadows
+      gl={{
+        antialias: !isMobile,
+        alpha: true,
+        toneMapping: THREE.ACESFilmicToneMapping,
+        toneMappingExposure: 1.0,
+      }}
+      camera={{ fov: 46, near: 0.1, far: 320, position: [0, 2.6, 9.2] }}
       onCreated={({ gl }) => {
         gl.outputColorSpace = THREE.SRGBColorSpace
+        gl.shadowMap.type = THREE.PCFSoftShadowMap
       }}
     >
       <AdaptiveDpr pixelated={false} />
       <SceneEnv />
       <CameraRig />
       <Scenery />
+      <Clouds />
       <Ground />
       <Meadow />
       <Tree />
-      <Blossoms />
+      <Foliage />
+      {/* bóng tán cây mềm in xuống đất */}
+      <ContactShadows
+        position={[0, 0.02, 0]}
+        scale={18}
+        far={7}
+        blur={2.6}
+        opacity={0.5}
+        resolution={1024}
+        color="#2a2012"
+      />
       <DecorPapers />
       <WishPapers />
       <CalligraphyDesk />
-      <Petals />
       <Rain />
       <Dew />
       <Critters />
