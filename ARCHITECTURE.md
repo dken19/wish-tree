@@ -39,6 +39,7 @@ components/
     Tree.tsx           # thân+rễ+cành cổ thụ: ống cong bezier (a->bend->b) thuôn, gộp 1 mesh
     Ground.tsx         # nền (đỉnh núi: mặt cỏ đa giác + vách đá thuôn) + gò + bóng đổ giả
     Scenery.tsx        # cảnh nền bao quanh: đồi/núi xa, rừng thông (instanced), xóm nhà — tĩnh
+    Clouds.tsx         # biển mây quanh đỉnh núi (theme đỉnh núi) — tĩnh/nhẹ
     Meadow.tsx         # cỏ + cỏ lau (thân+bông) gió GPU + hoa vàng (points)
     Blossoms.tsx       # hoa trên tán = point sprite mềm (texture canvas), bob theo gió
     DecorPapers.tsx    # giấy đỏ trang trí (InstancedMesh) đung đưa — KHÔNG click

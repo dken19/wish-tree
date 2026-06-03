@@ -14,4 +14,15 @@ Trang chủ là **cây 3D treo điều ước (giấy đỏ)**, có gió + thờ
 
 👉 **Đọc [ARCHITECTURE.md](ARCHITECTURE.md) để hiểu đầy đủ cấu trúc, luồng dữ liệu, và các "gotcha" trước khi sửa code.**
 
+## ⚠️ QUY ƯỚC BẮT BUỘC: làm xong → cập nhật docs
+
+**Mỗi khi hoàn thành một thay đổi, PHẢI cập nhật tài liệu tương ứng trong cùng lần làm đó** (đừng để docs lệch với code):
+- Thêm/xoá/đổi tên file, component, route, lib → cập nhật **cây thư mục** trong `ARCHITECTURE.md`.
+- Đổi luồng dữ liệu (điều ước/thời tiết/gió), mô hình Firestore, hoặc biến môi trường → cập nhật mục tương ứng trong `ARCHITECTURE.md`.
+- Thêm "gotcha" mới (quirk, workaround, rule eslint tắt, mẹo hiệu năng) → thêm vào mục **Gotchas** của `ARCHITECTURE.md`.
+- Đổi tính năng người dùng / cách chạy / deploy → cập nhật `README.md`.
+- Đổi stack, lệnh, hoặc nguyên tắc lớn → cập nhật phần tóm tắt trong `AGENTS.md` này.
+
+Giữ docs ngắn gọn, đúng hiện trạng. Coi việc cập nhật docs là **một phần của Definition of Done**, không phải việc làm thêm.
+
 Lệnh: `npm run dev` (cổng 3000) · `npm run build` · `npm run lint` · `npm run seed` (seed Firestore). Cấu hình ở `.env.local` (mẫu: `.env.local.example`). Deploy: push `master` → Vercel tự deploy; CI ở `.github/workflows/ci.yml`.
