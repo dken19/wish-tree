@@ -8,6 +8,8 @@ Website một trang: **cây 3D treo những tờ giấy điều ước**, có gi
 
 Luồng người dùng: chạm tờ giấy → đọc điều ước · chạm bàn thư pháp → mở khung viết → gửi → **lọc từ tục + hàng chờ duyệt** → admin duyệt ở `/admin` → điều ước hiện **realtime** trên cây.
 
+Có **menu dock** (góc dưới-phải, `NavDock`) để chuyển nhanh: Cây · Viết điều ước · Phòng ôn bài (đổi cảnh bằng state, CÙNG 1 Canvas) · **Kỹ năng sống** (`/ky-nang` — trang riêng dạy nấu nướng · trồng trọt · chụp ảnh · chăm sóc da, có ảnh minh hoạ + nguồn uy tín; KHÔNG dùng Canvas để đỡ pin).
+
 Ngoài ra có **thiền viện** trên đỉnh núi xa: chạm → vào **phòng Rừng Trúc** (cảnh 3D rừng trúc) để cùng nhau ôn bài/làm việc — thấy nhau qua avatar người thiền (hiện **đồng hồ phiên** trên đầu), có **đồng hồ flip** + **hẹn giờ Pomodoro**. Realtime qua Firestore `sessions` (presence ẩn danh, không Auth).
 
 ## 2. Stack & phiên bản (KHÁC training data — đọc kỹ)
@@ -29,6 +31,9 @@ app/
   page.tsx             # server: chỉ render <HomeClient/>
   globals.css          # toàn bộ CSS (port từ prototype) + style chim Lạc, khung viết
   admin/page.tsx       # client: trang duyệt (nhập ADMIN_SECRET, list pending, Duyệt/Bỏ)
+  ky-nang/
+    page.tsx           # server: metadata + render <SkillsView/> (route /ky-nang, KHÔNG Canvas)
+    SkillsView.tsx     # client: 4 tab (Nấu/Trồng/Chụp ảnh/Chăm sóc da) + thẻ accordion có ẢNH minh hoạ + link NGUỒN (đọc lib/skills); ảnh hỏng tự ẩn (onError)
   api/
     weather/route.ts   # GET: proxy Open-Meteo (Hà Nội), cache 10'
     wishes/route.ts    # POST: validate+lọc từ+rate-limit -> ghi pending (Admin SDK)
@@ -44,13 +49,14 @@ components/
     Ground.tsx         # nền (đỉnh núi) + gò + tảng đá (<Rock> mỗi viên 1 makeRock, lún vào đất)
     Scenery.tsx        # cảnh nền: núi đá vôi xa BO TRÒN đỉnh (makePeak dome) + RỪNG THÔNG xa (instanced, theo terrainHeight, r16-60) + xóm nhà xa
     Clouds.tsx         # biển mây quanh đỉnh núi (theme đỉnh núi) — tĩnh/nhẹ
+    StonePath.tsx      # VÒNG phiến đá trắng (ÍT, tách xa, lộ cỏ) quanh gốc cây + DẢI đá LIỀN MẠCH chạy về hướng đền (peakCenter, xuống thung lũng, mờ dần); đá RoundedBox bo góc + texture canvas nứt/sứt/lốm đốm; bám groundHeight + nghiêng slopeQuaternion nhẹ, instanced
     Meadow.tsx         # cỏ dày (instanced, gió GPU) + cỏ lau viền rìa (thân+bông) + hoa vàng (points)
     Foliage.tsx        # tán sồi: card chùm lá + HỆ CÀNH khô phân nhánh (lib/branch, gộp 1 mesh) đỡ lá quanh các TIP, đung đưa theo gió
     Blossoms.tsx       # hoa trên tán = point sprite mềm (texture canvas), bob theo gió
     DecorPapers.tsx    # giấy đỏ trang trí (InstancedMesh) đung đưa — KHÔNG click
     WishPapers.tsx     # điều ước đã duyệt (InstancedMesh) — CLICK đọc; dây nối cành
     CalligraphyDesk.tsx# bàn thư pháp 3D; onClick -> mở composer; có hào quang
-    Monastery.tsx      # thiền viện low-poly trên đỉnh núi xa (peakCenter); glow sprite -> setRoomOpen(true)
+    Monastery.tsx      # ĐỀN 3 tầng cầu kỳ trên đỉnh núi xa (peakCenter, quay về tâm): bệ đá+bậc, cột son, mái đầu đao, cửa/đèn lồng PHÁT SÁNG + cột sáng/hào quang/hạt sáng nhấp nháy mời bấm -> setRoomOpen(true)
     FocusRoom.tsx      # PHÒNG RỪNG TRÚC: RoomCamera tự xoay + fog/đèn riêng + nền SỎI TRẮNG (texture) + sỏi 3D (đổ bóng) + TIA NẮNG xuyên ngọn (cone additive) + sương; gate active
     Bamboo.tsx         # rừng trúc: thân CÓ ĐỐT mọc theo CỤM (3–7 cây/cụm, đổ bóng) + NHÁNH LÁ rủ dọc thân (cross-plane, lá hẹp nhọn) + LÁ ĐƠN rơi (Points, JS)
     Meditators.tsx     # avatar người thiền (instanced, từ store.sessions) + nhãn tên/đồng hồ phiên (sprite canvas, 1Hz)
@@ -66,11 +72,13 @@ components/
     WeatherPanel.tsx   # huy hiệu Hà Nội + công tắc Nắng/Mây/Mưa/Đêm/Tự động
     WishCard.tsx       # thẻ đọc điều ước (mở khi click giấy)
     Composer.tsx       # bảng viết: chọn theme + nhập text -> POST /api/wishes
+    NavDock.tsx        # MENU dock tròn góc dưới-phải: xòe 4 mục (Cây/Viết/Phòng ôn bài qua store; Kỹ năng sống -> router.push('/ky-nang')); ẩn khi roomOpen/composerOpen
     FocusHUD.tsx       # overlay phòng: đồng hồ flip + Pomodoro + số online + đổi tên + Rời phòng
     LacBird.tsx        # <img> chim Lạc (public/chim-lac.jpg) + mix-blend-mode
     Toast.tsx, Loader.tsx
 lib/
   themes.ts            # THEMES (8 chủ đề) + ThemeKey + isThemeKey
+  skills.ts            # SKILL_CATEGORIES (4 nhóm: Nấu/Trồng/Chụp ảnh/Chăm sóc da) cho /ky-nang — mỗi kỹ năng có img (Wikimedia Commons, đã verify 200) + source (Wikipedia, ad-free). Thuần dữ liệu
   peaks.ts             # RINGS/VALLEY_FLOOR + peakCenter(ri,i): vị trí đỉnh núi xa (Scenery dựng mesh, Monastery đặt thiền viện)
   presence.ts          # type Session, subscribeSessions (onSnapshot, lọc staleness), heartbeat/leave, clientId+nickname (localStorage)
   tree.ts              # BRANCHES/TIPS (hình học cây), THEME_ZONE, PRNG tất định, anchorFor/tipFor
@@ -87,13 +95,20 @@ lib/
   firebase.client.ts   # init client SDK (null nếu thiếu env -> dùng seed)
   firebase.admin.ts    # init Admin SDK (server-only)
 store/
-  useScene.ts          # zustand: autoCond/manual/temp, wishes, openWish, composerOpen, toast, loaded, roomOpen, sessions, nickname
+  useScene.ts          # zustand: autoCond/manual/temp, wishes, openWish, composerOpen, toast, loaded, roomOpen, sessions, nickname, navOpen
 scripts/seed.mjs       # seed vài điều ước 'approved' vào Firestore
 firestore.rules        # client read 'approved' (wishes) + read sessions; write = false (ghi qua Admin SDK)
 .github/workflows/ci.yml # CI: lint + build mỗi push/PR vào master
 ```
 
 ## 4. Luồng dữ liệu
+
+### Điều hướng (menu dock)
+`NavDock` (góc dưới-phải) là **trung tâm chuyển cảnh**: nút mở là **cuộn giấy bí kíp** (dựng thuần CSS — thân giấy + 2 trục gỗ + triện đỏ chữ thư pháp "Bí" + quầng sáng vàng, KHÔNG ảnh ngoài; KHÔNG dùng chữ Hán), bấm để mở (`navOpen`), chọn 1 trong 4 mục:
+- **Cây ước nguyện** → `roomOpen=false`, đóng composer/wish (đổi state).
+- **Viết điều ước** → `composerOpen=true` (giống bấm bàn thư pháp).
+- **Phòng ôn bài** → `roomOpen=true` (giống bấm thiền viện); lúc này NavDock tự ẩn (FocusHUD trượt lên thay).
+- **Kỹ năng sống** → `router.push('/ky-nang')` (đây là mục DUY NHẤT đổi **route** thật). Trang `/ky-nang` (`SkillsView`) là trang tĩnh đọc `lib/skills`, **không mount Canvas** → rời cảnh 3D khi đọc để tiết kiệm pin; bấm "← Về cây ước nguyện" để quay lại (Canvas dựng lại từ loader). 3 mục đầu vẫn giữ nguyên 1 Canvas (chỉ đổi state). **Ảnh kỹ năng** hotlink trực tiếp từ `upload.wikimedia.org` (Wikimedia Commons — ad-free, ổn định) bằng thẻ `<img>` thường (KHÔNG `next/image` → khỏi cấu hình `remotePatterns`); `onError` ẩn ảnh để không vỡ layout. Mọi URL ảnh + nguồn đã verify trả 200 trước khi đưa vào `lib/skills.ts`.
 
 ### Điều ước (chính)
 1. **Đọc**: `DataBridge` gọi `subscribeApproved()` (lib/wishes) → `onSnapshot` Firestore `wishes` where `status=='approved'` → `useScene.setWishes`. `WishPapers` đọc `wishes` từ store, render InstancedMesh, vị trí **tất định** theo `anchorFor(id, theme)` (lib/tree, PRNG seed theo id → không nhảy giữa các lần load). Mỗi `theme` = một "zone" (ngọn cành). Dây nối từ ngọn cành (`tipFor`) xuống tờ giấy.

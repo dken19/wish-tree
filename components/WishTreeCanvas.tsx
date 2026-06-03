@@ -14,6 +14,7 @@ import CalligraphyDesk from './three/CalligraphyDesk'
 import DecorPapers from './three/DecorPapers'
 import WishPapers from './three/WishPapers'
 import Rain from './three/Rain'
+import StonePath from './three/StonePath'
 import CameraRig from './three/CameraRig'
 import SceneEnv from './three/SceneEnv'
 import FocusRoom from './three/FocusRoom'
@@ -52,6 +53,7 @@ export default function WishTreeCanvas() {
         <Scenery />
         <Clouds />
         <Ground />
+        <StonePath />
         <Meadow />
         <Tree />
         <Foliage />

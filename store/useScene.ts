@@ -26,6 +26,10 @@ type SceneState = {
   nickname: string
   setNickname: (n: string) => void
 
+  // Điều hướng (menu dock)
+  navOpen: boolean
+  setNavOpen: (v: boolean) => void
+
   // UI
   composerOpen: boolean
   setComposerOpen: (v: boolean) => void
@@ -54,6 +58,9 @@ export const useScene = create<SceneState>((set) => ({
   setSessions: (s) => set({ sessions: s }),
   nickname: '',
   setNickname: (n) => set({ nickname: n }),
+
+  navOpen: false,
+  setNavOpen: (v) => set({ navOpen: v }),
 
   composerOpen: false,
   setComposerOpen: (v) => set({ composerOpen: v }),

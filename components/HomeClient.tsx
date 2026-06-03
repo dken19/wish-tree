@@ -7,6 +7,7 @@ import WeatherPanel from './ui/WeatherPanel'
 import WishCard from './ui/WishCard'
 import Composer from './ui/Composer'
 import FocusHUD from './ui/FocusHUD'
+import NavDock from './ui/NavDock'
 import Toast from './ui/Toast'
 import Loader from './ui/Loader'
 
@@ -34,13 +35,14 @@ export default function HomeClient() {
       <WeatherPanel />
 
       <div className="ui hint">
-        ✨ Chạm <b>tờ giấy</b> để đọc · chạm <b>bàn thư pháp</b> để viết điều ước · chạm{' '}
-        <b>thiền viện</b> trên núi để vào phòng ôn bài
+        ✨ Chạm <b>tờ giấy</b> để đọc · mở <b>cuộn bí kíp</b> góc dưới để viết điều ước, vào
+        phòng ôn bài hay học kỹ năng sống
       </div>
 
       <WishCard />
       <Composer />
       <FocusHUD />
+      <NavDock />
       <Toast />
       <Loader />
     </>

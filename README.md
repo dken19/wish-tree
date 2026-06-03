@@ -11,6 +11,8 @@ Xây bằng **Next.js (App Router) + React Three Fiber + Firebase Firestore**.
 - Viết điều ước → lọc từ tục + rate-limit → vào hàng chờ **duyệt** → hiện realtime trên cây.
 - Thời tiết Hà Nội qua Open-Meteo (đổi trời/ánh sáng/mưa/đêm); gió theo tốc độ gió thật.
 - Điều khiển camera orbit + pinch tự viết; tự xoay nhẹ khi rảnh.
+- **Menu dock** (góc dưới-phải): bấm `✦` để chuyển nhanh giữa Cây · Viết điều ước · Phòng ôn bài · **Kỹ năng sống**.
+- **Kỹ năng sống** (`/ky-nang`): trang dạy kỹ năng cơ bản cho học sinh theo 4 nhóm — **nấu nướng** (nấu cơm, luộc rau, mì trứng, an toàn bếp…), **trồng trọt** (rau mầm, giá đỗ, hành lá, rau ban công…), **chụp ảnh** (bố cục 1/3, ánh sáng, chụp điện thoại…) và **chăm sóc da** (rửa mặt, chống nắng, da mụn…). Mỗi bài có ảnh minh hoạ (Wikimedia Commons) + nguồn tham khảo uy tín (Wikipedia, không quảng cáo). Sửa nội dung ở `lib/skills.ts`.
 - **Thiền viện → phòng Rừng Trúc**: chạm thiền viện trên đỉnh núi xa để vào một cảnh rừng trúc 3D, cùng nhau ôn bài/làm việc. Thấy nhau qua avatar người thiền, **đồng hồ phiên** hiện trên đầu; có **đồng hồ flip** và **hẹn giờ Pomodoro** (25/5, 50/10). Presence realtime ẩn danh (không cần đăng nhập).
 
 ## Bắt đầu

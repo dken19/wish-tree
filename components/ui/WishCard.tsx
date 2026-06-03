@@ -31,7 +31,7 @@ export default function WishCard() {
               : undefined
           }
         >
-          願
+          Ước
         </div>
         <span
           className="tag"
