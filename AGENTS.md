@@ -10,7 +10,7 @@ Trang chủ là **cây 3D treo điều ước (giấy đỏ)**, có gió + thờ
 
 Còn có **thiền viện trên đỉnh núi xa** → bấm mở **phòng Rừng Trúc** (đổi cảnh trong CÙNG Canvas theo `roomOpen`): cùng ôn bài/làm việc, thấy nhau qua **avatar người thiền** (đồng hồ phiên hiện trên đầu), có **đồng hồ flip + Pomodoro**. Presence realtime ẩn danh (clientId + nickname ở localStorage, KHÔNG Auth) qua Firestore `sessions` — **đường ghi Firestore MỚI**: client heartbeat → `/api/presence` (Admin SDK), client đọc `onSnapshot` + lọc staleness; đồng hồ phiên tính ở client từ `joinedAt` (0 ghi/giây).
 
-**Stack:** Next.js 16 (App Router, Turbopack) · React 19 · React Three Fiber v9 + drei + three 0.184 · Zustand · Firebase (client đọc Firestore, Admin SDK ghi/duyệt) · next/font.
+**Stack:** Next.js 16 (App Router, Turbopack) · React 19 · React Three Fiber v9 + drei + three 0.184 · Zustand · Firebase (client đọc Firestore, Admin SDK ghi/duyệt) · next/font · Vercel Analytics (`<Analytics />` ở `app/layout.tsx`).
 
 **Nguyên tắc cốt lõi: KHÔNG được lag trên mobile.** Gió cỏ chạy GPU (vertex shader), mọi thứ instanced, số lượng giảm theo `useIsMobile()`, có `AdaptiveDpr`.
 
