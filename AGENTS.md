@@ -8,9 +8,13 @@ This version has breaking changes — APIs, conventions, and file structure may 
 
 Trang chủ là **cây 3D treo điều ước (giấy đỏ)**, có gió + thời tiết Hà Nội, đồng cỏ/bướm/chuồn chuồn/sương, bàn thư pháp để viết điều ước, hoạ tiết chim Lạc. Người dùng gửi điều ước → lọc từ + duyệt tay → hiện realtime trên cây.
 
+Còn có **thiền viện trên đỉnh núi xa** → bấm mở **phòng Rừng Trúc** (đổi cảnh trong CÙNG Canvas theo `roomOpen`): cùng ôn bài/làm việc, thấy nhau qua **avatar người thiền** (đồng hồ phiên hiện trên đầu), có **đồng hồ flip + Pomodoro**. Presence realtime ẩn danh (clientId + nickname ở localStorage, KHÔNG Auth) qua Firestore `sessions` — **đường ghi Firestore MỚI**: client heartbeat → `/api/presence` (Admin SDK), client đọc `onSnapshot` + lọc staleness; đồng hồ phiên tính ở client từ `joinedAt` (0 ghi/giây).
+
 **Stack:** Next.js 16 (App Router, Turbopack) · React 19 · React Three Fiber v9 + drei + three 0.184 · Zustand · Firebase (client đọc Firestore, Admin SDK ghi/duyệt) · next/font.
 
 **Nguyên tắc cốt lõi: KHÔNG được lag trên mobile.** Gió cỏ chạy GPU (vertex shader), mọi thứ instanced, số lượng giảm theo `useIsMobile()`, có `AdaptiveDpr`.
+
+**Bám đất ("trọng lực" nhẹ):** vật đặt trên đất lấy Y từ `groundHeight(x,z)` (KHÔNG hardcode `y=0`), vật trên sườn nghiêng theo `slopeQuaternion(x,z,blend)` (`lib/terrain`); tính **1 lần lúc dựng cảnh** (bake vào instance), KHÔNG mỗi frame, KHÔNG dùng engine vật lí thật.
 
 👉 **Đọc [ARCHITECTURE.md](ARCHITECTURE.md) để hiểu đầy đủ cấu trúc, luồng dữ liệu, và các "gotcha" trước khi sửa code.**
 

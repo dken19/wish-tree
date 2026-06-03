@@ -16,8 +16,11 @@ import WishPapers from './three/WishPapers'
 import Rain from './three/Rain'
 import CameraRig from './three/CameraRig'
 import SceneEnv from './three/SceneEnv'
+import FocusRoom from './three/FocusRoom'
+import { useScene } from '@/store/useScene'
 
 export default function WishTreeCanvas() {
+  const roomOpen = useScene((s) => s.roomOpen)
   const isMobile =
     typeof window !== 'undefined' &&
     (matchMedia('(pointer:coarse)').matches || window.innerWidth < 760)
@@ -41,29 +44,37 @@ export default function WishTreeCanvas() {
     >
       <AdaptiveDpr pixelated={false} />
       <SceneEnv />
-      <CameraRig />
-      <Scenery />
-      <Clouds />
-      <Ground />
-      <Meadow />
-      <Tree />
-      <Foliage />
-      {/* bóng tán cây mềm in xuống đất */}
-      <ContactShadows
-        position={[0, 0.02, 0]}
-        scale={18}
-        far={7}
-        blur={2.6}
-        opacity={0.5}
-        resolution={1024}
-        color="#2a2012"
-      />
-      <DecorPapers />
-      <WishPapers />
-      <CalligraphyDesk />
-      <Rain />
-      <Dew />
-      <Critters />
+      {/* ở phòng Rừng Trúc thì RoomCamera tiếp quản -> tắt orbit rig chính */}
+      <CameraRig disabled={roomOpen} />
+
+      {/* Cảnh cây ước nguyện — ẩn khi vào phòng (KHÔNG unmount để vào lại tức thì) */}
+      <group visible={!roomOpen}>
+        <Scenery />
+        <Clouds />
+        <Ground />
+        <Meadow />
+        <Tree />
+        <Foliage />
+        {/* bóng tán cây mềm in xuống đất */}
+        <ContactShadows
+          position={[0, 0.02, 0]}
+          scale={18}
+          far={7}
+          blur={2.6}
+          opacity={0.5}
+          resolution={1024}
+          color="#2a2012"
+        />
+        <DecorPapers />
+        <WishPapers />
+        <CalligraphyDesk />
+        <Rain />
+        <Dew />
+        <Critters />
+      </group>
+
+      {/* Phòng Rừng Trúc (tự gate: rỗng khi chưa mở) */}
+      <FocusRoom active={roomOpen} />
     </Canvas>
   )
 }

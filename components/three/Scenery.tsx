@@ -1,8 +1,11 @@
 'use client'
 import { useMemo } from 'react'
 import * as THREE from 'three'
-import { terrainHeight } from '@/lib/terrain'
+import { groundHeight } from '@/lib/terrain'
+import { RINGS, VALLEY_FLOOR } from '@/lib/peaks'
+import { mulberry32 } from '@/lib/tree'
 import { useIsMobile } from './useIsMobile'
+import Monastery from './Monastery'
 
 // Cảnh xa: VÀI dãy núi xanh (rừng phủ) THẤP & XA hơn đỉnh ta đứng, mờ vào sương.
 const TAU = Math.PI * 2
@@ -13,7 +16,6 @@ const C_FOREST_HI = new THREE.Color(0x5c7d42)
 const C_ROCK = new THREE.Color(0x6b7686)
 const C_SNOW = new THREE.Color(0xeef3f8)
 const LIGHT_DIR = new THREE.Vector3(0.45, 0.72, 0.5).normalize()
-const VALLEY_FLOOR = -32
 
 function mountainColor(out: THREE.Color, fy: number, tall: boolean) {
   if (fy < 0.5) {
@@ -26,21 +28,26 @@ function mountainColor(out: THREE.Color, fy: number, tall: boolean) {
   }
 }
 
-// Đỉnh núi gồ ghề: nón bị nhiễu bán kính theo góc/độ cao -> sống núi, khe.
+// Núi đá vôi (karst): nón được UỐN TRÒN thành vòm — sườn vẫn dốc nhưng đỉnh
+// KHÔNG nhọn như kim; thêm nhiễu nhẹ theo góc/độ cao cho sống núi/khe gồ ghề.
 function makePeak(baseR: number, height: number, seed: number): THREE.BufferGeometry {
-  const g = new THREE.ConeGeometry(baseR, height, 12, 7)
+  const g = new THREE.ConeGeometry(baseR, height, 14, 8)
   const p = g.attributes.position as THREE.BufferAttribute
   for (let i = 0; i < p.count; i++) {
     const x = p.getX(i)
     const y = p.getY(i)
     const z = p.getZ(i)
     const ang = Math.atan2(z, x)
-    const fy = (y + height / 2) / height
+    const fy = THREE.MathUtils.clamp((y + height / 2) / height, 0, 1)
+    // remap bán kính nón (tuyến tính) -> vòm tròn: vai núi đầy đặn, đỉnh bo tròn
+    const linRad = baseR * (1 - fy)
+    const domeRad = baseR * Math.pow(Math.max(0, 1 - Math.pow(fy, 2.3)), 0.6)
+    const shape = linRad > 1e-3 ? Math.min(domeRad / linRad, 2.6) : 1
     const n =
       Math.sin(ang * 3 + seed) * 0.5 +
       Math.sin(ang * 7 + fy * 5 + seed * 1.7) * 0.3 +
       Math.sin(ang * 13 + seed * 2.3) * 0.2
-    const k = 1 + n * 0.34 * (1 - fy * 0.5)
+    const k = shape * (1 + n * 0.24 * (1 - fy * 0.45))
     p.setX(i, x * k)
     p.setZ(i, z * k)
     p.setY(i, y + Math.sin(ang * 5 + seed) * 0.5 * height * 0.03)
@@ -56,10 +63,7 @@ export default function Scenery() {
     const positions: number[] = []
     const colors: number[] = []
     // ÍT núi: 2 lớp, lớp xa nhiều hơn chút. Đỉnh đều THẤP hơn ta (top < ~0).
-    const rings = [
-      { n: 4, r: 80, rj: 18, h0: 20, hj: 8, base: 16, snowAt: 28 },
-      { n: 6, r: 124, rj: 30, h0: 26, hj: 12, base: 22, snowAt: 32 },
-    ]
+    const rings = RINGS
     const col = new THREE.Color()
     const nrm = new THREE.Vector3()
     rings.forEach((ring, ri) => {
@@ -103,17 +107,18 @@ export default function Scenery() {
   // lơ lửng. Càng xa scale càng lớn để vẫn đọc được qua sương.
   const pineCount = isMobile ? 70 : 150
   const pineData = useMemo(() => {
+    const rng = mulberry32(0x9143 + pineCount) // seed cố định -> rừng thông KHÔNG đổi
     const arr: { p: THREE.Vector3; s: number; yaw: number }[] = []
     for (let i = 0; i < pineCount; i++) {
-      const a = Math.random() * TAU
-      const r = 16 + Math.random() * 44
+      const a = rng() * TAU
+      const r = 16 + rng() * 44
       const x = Math.cos(a) * r
       const z = Math.sin(a) * r
       const grow = (r - 16) / 44 // 0 gần -> 1 xa
       arr.push({
-        p: new THREE.Vector3(x, terrainHeight(x, z) - 0.1, z),
-        s: 1.4 + grow * 1.9 + Math.random() * 0.7,
-        yaw: Math.random() * TAU,
+        p: new THREE.Vector3(x, groundHeight(x, z) - 0.1, z),
+        s: 1.4 + grow * 1.9 + rng() * 0.7,
+        yaw: rng() * TAU,
       })
     }
     return arr
@@ -128,6 +133,7 @@ export default function Scenery() {
 
       <Pines data={pineData} />
       <Village />
+      <Monastery />
     </group>
   )
 }
@@ -194,16 +200,18 @@ function Pines({ data }: { data: { p: THREE.Vector3; s: number; yaw: number }[] 
 function House({
   position,
   rotation = 0,
+  scale = 1,
   roof = 0xc2683f,
   wall = 0xeadcc6,
 }: {
   position: [number, number, number]
   rotation?: number
+  scale?: number
   roof?: number
   wall?: number
 }) {
   return (
-    <group position={position} rotation-y={rotation}>
+    <group position={position} rotation-y={rotation} scale={scale}>
       <mesh position-y={0.4} castShadow receiveShadow>
         <boxGeometry args={[1, 0.8, 0.9]} />
         <meshStandardMaterial color={wall} roughness={0.9} />
@@ -216,16 +224,30 @@ function House({
   )
 }
 
+// XÓM NHỎ Ở XA: vài nóc nhà nép dưới sườn/thung lũng, ngồi đúng địa hình -> đọc
+// như một bản làng đằng xa, KHÔNG nằm cạnh cây.
 function Village() {
-  // 1 nhà nhỏ nép rìa đỉnh
-  const base = useMemo(() => {
-    const cx = Math.cos(-1.0) * 6.6
-    const cz = Math.sin(-1.0) * 6.6
-    return { cx, cz }
+  const houses = useMemo(() => {
+    const spots: { a: number; r: number; rot: number; roof: number }[] = [
+      { a: -1.0, r: 25, rot: 0.4, roof: 0xc2683f },
+      { a: -1.28, r: 28.5, rot: -0.5, roof: 0xb9603a },
+      { a: -0.72, r: 30, rot: 0.9, roof: 0xcf7a48 },
+    ]
+    return spots.map((s) => {
+      const x = Math.cos(s.a) * s.r
+      const z = Math.sin(s.a) * s.r
+      return {
+        pos: [x, groundHeight(x, z) - 0.05, z] as [number, number, number],
+        rot: s.rot,
+        roof: s.roof,
+      }
+    })
   }, [])
   return (
     <group>
-      <House position={[base.cx, 0, base.cz]} rotation={0.3} />
+      {houses.map((h, i) => (
+        <House key={i} position={h.pos} rotation={h.rot} scale={1.7} roof={h.roof} />
+      ))}
     </group>
   )
 }

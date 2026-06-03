@@ -1,10 +1,12 @@
 'use client'
 import dynamic from 'next/dynamic'
 import DataBridge from './DataBridge'
+import PresenceBridge from './PresenceBridge'
 import SkyBackdrop from './ui/SkyBackdrop'
 import WeatherPanel from './ui/WeatherPanel'
 import WishCard from './ui/WishCard'
 import Composer from './ui/Composer'
+import FocusHUD from './ui/FocusHUD'
 import Toast from './ui/Toast'
 import Loader from './ui/Loader'
 
@@ -21,6 +23,7 @@ export default function HomeClient() {
       <div id="grain" />
       <WishTreeCanvas />
       <DataBridge />
+      <PresenceBridge />
 
       {/* Lớp giao diện */}
       <div className="ui brand">
@@ -31,11 +34,13 @@ export default function HomeClient() {
       <WeatherPanel />
 
       <div className="ui hint">
-        ✨ Chạm <b>tờ giấy</b> để đọc · chạm <b>bàn thư pháp</b> để viết điều ước
+        ✨ Chạm <b>tờ giấy</b> để đọc · chạm <b>bàn thư pháp</b> để viết điều ước · chạm{' '}
+        <b>thiền viện</b> trên núi để vào phòng ôn bài
       </div>
 
       <WishCard />
       <Composer />
+      <FocusHUD />
       <Toast />
       <Loader />
     </>

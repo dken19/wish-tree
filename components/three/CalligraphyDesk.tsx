@@ -3,6 +3,7 @@ import { useMemo, useRef } from 'react'
 import { useFrame, type ThreeEvent } from '@react-three/fiber'
 import * as THREE from 'three'
 import { pointer } from '@/lib/runtime'
+import { groundHeight } from '@/lib/terrain'
 import { useScene } from '@/store/useScene'
 
 function glowTexture(): THREE.CanvasTexture {
@@ -50,7 +51,7 @@ export default function CalligraphyDesk() {
 
   return (
     <group
-      position={[2.4, 0, 1.7]}
+      position={[2.4, groundHeight(2.4, 1.7), 1.7]}
       rotation-y={-0.7}
       onClick={onClick}
       onPointerOver={() => hover(true)}

@@ -8,6 +8,8 @@ Website một trang: **cây 3D treo những tờ giấy điều ước**, có gi
 
 Luồng người dùng: chạm tờ giấy → đọc điều ước · chạm bàn thư pháp → mở khung viết → gửi → **lọc từ tục + hàng chờ duyệt** → admin duyệt ở `/admin` → điều ước hiện **realtime** trên cây.
 
+Ngoài ra có **thiền viện** trên đỉnh núi xa: chạm → vào **phòng Rừng Trúc** (cảnh 3D rừng trúc) để cùng nhau ôn bài/làm việc — thấy nhau qua avatar người thiền (hiện **đồng hồ phiên** trên đầu), có **đồng hồ flip** + **hẹn giờ Pomodoro**. Realtime qua Firestore `sessions` (presence ẩn danh, không Auth).
+
 ## 2. Stack & phiên bản (KHÁC training data — đọc kỹ)
 
 - **Next.js 16** (App Router, **Turbopack**), **React 19**, TypeScript
@@ -31,20 +33,27 @@ app/
     weather/route.ts   # GET: proxy Open-Meteo (Hà Nội), cache 10'
     wishes/route.ts    # POST: validate+lọc từ+rate-limit -> ghi pending (Admin SDK)
     admin/wishes/route.ts # GET list pending / PATCH duyệt|từ chối (header x-admin-secret)
+    presence/route.ts  # POST: heartbeat|leave phòng Rừng Trúc -> ghi `sessions` (Admin SDK)
 components/
   HomeClient.tsx       # 'use client'; dynamic import Canvas + lớp UI overlay
-  WishTreeCanvas.tsx   # <Canvas> R3F: dpr cap, antialias theo mobile, lắp mọi thành phần 3D
+  WishTreeCanvas.tsx   # <Canvas> R3F: dpr cap; GATE cảnh cây (visible) vs <FocusRoom/> theo roomOpen
   DataBridge.tsx       # render rỗng: subscribe điều ước + fetch thời tiết -> đẩy vào store
+  PresenceBridge.tsx   # render rỗng: CHỈ khi roomOpen — heartbeat + subscribe sessions + leave (sendBeacon)
   three/
     Tree.tsx           # thân+rễ+cành cổ thụ: ống cong bezier (a->bend->b) thuôn, gộp 1 mesh
-    Ground.tsx         # nền (đỉnh núi: mặt cỏ đa giác + vách đá thuôn) + gò + bóng đổ giả
-    Scenery.tsx        # cảnh nền bao quanh: đồi/núi xa, rừng thông (instanced), xóm nhà — tĩnh
+    Ground.tsx         # nền (đỉnh núi) + gò + tảng đá (<Rock> mỗi viên 1 makeRock, lún vào đất)
+    Scenery.tsx        # cảnh nền: núi đá vôi xa BO TRÒN đỉnh (makePeak dome) + RỪNG THÔNG xa (instanced, theo terrainHeight, r16-60) + xóm nhà xa
     Clouds.tsx         # biển mây quanh đỉnh núi (theme đỉnh núi) — tĩnh/nhẹ
-    Meadow.tsx         # cỏ + cỏ lau (thân+bông) gió GPU + hoa vàng (points)
+    Meadow.tsx         # cỏ dày (instanced, gió GPU) + cỏ lau viền rìa (thân+bông) + hoa vàng (points)
+    Foliage.tsx        # tán sồi: card chùm lá + HỆ CÀNH khô phân nhánh (lib/branch, gộp 1 mesh) đỡ lá quanh các TIP, đung đưa theo gió
     Blossoms.tsx       # hoa trên tán = point sprite mềm (texture canvas), bob theo gió
     DecorPapers.tsx    # giấy đỏ trang trí (InstancedMesh) đung đưa — KHÔNG click
     WishPapers.tsx     # điều ước đã duyệt (InstancedMesh) — CLICK đọc; dây nối cành
     CalligraphyDesk.tsx# bàn thư pháp 3D; onClick -> mở composer; có hào quang
+    Monastery.tsx      # thiền viện low-poly trên đỉnh núi xa (peakCenter); glow sprite -> setRoomOpen(true)
+    FocusRoom.tsx      # PHÒNG RỪNG TRÚC: RoomCamera tự xoay + fog/đèn riêng + nền SỎI TRẮNG (texture) + sỏi 3D (đổ bóng) + TIA NẮNG xuyên ngọn (cone additive) + sương; gate active
+    Bamboo.tsx         # rừng trúc: thân CÓ ĐỐT mọc theo CỤM (3–7 cây/cụm, đổ bóng) + lá ngọn NHỌN ĐẦU (instanced, gió GPU) + LÁ RƠI (Points, JS)
+    Meditators.tsx     # avatar người thiền (instanced, từ store.sessions) + nhãn tên/đồng hồ phiên (sprite canvas, 1Hz)
     Petals.tsx         # cánh hoa rơi (Points), ẩn khi mưa
     Rain.tsx           # mưa (LineSegments), hiện khi điều kiện = rain
     Dew.tsx            # giọt sương lấp lánh trôi (Points, JS)
@@ -57,11 +66,18 @@ components/
     WeatherPanel.tsx   # huy hiệu Hà Nội + công tắc Nắng/Mây/Mưa/Đêm/Tự động
     WishCard.tsx       # thẻ đọc điều ước (mở khi click giấy)
     Composer.tsx       # bảng viết: chọn theme + nhập text -> POST /api/wishes
+    FocusHUD.tsx       # overlay phòng: đồng hồ flip + Pomodoro + số online + đổi tên + Rời phòng
     LacBird.tsx        # <img> chim Lạc (public/chim-lac.jpg) + mix-blend-mode
     Toast.tsx, Loader.tsx
 lib/
   themes.ts            # THEMES (8 chủ đề) + ThemeKey + isThemeKey
+  peaks.ts             # RINGS/VALLEY_FLOOR + peakCenter(ri,i): vị trí đỉnh núi xa (Scenery dựng mesh, Monastery đặt thiền viện)
+  presence.ts          # type Session, subscribeSessions (onSnapshot, lọc staleness), heartbeat/leave, clientId+nickname (localStorage)
   tree.ts              # BRANCHES/TIPS (hình học cây), THEME_ZONE, PRNG tất định, anchorFor/tipFor
+  terrain.ts           # terrainHeight(x,z) (Ground dựng lưới) + groundHeight(x,z)=terrainHeight(x,-z) cho ĐẶT vật (z bị lật do rotateX) + rEdgeAt + VALLEY + HỆ BÁM ĐẤT: terrainNormal(x,z) + slopeQuaternion(x,z,blend) (nghiêng vật theo sườn)
+  branch.ts            # makeBranch() HỆ cành khô phân nhánh cong gnarled (đệ quy, ống CatmullRom thuôn) + mergeBranches() -> 1 geometry
+  rock.ts              # makeRock(seed) tảng đá LIỀN KHỐI kín (icosphere + nhiễu liên tục + kéo lệch trục -> watertight, không hở)
+  textures.ts          # texture PBR sinh thủ tục (canvas): vỏ cây, chùm lá sồi, cỏ + normal map
   weather.ts           # Condition, SKIES, WX_ICON/VI, PRESETS (đèn/fog), codeToCond, windFromSpeed, HANOI
   windMaterial.ts      # makeWindMaterial(): MeshLambertMaterial + vertex shader gió GPU (.tick)
   profanity.ts         # containsProfanity + validateWish (giữ dấu, khớp theo TỪ; ưu tiên KHÔNG chặn nhầm)
@@ -71,9 +87,9 @@ lib/
   firebase.client.ts   # init client SDK (null nếu thiếu env -> dùng seed)
   firebase.admin.ts    # init Admin SDK (server-only)
 store/
-  useScene.ts          # zustand: autoCond/manual/temp, wishes, openWish, composerOpen, toast, loaded
+  useScene.ts          # zustand: autoCond/manual/temp, wishes, openWish, composerOpen, toast, loaded, roomOpen, sessions, nickname
 scripts/seed.mjs       # seed vài điều ước 'approved' vào Firestore
-firestore.rules        # client chỉ read 'approved'; write = false (ghi qua Admin SDK)
+firestore.rules        # client read 'approved' (wishes) + read sessions; write = false (ghi qua Admin SDK)
 .github/workflows/ci.yml # CI: lint + build mỗi push/PR vào master
 ```
 
@@ -91,8 +107,18 @@ Chưa cấu hình Firebase: `getDb()` trả null → dùng `SEED_WISHES`; `/api/
 
 ### Gió (mỗi frame, KHÔNG re-render)
 `SceneEnv` mỗi frame ease `windRef.current → windRef.target`. Các thành phần đọc `windRef.current`:
-- Cỏ/cỏ lau: **GPU** — `makeWindMaterial(...).tick(time, wind)` chỉ set 1 uniform/frame (vertex shader uốn đỉnh). Đây là lý do cỏ dày vẫn mượt mobile.
+- Cỏ/cỏ lau/trúc: **GPU** — `makeWindMaterial(...).tick(time, wind)` chỉ set 1 uniform/frame (vertex shader uốn đỉnh). Đây là lý do cỏ dày vẫn mượt mobile.
 - DecorPapers/WishPapers/Blossoms/Dew/Critters: cập nhật ma trận/điểm bằng JS (số lượng nhỏ, giảm theo mobile).
+
+### Phòng Rừng Trúc / presence (thiền viện)
+Bấm **thiền viện** (`Monastery`, trên đỉnh núi xa) → `useScene.setRoomOpen(true)`. `WishTreeCanvas` ẩn cảnh cây (`<group visible={!roomOpen}>`, KHÔNG unmount) và bật `<FocusRoom active>`; `CameraRig` nhận `disabled={roomOpen}` (ngừng ghi camera) để `RoomCamera` tiếp quản. Cảnh phòng = rừng trúc + người thiền + (HUD HTML) đồng hồ flip & Pomodoro.
+
+Presence (giống mô hình điều ước: **client đọc, server ghi**):
+1. **Ghi**: `PresenceBridge` (chỉ khi `roomOpen`) gửi `heartbeat` ngay + mỗi `HEARTBEAT_MS` (18s) → `POST /api/presence` → Admin SDK `set` doc `sessions/{clientId}` với `lastSeen=serverTimestamp` (và `joinedAt` CHỈ khi doc chưa tồn tại). Đóng tab/ẩn tab → `navigator.sendBeacon('/api/presence', {action:'leave'})` (route đọc cả body `text/plain`).
+2. **Đọc**: `subscribeSessions` (`lib/presence`) `onSnapshot(collection 'sessions')` **không where/orderBy** → lọc client `now - lastSeen < STALE_MS` (40s, ẩn "ma" khi đóng tab cứng) + sort theo `joinedAt` → `useScene.setSessions`. `Meditators` render avatar instanced; **đồng hồ phiên = `now - joinedAt` tính ở client mỗi giây** (0 ghi Firestore).
+3. **Danh tính ẩn danh**: `clientId = crypto.randomUUID()` + `nickname` lưu `localStorage` (KHÔNG dùng Auth). Avatar của mình tô vàng (`isSelf`).
+
+Chưa cấu hình Firebase: `getDb()` null → `subscribeSessions` trả về 1 phiên "self" cục bộ (vẫn vào phòng được); `/api/presence` trả 503 gọn.
 
 ## 5. Hiệu năng mobile (nguyên tắc CỐT LÕI)
 
@@ -111,6 +137,17 @@ Chưa cấu hình Firebase: `getDb()` trả null → dùng `SEED_WISHES`; `/api/
 ```
 Rules (`firestore.rules`): client `read` chỉ khi `status=='approved'`; `write:false` (mọi ghi qua Admin SDK). Query client **không orderBy** (tránh composite index) — sort theo `createdAt` ở client.
 
+### Firestore `sessions` (presence phòng Rừng Trúc)
+
+```ts
+// doc id = clientId
+{ clientId: string, name: string(<=24),
+  joinedAt: serverTimestamp,  // đặt 1 lần -> đếm giờ phiên ở client
+  lastSeen: serverTimestamp,  // cập nhật mỗi heartbeat -> lọc staleness 40s
+  pomo?: { phase: 'focus'|'break'|'idle', endsAt: number } }  // (tuỳ chọn, chưa broadcast)
+```
+Rules: `read: if true` (không chứa PII), `write: false` (ghi qua `/api/presence`). Đọc **không where/orderBy** → lọc staleness + sort ở client. Lượng ghi ≈ N người × 1 ghi/18s; đồng hồ giây = client tính từ `joinedAt` → 0 ghi. (Tuỳ chọn dọn ghost: Firestore TTL trên `lastSeen`.)
+
 ## 7. Biến môi trường (`.env.local`, mẫu `.env.local.example`)
 
 - `NEXT_PUBLIC_FIREBASE_*` (6 biến) — client đọc Firestore (công khai, an toàn).
@@ -127,6 +164,27 @@ Vercel: import `.env.local` khi tạo project. App **không dùng Firebase Auth*
 - **Click vs xoay**: `WishPapers`/`CalligraphyDesk` onClick bỏ qua nếu `pointer.moved > 7` (lib/runtime) để không mở khi đang orbit.
 - **Vị trí điều ước tất định**: dựa trên `anchorFor(id, theme)` — đừng đổi seed/PRNG nếu không muốn mọi tờ đổi chỗ.
 - **Lọc từ**: `lib/profanity.ts` cố ý GIỮ DẤU và khớp theo TỪ nguyên vẹn để tránh chặn nhầm ("buổi", "lớn", "ngủ"…). Hàng chờ duyệt là lớp chặn thứ hai.
+- **Đặt vật thể ngoài đỉnh phẳng** (thông, nhà, đá): PHẢI lấy y từ `terrainHeight(x,z)` (`lib/terrain`) nếu không sẽ lơ lửng/chìm vào sườn dốc. Đỉnh phẳng có bán kính `rEdgeAt(ang)` (~6.7–11.3); để vùng cây/cỏ/bàn gọn trong rìa, vật nền (rừng/xóm) đặt từ r≈16 trở ra.
+- **HỆ BÁM ĐẤT ("trọng lực" nhẹ)**: MỌI vật đặt trên đất phải lấy Y từ `groundHeight(x,z)` (KHÔNG hardcode `y=0`). Vật rải trên sườn nên nghiêng theo `slopeQuaternion(x,z,blend)` (quay +Y về pháp tuyến `terrainNormal`, `blend` 0.5–0.6 để nghiêng vừa) cho cảm giác trọng lực tự nhiên. **Tính 1 LẦN lúc dựng cảnh** (bake vào ma trận instance trong `useLayoutEffect`/`useMemo`), KHÔNG gọi mỗi frame → 0 chi phí runtime, an toàn mobile. KHÔNG dùng engine vật lí thật (rapier/cannon) — thừa cho cảnh tĩnh + vi phạm nguyên tắc no-lag.
+- **Cảnh tĩnh phải TẤT ĐỊNH (không đổi giữa các lần load)**: cỏ/cỏ lau/hoa (Meadow), rừng thông (Scenery), tán lá + cành (Foliage), tảng đá (Ground) đều rải bằng `mulberry32(seed)` với **seed cố định**, KHÔNG dùng `Math.random` trực tiếp. `makeRock(seed)` và `makeBranch({rng})` nhận nguồn ngẫu nhiên qua tham số. Đừng thay lại bằng `Math.random` (sẽ làm cảnh nhảy mỗi lần tải).
+- **Đổi cảnh dùng 1 Canvas**: phòng Rừng Trúc KHÔNG mở Canvas thứ hai (tránh 2 WebGL context gây stall mobile). Cảnh cây bị `visible={false}` (KHÔNG unmount → vào lại tức thì) nhưng `useFrame` vẫn chạy; chỉ MỘT camera rig ghi `camera.position` (gate qua `roomOpen`/`disabled`). `Monastery` import `peakCenter` từ `lib/peaks` (KHÔNG từ `Scenery`) để tránh import vòng.
+- **Thiền viện ở xa (~r80)**: glow sprite dùng `sizeAttenuation:false` để giữ kích thước/vùng-chạm ổn định trên màn dù xa; click bỏ qua nếu `pointer.moved > 7` như các onClick khác.
+- **Presence ghi/ma**: heartbeat 18s, ẩn phiên nếu `now-lastSeen ≥ 40s` (lọc ở client). Đóng tab cứng không kịp `leave` → biến mất sau ≤40s. `sendBeacon` gửi `text/plain` nên route `/api/presence` đọc `req.text()` rồi `JSON.parse`. Rate-limit presence nới rộng (`30/phút`, key theo `clientId:ip`) — mặc định 5/10ph sẽ chặn nhầm heartbeat.
+- **Nhãn avatar = sprite canvas, KHÔNG drei `<Html>`**: mỗi avatar 1 `CanvasTexture` vẽ lại **1 lần/giây** (throttle trong `useFrame`) → không tạo DOM/giây/avatar gây jank mobile. Số avatar cap `CAP=24` (dư ẩn).
+- **ESLint**: thêm `components/PresenceBridge.tsx` + `components/ui/FocusHUD.tsx` vào danh sách tắt `set-state-in-effect` (đồng bộ localStorage/timer). Ghi ref trong render bị `react-hooks/refs` chặn → cập nhật ref trong `useEffect`.
+
+## 8b. Nhật ký lỗi đã sửa (ghi NGAY sau mỗi lần sửa)
+
+Quy ước: mỗi khi sửa xong một lỗi cảnh/đồ hoạ, ghi 1 dòng vào đây để phiên sau không lặp lại.
+
+- **Đá rơi vào đỉnh cạnh gốc cây** ("đá nằm trên cây"): trước đặt đá từ `r=11`, nhưng rìa đỉnh phẳng `rEdgeAt` tới ~11.3 → đá lọt vào mặt phẳng cạnh cây. Sửa: đá đặt từ **r≥16** (ngoài hẳn rìa, trên sườn). → `Ground.tsx` rocks.
+- **Cành như "que đũa", thẳng & nhọn ở ngọn**: ban đầu twig là trụ thẳng, rồi ống cong 1 nhánh vẫn thẳng/nhọn. Sửa: `lib/branch.ts` đổi sang **hệ cành khô PHÂN NHÁNH đệ quy, uốn gnarled** (CatmullRom), Foliage dùng 3 hệ/TIP. → `lib/branch.ts`, `Foliage.tsx`.
+- **Tảng đá hình quá đơn giản / bị hở lỗ**: bản gộp 3 cục icosahedron để hở khe. Sửa: `makeRock` = **1 icosphere kín + nhiễu liên tục nhiều tần + kéo lệch trục** (watertight, không hở), nâng `detail=2`. → `lib/rock.ts`.
+- **Cảnh nhảy mỗi lần load**: scatter dùng `Math.random` → đổi sang `mulberry32(seed)` cố định cho toàn bộ cảnh tĩnh. → Meadow/Scenery/Foliage/Ground + `makeRock(seed)`/`makeBranch({rng})`.
+- **Thông/đá lơ lửng trên không**: đặt vật bằng `terrainHeight(x,z)` trong khi lưới Ground bị `rotateX(-π/2)` làm **lật trục z** → cao độ thực là `terrainHeight(x,-z)`. Đỉnh phẳng (h≈0) không lộ, ra sườn dốc thì lệch nhiều. Sửa: thêm **`groundHeight(x,z)=terrainHeight(x,-z)`**, mọi chỗ đặt thông/đá/nhà đổi sang dùng nó. → `lib/terrain.ts`, `Scenery.tsx`, `Ground.tsx`.
+- **Cành trên cao biến mất sạch**: `makeBranch` dùng `computeFrenetFrames` → **NaN** ở khúc cong → bounding sphere NaN → cả mesh cành bị frustum-cull. Sửa: thay bằng khung **parallel-transport** (không NaN) + chặn pháp tuyến 0 khi merge + `computeBoundingSphere()`. → `lib/branch.ts`.
+- **Cỏ/lau/hoa lơ lửng trên sườn**: Meadow rải cỏ `r≤8`, lau `r≤8`, hoa `r≤7.8` ở `y=0` cố định; bán kính vượt rìa đỉnh phẳng (`rEdge` ~6.7) nên ở góc rìa hẹp cỏ treo lơ lửng trên không phía trên sườn dốc. Sửa: thêm **hệ bám đất** `terrainNormal`/`slopeQuaternion` vào `lib/terrain.ts`; Meadow bake `groundHeight(x,z)` vào Y + nghiêng `slopeQuaternion` (blend 0.5–0.6) trong `useLayoutEffect`; hoa vàng (Points) bake Y. Gò đất (Ground) + bàn thư pháp (CalligraphyDesk) cũng đổi sang `groundHeight` cho thống nhất. → `lib/terrain.ts`, `Meadow.tsx`, `Ground.tsx`, `CalligraphyDesk.tsx`.
+- **Một số cây VẪN lơ lửng (sau khi đã groundHeight=terrainHeight(x,-z))**: lưới Ground chỉ lấy mẫu `terrainHeight` tại đỉnh lưới (cách ~3.23) rồi **nội suy TAM GIÁC**, còn sống núi `sin(ang*17)` dao động nhanh hơn 1 ô → `terrainHeight` chính xác KHÁC mặt lưới (lệch tới ~2.1). Sửa: `groundHeight` đổi sang **nội suy đúng kiểu chia tam giác của PlaneGeometry** (đường chéo fx=fy, sample 4 đỉnh ô) → khớp mặt lưới **lệch 0.0000** (verify bằng raycast trên lưới thật). Hằng số `GROUND_SIZE/GROUND_SEG` chia sẻ `terrain.ts`↔`Ground.tsx`. → `lib/terrain.ts`, `Ground.tsx`.
 
 ## 9. Lệnh & deploy
 

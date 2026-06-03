@@ -27,7 +27,12 @@ const eslintConfig = defineConfig([
   // Đồng bộ state với hệ thống ngoài (media query, toast trigger, localStorage)
   // là pattern hợp lệ ở các component này.
   {
-    files: ["components/ui/Toast.tsx", "app/admin/page.tsx"],
+    files: [
+      "components/ui/Toast.tsx",
+      "app/admin/page.tsx",
+      "components/PresenceBridge.tsx",
+      "components/ui/FocusHUD.tsx",
+    ],
     rules: { "react-hooks/set-state-in-effect": "off" },
   },
 ]);

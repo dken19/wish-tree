@@ -2,6 +2,7 @@
 import { create } from 'zustand'
 import type { Condition } from '@/lib/weather'
 import type { Wish } from '@/lib/wishes'
+import type { Session } from '@/lib/presence'
 
 type SceneState = {
   // Thời tiết
@@ -16,6 +17,14 @@ type SceneState = {
   setWishes: (w: Wish[]) => void
   openWish: Wish | null
   setOpenWish: (w: Wish | null) => void
+
+  // Phòng Rừng Trúc (thiền viện)
+  roomOpen: boolean
+  setRoomOpen: (v: boolean) => void
+  sessions: Session[]
+  setSessions: (s: Session[]) => void
+  nickname: string
+  setNickname: (n: string) => void
 
   // UI
   composerOpen: boolean
@@ -38,6 +47,13 @@ export const useScene = create<SceneState>((set) => ({
   setWishes: (w) => set({ wishes: w }),
   openWish: null,
   setOpenWish: (w) => set({ openWish: w }),
+
+  roomOpen: false,
+  setRoomOpen: (v) => set({ roomOpen: v }),
+  sessions: [],
+  setSessions: (s) => set({ sessions: s }),
+  nickname: '',
+  setNickname: (n) => set({ nickname: n }),
 
   composerOpen: false,
   setComposerOpen: (v) => set({ composerOpen: v }),

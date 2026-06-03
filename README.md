@@ -11,6 +11,7 @@ Xây bằng **Next.js (App Router) + React Three Fiber + Firebase Firestore**.
 - Viết điều ước → lọc từ tục + rate-limit → vào hàng chờ **duyệt** → hiện realtime trên cây.
 - Thời tiết Hà Nội qua Open-Meteo (đổi trời/ánh sáng/mưa/đêm); gió theo tốc độ gió thật.
 - Điều khiển camera orbit + pinch tự viết; tự xoay nhẹ khi rảnh.
+- **Thiền viện → phòng Rừng Trúc**: chạm thiền viện trên đỉnh núi xa để vào một cảnh rừng trúc 3D, cùng nhau ôn bài/làm việc. Thấy nhau qua avatar người thiền, **đồng hồ phiên** hiện trên đầu; có **đồng hồ flip** và **hẹn giờ Pomodoro** (25/5, 50/10). Presence realtime ẩn danh (không cần đăng nhập).
 
 ## Bắt đầu
 
@@ -28,7 +29,7 @@ npm run dev                        # http://localhost:3000
 2. Lấy config web app → điền các biến `NEXT_PUBLIC_FIREBASE_*`.
 3. Vào *Project settings > Service accounts > Generate new private key* → điền `FIREBASE_PROJECT_ID`, `FIREBASE_CLIENT_EMAIL`, `FIREBASE_PRIVATE_KEY`.
 4. Đặt `ADMIN_SECRET` (mã đăng nhập trang duyệt).
-5. Triển khai security rules: nội dung trong `firestore.rules` (client chỉ đọc bản `approved`).
+5. Triển khai security rules: nội dung trong `firestore.rules` (client đọc bản `approved` của `wishes` + đọc `sessions`; mọi ghi qua Admin SDK).
 
 ## Duyệt điều ước
 

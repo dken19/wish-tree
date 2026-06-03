@@ -7,5 +7,12 @@ service cloud.firestore {
       allow read: if resource.data.status == 'approved';
       allow write: if false;
     }
+
+    // Phiên online phòng Rừng Trúc: ai cũng đọc được (không chứa PII).
+    // Mọi ghi đi qua /api/presence (Admin SDK) -> bỏ qua rules này.
+    match /sessions/{id} {
+      allow read: if true;
+      allow write: if false;
+    }
   }
 }
