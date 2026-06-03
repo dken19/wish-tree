@@ -52,7 +52,7 @@ components/
     CalligraphyDesk.tsx# bàn thư pháp 3D; onClick -> mở composer; có hào quang
     Monastery.tsx      # thiền viện low-poly trên đỉnh núi xa (peakCenter); glow sprite -> setRoomOpen(true)
     FocusRoom.tsx      # PHÒNG RỪNG TRÚC: RoomCamera tự xoay + fog/đèn riêng + nền SỎI TRẮNG (texture) + sỏi 3D (đổ bóng) + TIA NẮNG xuyên ngọn (cone additive) + sương; gate active
-    Bamboo.tsx         # rừng trúc: thân CÓ ĐỐT mọc theo CỤM (3–7 cây/cụm, đổ bóng) + lá ngọn NHỌN ĐẦU (instanced, gió GPU) + LÁ RƠI (Points, JS)
+    Bamboo.tsx         # rừng trúc: thân CÓ ĐỐT mọc theo CỤM (3–7 cây/cụm, đổ bóng) + NHÁNH LÁ rủ dọc thân (cross-plane, lá hẹp nhọn) + LÁ ĐƠN rơi (Points, JS)
     Meditators.tsx     # avatar người thiền (instanced, từ store.sessions) + nhãn tên/đồng hồ phiên (sprite canvas, 1Hz)
     Petals.tsx         # cánh hoa rơi (Points), ẩn khi mưa
     Rain.tsx           # mưa (LineSegments), hiện khi điều kiện = rain
