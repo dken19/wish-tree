@@ -1,0 +1,2 @@
+[     421ms] [WARNING] THREE.Clock: This module has been deprecated. Please use THREE.Timer instead. @ https://cayuocnguyen.io.vn/_next/static/chunks/1nya1gxo-wegn.js:0
+[     687ms] [WARNING] THREE.WebGLShadowMap: PCFSoftShadowMap has been deprecated. Using PCFShadowMap instead. @ https://cayuocnguyen.io.vn/_next/static/chunks/1nya1gxo-wegn.js:0
