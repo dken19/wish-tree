@@ -27,7 +27,12 @@ Ngoài ra có **thiền viện** trên đỉnh núi xa: chạm → vào **phòng
 
 ```
 app/
-  layout.tsx           # fonts (next/font), metadata SEO đầy đủ (metadataBase, OG, twitter, robots, canonical), JSON-LD WebSite (cho Google + AI), viewport; class font lên <html>
+  layout.tsx           # fonts (next/font), metadata SEO đầy đủ (metadataBase, keywords Việt, OG/twitter title+desc, robots, canonical), JSON-LD WebSite (cho Google + AI), viewport; class font lên <html>
+  opengraph-image.tsx  # sinh ẢNH OG 1200×630 bằng next/og (ImageResponse): trời Hà Nội + cây treo giấy ước đỏ + chim Lạc + đồng cỏ; nhúng font app/_fonts (đủ dấu Việt)
+  twitter-image.tsx    # re-export opengraph-image cho Twitter/X
+  icon.svg             # favicon (cây + giấy ước đỏ trên nền trời) — thay favicon.ico mặc định của Vercel (đã xoá)
+  apple-icon.tsx       # apple-touch-icon 180×180 (next/og) cho màn hình chính iOS
+  _fonts/              # TTF Be Vietnam Pro (Regular/SemiBold) — font cho next/og, KHÔNG phải route (thư mục _ là private)
   robots.ts            # sinh /robots.txt (allow /, chặn /admin + /api/, trỏ sitemap)
   sitemap.ts           # sinh /sitemap.xml (/, /dieu-uoc, /ky-nang)
   # (public/llms.txt: mô tả site cho LLM/AI crawlers — ChatGPT/Claude/Perplexity)
@@ -195,7 +200,8 @@ Vercel: import `.env.local` khi tạo project.
 
 - **ESLint**: Next 16 bật rule React-Compiler (`purity`/`immutability`/`set-state-in-effect`) báo nhầm với code Three.js (Math.random trong useMemo, mutate buffer trong useFrame). Đã **tắt cho `components/three/**`** + vài file UI trong `eslint.config.mjs`. Đừng "sửa" các cảnh báo này bằng cách viết lại — chúng cố ý.
 - **Canvas SSR**: phải `dynamic(..., { ssr:false })` từ client component (HomeClient). Không import trực tiếp ở server component.
-- **Chim Lạc**: `public/chim-lac.jpg` là ảnh ĐEN/nền TRẮNG; nền trắng được bỏ bằng `mix-blend-mode: multiply` (xem `.composer-head .lac`, `.lac-watermark` trong globals.css). Muốn đổi màu chim cần CSS filter.
+- **Chim Lạc**: `public/chim-lac.jpg` là ảnh ĐEN/nền TRẮNG; nền trắng được bỏ bằng `mix-blend-mode: multiply` (xem `.composer-head .lac`, `.lac-watermark` trong globals.css, dùng ở `LacBird.tsx`). Muốn đổi màu chim cần CSS filter. Lưu ý: ẢNH OG/favicon KHÔNG dùng file này (chim Lạc vẽ lại bằng SVG silhouette vì satori không hỗ trợ `mix-blend-mode` để bỏ nền trắng).
+- **Ảnh OG + icon sinh động (next/og)**: `app/opengraph-image.tsx` (+ `apple-icon.tsx`) vẽ bằng satori — chỉ hỗ trợ flexbox + inline-style + `<svg>` cơ bản (KHÔNG `mix-blend-mode`, gradient text, filter…). Chữ Việt có dấu cần **nhúng font TTF** đọc bằng `readFile(join(process.cwd(),'app/_fonts/...'))` — font mặc định Geist thiếu dấu. Đổi tiêu đề/khẩu hiệu thì sửa trực tiếp trong file; test bằng `curl localhost:3000/opengraph-image -o og.png`. `twitter-image.tsx` chỉ re-export. Favicon: dùng `app/icon.svg` (đã xoá `app/favicon.ico` mặc định Vercel) — KHÔNG sinh được `favicon.ico` bằng code, chỉ `icon`/`apple-icon`.
 - **Click vs xoay**: `WishPapers`/`CalligraphyDesk` onClick bỏ qua nếu `pointer.moved > 7` (lib/runtime) để không mở khi đang orbit.
 - **Bấm tờ ước nguyện = hộp va chạm VÔ HÌNH, KHÔNG phải mặt giấy**: mặt giấy là `PlaneGeometry` nhỏ + xoay `yaw` ngẫu nhiên → nghiêng cạnh về camera thì raycast trượt → bấm không trúng. Click gắn vào `hitRef` (InstancedMesh `BoxGeometry` to hơn, có chiều sâu, material `opacity:0 depthWrite:false`) đặt CÙNG ma trận với tờ giấy mỗi frame. **KHÔNG** dùng `visible={false}` cho hộp này (raycaster bỏ qua object ẩn). Đổi kích thước tờ giấy thì cân nhắc chỉnh `hitGeo`. **BẮT BUỘC** đặt `hit.boundingSphere = null` trong `useFrame` (vì `instanceMatrix` đổi mỗi frame nhưng `InstancedMesh` chỉ tính boundingSphere lazy 1 lần → kẹt ở gốc toạ độ → raycast loại tia sớm → cả cụm tờ giấy mất click, xem Nhật ký lỗi) + `frustumCulled={false}`.
 - **Vị trí điều ước tất định**: dựa trên `anchorFor(id, theme)` — đừng đổi seed/PRNG nếu không muốn mọi tờ đổi chỗ.

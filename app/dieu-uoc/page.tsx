@@ -3,9 +3,9 @@ import { Suspense } from 'react'
 import WishesView from './WishesView'
 
 export const metadata: Metadata = {
-  title: 'Tất cả điều ước',
+  title: 'Tất cả điều ước — đọc điều ước của mọi người',
   description:
-    'Xem tất cả điều ước đã đăng trên Cây Ước Nguyện — lọc theo chủ đề và lật từng trang.',
+    'Đọc tất cả điều ước mọi người đã viết và thả lên Cây Ước Nguyện — lọc theo chủ đề (tình yêu, học hành, gia đình, sức khoẻ…) và lật từng trang.',
   alternates: { canonical: '/dieu-uoc' },
 }
 

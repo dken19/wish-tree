@@ -1,0 +1,24 @@
+<svg width="64" height="64" viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="sky" x1="0" y1="0" x2="0" y2="64" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#bcd6ef"/>
+      <stop offset="1" stop-color="#e6f0d8"/>
+    </linearGradient>
+    <linearGradient id="leaf" x1="0" y1="14" x2="0" y2="44" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#84c563"/>
+      <stop offset="1" stop-color="#5f9e44"/>
+    </linearGradient>
+  </defs>
+  <rect width="64" height="64" rx="15" fill="url(#sky)"/>
+  <!-- thân cây -->
+  <path d="M32 52 V33" stroke="#6b4a2b" stroke-width="5" stroke-linecap="round"/>
+  <!-- tán lá -->
+  <circle cx="32" cy="26" r="17" fill="url(#leaf)"/>
+  <circle cx="22" cy="30" r="9" fill="#6aa84f"/>
+  <circle cx="43" cy="29" r="8" fill="#74b352"/>
+  <!-- giấy ước đỏ treo -->
+  <path d="M27 28 V35" stroke="#7a3b2a" stroke-width="1.5" stroke-linecap="round"/>
+  <rect x="23.5" y="35" width="7" height="9" rx="2" fill="#d2392a"/>
+  <path d="M40 26 V32" stroke="#7a3b2a" stroke-width="1.5" stroke-linecap="round"/>
+  <rect x="36.5" y="32" width="7" height="9" rx="2" fill="#e0533f"/>
+</svg>

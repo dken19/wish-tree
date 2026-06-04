@@ -28,25 +28,36 @@ const beVietnam = Be_Vietnam_Pro({
 
 const SITE_URL = "https://cayuocnguyen.io.vn";
 const SITE_TITLE = "Cây Ước Nguyện";
+// Tiêu đề trang chủ giàu từ khoá (vẫn dùng SITE_TITLE cho thương hiệu/template)
+const HOME_TITLE = "Cây Ước Nguyện — viết & thả điều ước online trên cây 3D";
 const SITE_DESC =
-  "Thả một điều ước vào gió — cây ước nguyện 3D với hiệu ứng thời tiết Hà Nội. Viết điều ước, treo lên cây, cùng ôn bài trong rừng trúc.";
+  "Viết điều ước và thả lên cây ước nguyện 3D — hiệu ứng gió và thời tiết Hà Nội. Gửi điều ước đầu năm, xem điều ước của mọi người và cùng ôn bài trong rừng trúc.";
 
 export const metadata: Metadata = {
   metadataBase: new URL(SITE_URL),
   title: {
-    default: SITE_TITLE,
+    default: HOME_TITLE,
     template: `%s · ${SITE_TITLE}`,
   },
   description: SITE_DESC,
   applicationName: SITE_TITLE,
   keywords: [
     "cây ước nguyện",
-    "điều ước",
+    "cây điều ước",
+    "viết điều ước",
+    "viết điều ước online",
+    "thả điều ước",
+    "gửi điều ước",
+    "treo điều ước lên cây",
+    "điều ước đầu năm",
+    "điều ước năm mới",
+    "ước nguyện",
     "wish tree",
-    "3D",
+    "cây 3D",
     "Hà Nội",
     "chim Lạc",
-    "ôn bài",
+    "ôn bài cùng nhau",
+    "phòng tự học online",
     "pomodoro",
   ],
   authors: [{ name: SITE_TITLE }],
@@ -58,22 +69,15 @@ export const metadata: Metadata = {
     locale: "vi_VN",
     url: SITE_URL,
     siteName: SITE_TITLE,
-    title: SITE_TITLE,
+    title: HOME_TITLE,
     description: SITE_DESC,
-    images: [
-      {
-        url: "/chim-lac.jpg",
-        width: 1200,
-        height: 630,
-        alt: "Cây Ước Nguyện — hoạ tiết chim Lạc",
-      },
-    ],
+    // Ảnh OG sinh động lấy từ app/opengraph-image.tsx (next/og)
   },
   twitter: {
     card: "summary_large_image",
-    title: SITE_TITLE,
+    title: HOME_TITLE,
     description: SITE_DESC,
-    images: ["/chim-lac.jpg"],
+    // Ảnh lấy từ app/twitter-image.tsx
   },
   robots: {
     index: true,
