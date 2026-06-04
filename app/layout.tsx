@@ -85,8 +85,8 @@ export const metadata: Metadata = {
       "max-snippet": -1,
     },
   },
-  // Sau khi xác minh ở Google Search Console, dán mã vào đây:
-  // verification: { google: "MÃ_XÁC_MINH_CỦA_BẠN" },
+  // Mã xác minh Google Search Console
+  verification: { google: "uZxs9FxwMWorappYiRNHoYOtDa7ZRKH0KC0VAJk3zAA" },
 };
 
 export const viewport: Viewport = {
