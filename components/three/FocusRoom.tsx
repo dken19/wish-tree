@@ -129,7 +129,7 @@ function Shafts() {
         depthWrite: false,
         blending: THREE.AdditiveBlending,
         side: THREE.DoubleSide,
-        opacity: 0.6,
+        opacity: 0.32, // dịu lại, đỡ loá
       }),
     [tex]
   )
@@ -149,7 +149,7 @@ function Shafts() {
     if (!g) return
     g.children.forEach((ch, i) => {
       const m = (ch as THREE.Mesh).material as THREE.MeshBasicMaterial
-      m.opacity = 0.4 + 0.25 * (0.5 + 0.5 * Math.sin(state.clock.elapsedTime * 0.5 + i))
+      m.opacity = 0.2 + 0.14 * (0.5 + 0.5 * Math.sin(state.clock.elapsedTime * 0.5 + i))
     })
   })
   return (
@@ -177,18 +177,23 @@ function mistTexture(): THREE.CanvasTexture {
 // Phòng Rừng Trúc: nền sỏi trắng + trúc theo cụm + người thiền + nắng xuyên ngọn.
 export default function FocusRoom({ active }: { active: boolean }) {
   const scene = useThree((s) => s.scene)
+  const gl = useThree((s) => s.gl)
   const mistTex = useMemo(() => mistTexture(), [])
   const gravelTex = useMemo(() => gravelTexture(), [])
 
   // override fog xanh dịu khi vào phòng; khôi phục fog cũ khi rời.
+  // đồng thời GHÌM phơi sáng xuống khi trời nắng (exposure cao) -> phòng đỡ chói/loá.
   useEffect(() => {
     if (!active) return
-    const saved = scene.fog
+    const savedFog = scene.fog
+    const savedExp = gl.toneMappingExposure
     scene.fog = new THREE.Fog(0xaec6a0, 9, 34)
+    gl.toneMappingExposure = Math.min(savedExp, 0.9)
     return () => {
-      scene.fog = saved
+      scene.fog = savedFog
+      gl.toneMappingExposure = savedExp
     }
-  }, [active, scene])
+  }, [active, scene, gl])
 
   const mistPos = useMemo(() => {
     const arr = new Float32Array(10 * 3)
@@ -208,13 +213,13 @@ export default function FocusRoom({ active }: { active: boolean }) {
     <group>
       <RoomCamera active={active} />
       {/* đèn fill dịu (bóng thật do mặt trời của SceneEnv tạo) */}
-      <ambientLight intensity={0.4} color={0xe6f0d8} />
-      <directionalLight position={[5, 9, 3]} intensity={0.45} color={0xfff2d6} />
+      <ambientLight intensity={0.3} color={0xe6f0d8} />
+      <directionalLight position={[5, 9, 3]} intensity={0.32} color={0xfff2d6} />
 
-      {/* nền SỎI TRẮNG */}
+      {/* nền SỎI (hơi ngà thay vì trắng tinh -> đỡ phản sáng chói) */}
       <mesh rotation-x={-Math.PI / 2} receiveShadow>
         <circleGeometry args={[28, 48]} />
-        <meshStandardMaterial map={gravelTex} roughness={1} color={0xffffff} />
+        <meshStandardMaterial map={gravelTex} roughness={1} color={0xe8e2d4} />
       </mesh>
       <Pebbles />
 

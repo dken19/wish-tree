@@ -121,7 +121,7 @@ function makeCross(): THREE.BufferGeometry {
 // Rừng trúc: thân CÓ ĐỐT mọc theo CỤM + nhánh lá rủ dọc thân + LÁ ĐƠN rơi lả tả.
 export default function Bamboo() {
   const isMobile = useIsMobile()
-  const CLUSTERS = isMobile ? 18 : 38
+  const CLUSTERS = isMobile ? 26 : 56 // rừng dày hơn (instanced nên vẫn nhẹ)
   const SPRIGS = isMobile ? 2 : 3 // nhánh lá mỗi thân
   const FALLING = isMobile ? 30 : 64
 
@@ -159,10 +159,10 @@ export default function Bamboo() {
     const arr: { x: number; z: number; yaw: number; h: number; lean: number; lz: number }[] = []
     for (let cI = 0; cI < CLUSTERS; cI++) {
       const ca = Math.random() * TAU
-      const cr = 8 + Math.random() * 16
+      const cr = 7.5 + Math.random() * 12 // vòng sát hơn -> tường trúc dày
       const cx = Math.cos(ca) * cr
       const cz = Math.sin(ca) * cr
-      const per = 3 + ((Math.random() * 5) | 0)
+      const per = 4 + ((Math.random() * 5) | 0) // 4–8 cây/cụm
       const outX = Math.cos(ca)
       const outZ = Math.sin(ca)
       for (let k = 0; k < per; k++) {
