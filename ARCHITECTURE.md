@@ -27,7 +27,10 @@ Ngoài ra có **thiền viện** trên đỉnh núi xa: chạm → vào **phòng
 
 ```
 app/
-  layout.tsx           # fonts (next/font), metadata, viewport; class font lên <html>
+  layout.tsx           # fonts (next/font), metadata SEO đầy đủ (metadataBase, OG, twitter, robots, canonical), JSON-LD WebSite (cho Google + AI), viewport; class font lên <html>
+  robots.ts            # sinh /robots.txt (allow /, chặn /admin + /api/, trỏ sitemap)
+  sitemap.ts           # sinh /sitemap.xml (/, /dieu-uoc, /ky-nang)
+  # (public/llms.txt: mô tả site cho LLM/AI crawlers — ChatGPT/Claude/Perplexity)
   page.tsx             # server: chỉ render <HomeClient/>
   globals.css          # toàn bộ CSS (port từ prototype) + style chim Lạc, khung viết
   admin/page.tsx       # client: trang duyệt (nhập ADMIN_SECRET, list pending, Duyệt/Bỏ)

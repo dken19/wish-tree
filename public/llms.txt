@@ -1,0 +1,25 @@
+# Cây Ước Nguyện (cayuocnguyen.io.vn)
+
+> Một trang web 3D nơi người Việt viết và treo "điều ước" (giấy đỏ) lên một cây ước nguyện sống động, có gió và thời tiết Hà Nội theo thời gian thực. Có không gian "Rừng Trúc" để cùng nhau ôn bài / làm việc tập trung với đồng hồ Pomodoro.
+
+Cây Ước Nguyện (Wish Tree) là một sản phẩm web tương tác, miễn phí, bằng tiếng Việt. Người dùng viết một điều ước, hệ thống lọc từ ngữ, rồi điều ước hiện lên cây theo thời gian thực dưới dạng tờ giấy đỏ bay trong gió. Người đăng nhập Google/Facebook được duyệt tự động; người ẩn danh vào hàng chờ duyệt tay.
+
+Công nghệ: Next.js 16, React 19, React Three Fiber (three.js), Firebase. Tối ưu mạnh cho mobile (không lag).
+
+## Trang chính
+
+- [Trang chủ — Cây ước nguyện 3D](https://cayuocnguyen.io.vn/): Cây 3D treo điều ước, gió + thời tiết Hà Nội, bàn thư pháp để viết điều ước, hoạ tiết chim Lạc. Có thiền viện trên núi mở ra phòng Rừng Trúc để cùng ôn bài.
+- [Tất cả điều ước](https://cayuocnguyen.io.vn/dieu-uoc): Danh sách các điều ước đã được đăng, lọc theo chủ đề, phân trang.
+- [Kỹ năng sống](https://cayuocnguyen.io.vn/ky-nang): Hướng dẫn nấu nướng, trồng trọt, chụp ảnh, chăm sóc da — kèm ảnh minh hoạ và nguồn Wikipedia.
+
+## Tính năng nổi bật
+
+- Viết điều ước và treo lên cây 3D, hiện realtime.
+- Phòng Rừng Trúc: cùng ôn bài / làm việc tập trung, thấy nhau qua avatar người thiền, có đồng hồ flip và Pomodoro.
+- Hiệu ứng: gió chạy trên GPU, đồng cỏ, bướm, chuồn chuồn, sương; thời tiết Hà Nội thực.
+- Hoạ tiết văn hoá Việt: chim Lạc.
+
+## Liên hệ & nguồn
+
+- Website: https://cayuocnguyen.io.vn
+- Ngôn ngữ: Tiếng Việt
