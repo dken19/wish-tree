@@ -11,10 +11,29 @@ const TAU = Math.PI * 2
 function RoomCamera({ active }: { active: boolean }) {
   const camera = useThree((s) => s.camera)
   const theta = useRef(0.5)
+  const isMobile = useMemo(
+    () =>
+      typeof window !== 'undefined' &&
+      (matchMedia('(pointer:coarse)').matches || window.innerWidth < 760),
+    []
+  )
+  // mobile (màn dọc hẹp): nới GÓC NHÌN rộng hơn để thấy rõ cảnh; khôi phục khi rời.
+  useEffect(() => {
+    if (!active || !isMobile) return
+    const cam = camera as THREE.PerspectiveCamera
+    const savedFov = cam.fov
+    cam.fov = 58
+    cam.updateProjectionMatrix()
+    return () => {
+      cam.fov = savedFov
+      cam.updateProjectionMatrix()
+    }
+  }, [active, isMobile, camera])
   useFrame((_, dt) => {
     if (!active) return
     theta.current += Math.min(dt, 0.05) * 0.05
-    const r = 6.5 // ngồi TRONG vòng trúc (trúc ở r8+) -> trúc thành phông nền
+    // mobile lùi xa hơn chút (vẫn TRONG vòng trúc r7.5) -> thấy nhiều cảnh hơn
+    const r = isMobile ? 7.2 : 6.5
     camera.position.set(Math.sin(theta.current) * r, 2.4, Math.cos(theta.current) * r)
     camera.lookAt(0, 1, 0)
   })

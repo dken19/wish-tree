@@ -24,6 +24,8 @@ type SceneState = {
   setRoomOpen: (v: boolean) => void
   sessions: Session[]
   setSessions: (s: Session[]) => void
+  bots: Session[] // người "ảo" ngồi học sẵn (tương tác, không phải presence thật)
+  setBots: (b: Session[]) => void
   nickname: string
   setNickname: (n: string) => void
 
@@ -61,6 +63,8 @@ export const useScene = create<SceneState>((set) => ({
   setRoomOpen: (v) => set({ roomOpen: v }),
   sessions: [],
   setSessions: (s) => set({ sessions: s }),
+  bots: [],
+  setBots: (b) => set({ bots: b }),
   nickname: '',
   setNickname: (n) => set({ nickname: n }),
 

@@ -41,9 +41,23 @@ export default function FocusHUD() {
   const roomOpen = useScene((s) => s.roomOpen)
   const setRoomOpen = useScene((s) => s.setRoomOpen)
   const sessions = useScene((s) => s.sessions)
+  const bots = useScene((s) => s.bots)
   const nickname = useScene((s) => s.nickname)
   const setNickname = useScene((s) => s.setNickname)
   const showToast = useScene((s) => s.showToast)
+
+  const online = sessions.length + bots.length
+
+  // panel mở/thu gọn: MẶC ĐỊNH THU GỌN khi vào phòng (đỡ che cảnh), tự mở khi bấm.
+  const [open, setOpen] = useState(false)
+  const initOpen = useRef(false)
+  useEffect(() => {
+    if (roomOpen && !initOpen.current) {
+      setOpen(false)
+      initOpen.current = true
+    }
+    if (!roomOpen) initOpen.current = false
+  }, [roomOpen])
 
   // ----- đồng hồ flip: giờ hiện tại -----
   const [clock, setClock] = useState('00:00:00')
@@ -118,13 +132,35 @@ export default function FocusHUD() {
     phase === 'focus' ? 'Đang tập trung' : phase === 'break' ? 'Đang giải lao' : 'Sẵn sàng'
 
   return (
-    <div className={`focus-hud${roomOpen ? ' show' : ''}`}>
-      <div className="fh-top">
-        <span className="fh-online">🟢 {sessions.length} đang ôn cùng bạn</span>
-        <button className="fh-leave" onClick={() => setRoomOpen(false)}>
-          Rời phòng
-        </button>
-      </div>
+    <>
+      {/* Thanh thu gọn: luôn thấy số online + đồng hồ Pomodoro; bấm để mở bảng */}
+      {roomOpen && !open && (
+        <div className="fh-mini">
+          <button className="fh-mini-main" onClick={() => setOpen(true)} aria-label="Mở bảng ôn bài">
+            <span className="fh-mini-online">🟢 {online}</span>
+            <span className={`fh-mini-time ${phase}`}>
+              {phase === 'idle' ? '🧘 Phòng ôn bài' : `${mm}:${ss}`}
+            </span>
+            <span className="fh-mini-caret">▴</span>
+          </button>
+          <button className="fh-mini-leave" onClick={() => setRoomOpen(false)} aria-label="Rời phòng">
+            Rời
+          </button>
+        </div>
+      )}
+
+      <div className={`focus-hud${roomOpen && open ? ' show' : ''}`}>
+        <div className="fh-top">
+          <span className="fh-online">🟢 {online} đang ôn cùng bạn</span>
+          <div className="fh-top-btns">
+            <button className="fh-min" onClick={() => setOpen(false)} aria-label="Thu gọn" title="Thu gọn">
+              ▾
+            </button>
+            <button className="fh-leave" onClick={() => setRoomOpen(false)}>
+              Rời phòng
+            </button>
+          </div>
+        </div>
 
       {/* đồng hồ flip (giờ hiện tại) */}
       <div className="flip-clock">
@@ -185,6 +221,7 @@ export default function FocusHUD() {
           }}
         />
       </div>
-    </div>
+      </div>
+    </>
   )
 }

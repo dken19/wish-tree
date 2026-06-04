@@ -56,6 +56,7 @@ components/
   WishTreeCanvas.tsx   # <Canvas> R3F: dpr cap; GATE cảnh cây (visible) vs <FocusRoom/> theo roomOpen
   DataBridge.tsx       # render rỗng: subscribe điều ước + fetch thời tiết -> đẩy vào store
   PresenceBridge.tsx   # render rỗng: CHỈ khi roomOpen — heartbeat + subscribe sessions + leave (sendBeacon)
+  FakePresence.tsx     # render rỗng: CHỈ khi roomOpen — "bạn học ảo" TẤT ĐỊNH theo Date.now (đồng bộ mọi thiết bị, KHÔNG ghi Firestore) -> store.bots; toast vào/rời
   AuthBridge.tsx       # render rỗng: onAuthStateChanged (Firebase Auth) -> ghi user vào store
   three/
     Tree.tsx           # thân+rễ+cành cổ thụ: ống cong bezier (a->bend->b) thuôn, gộp 1 mesh
@@ -72,7 +73,7 @@ components/
     Monastery.tsx      # ĐỀN 3 tầng cầu kỳ trên đỉnh núi xa (peakCenter, quay về tâm): bệ đá+bậc, cột son, mái đầu đao, cửa/đèn lồng PHÁT SÁNG + cột sáng/hào quang/hạt sáng nhấp nháy mời bấm -> setRoomOpen(true)
     FocusRoom.tsx      # PHÒNG RỪNG TRÚC: RoomCamera tự xoay + fog/đèn riêng + ghìm exposure≤0.9 (đỡ loá) + nền SỎI ngà (texture) + sỏi 3D (đổ bóng) + TIA NẮNG xuyên ngọn (cone additive, dịu) + sương + Backdrop (cylinder phông NÚI ĐỒI nhiều lớp, MeshBasic fog/tonemap=off — thay nền trắng); gate active
     Bamboo.tsx         # rừng trúc: thân CÓ ĐỐT mọc theo CỤM (4–8 cây/cụm, vòng r7.5–19.5 dày, đổ bóng) + NHÁNH LÁ rủ dọc thân (cross-plane, lá hẹp nhọn) + LÁ ĐƠN rơi (Points, JS)
-    Meditators.tsx     # avatar người thiền (instanced, từ store.sessions) + nhãn tên/đồng hồ phiên (sprite canvas, 1Hz)
+    Meditators.tsx     # SLIME tròn pastel (thân gel + 2 mắt CHỚP + chấm sáng, nhún nhẹ, quay mặt về camera) từ store.sessions + store.bots + nhãn tên/đồng hồ phiên (sprite canvas, 1Hz)
     Petals.tsx         # cánh hoa rơi (Points), ẩn khi mưa
     Rain.tsx           # mưa (LineSegments), hiện khi điều kiện = rain
     Dew.tsx            # giọt sương lấp lánh trôi (Points, JS)
@@ -86,7 +87,7 @@ components/
     WishCard.tsx       # thẻ đọc điều ước (mở khi click giấy)
     Composer.tsx       # bảng viết: chọn theme + nhập text -> POST /api/wishes
     NavDock.tsx        # MENU dock tròn góc dưới-phải: xòe 4 mục (Cây/Viết/Phòng ôn bài qua store; Kỹ năng sống -> router.push('/ky-nang')); ẩn khi roomOpen/composerOpen
-    FocusHUD.tsx       # overlay phòng: đồng hồ flip + Pomodoro + số online + đổi tên + Rời phòng
+    FocusHUD.tsx       # overlay phòng: MẶC ĐỊNH THU GỌN (thanh mini: online + đồng hồ Pomodoro + Rời) — bấm mở bảng đầy đủ (flip + Pomodoro + đổi tên + Rời); số online = sessions + bots; mobile RoomCamera nới FOV
     LacBird.tsx        # <img> chim Lạc (public/chim-lac.jpg) + mix-blend-mode
     Toast.tsx, Loader.tsx
 lib/

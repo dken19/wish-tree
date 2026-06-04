@@ -1,55 +1,23 @@
 'use client'
-import { useLayoutEffect, useMemo, useRef } from 'react'
+import { useMemo, useRef } from 'react'
 import { useFrame } from '@react-three/fiber'
 import * as THREE from 'three'
 import { useScene } from '@/store/useScene'
 import type { Session } from '@/lib/presence'
 
 const TAU = Math.PI * 2
-const CAP = 24 // tối đa số avatar vẽ (dư hiển thị "+N")
-const RING_R = 3.5
+const CAP = 14 // tối đa số slime vẽ
+const RING_R = 3.6
 
-// ---- hình nhân ngồi thiền low-poly: áo (nón) + đầu (cầu), màu baked vào vertex ----
-function makeMeditator(): THREE.BufferGeometry {
-  const pos: number[] = []
-  const col: number[] = []
-  const c = new THREE.Color()
-  const add = (geom: THREE.BufferGeometry, hex: number) => {
-    const ng = geom.toNonIndexed()
-    const p = ng.attributes.position as THREE.BufferAttribute
-    c.set(hex)
-    for (let i = 0; i < p.count; i++) {
-      pos.push(p.getX(i), p.getY(i), p.getZ(i))
-      col.push(c.r, c.g, c.b)
-    }
-    ng.dispose()
-    geom.dispose()
-  }
-  const robe = new THREE.ConeGeometry(0.46, 0.95, 8)
-  robe.translate(0, 0.47, 0)
-  add(robe, 0x7c8aa6)
-  const head = new THREE.SphereGeometry(0.19, 10, 8)
-  head.translate(0, 1.05, 0)
-  add(head, 0xe6c9a8)
-  const out = new THREE.BufferGeometry()
-  out.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3))
-  out.setAttribute('color', new THREE.Float32BufferAttribute(col, 3))
-  out.computeVertexNormals()
-  return out
-}
+// bảng màu pastel cho slime (gel mềm)
+const BODY_COLORS = [
+  0x8fd39a, 0x86c7e0, 0xf2b6c6, 0xc9b3f0, 0xf0d28a, 0x9fe0c8, 0xe8a9d4, 0xa9d99b,
+]
 
-function glowTexture(): THREE.CanvasTexture {
-  const S = 128
-  const c = document.createElement('canvas')
-  c.width = c.height = S
-  const g = c.getContext('2d')!
-  const grd = g.createRadialGradient(S / 2, S / 2, 0, S / 2, S / 2, S / 2)
-  grd.addColorStop(0, 'rgba(255,236,190,0.7)')
-  grd.addColorStop(0.5, 'rgba(255,214,150,0.22)')
-  grd.addColorStop(1, 'rgba(255,214,150,0)')
-  g.fillStyle = grd
-  g.fillRect(0, 0, S, S)
-  return new THREE.CanvasTexture(c)
+function hashStr(s: string): number {
+  let h = 0
+  for (let i = 0; i < s.length; i++) h = (h * 31 + s.charCodeAt(i)) >>> 0
+  return h
 }
 
 function fmt(ms: number): string {
@@ -82,12 +50,10 @@ function Label({ session, self }: { session: Session; self: boolean }) {
     const c = tex.image as HTMLCanvasElement
     const g = c.getContext('2d')!
     g.clearRect(0, 0, 256, 128)
-    // tên
     g.font = '600 30px "Be Vietnam Pro", sans-serif'
     g.textAlign = 'center'
     g.fillStyle = self ? '#ffe6a8' : '#f2efe8'
     g.fillText(session.name.slice(0, 18), 128, 40)
-    // đồng hồ phiên
     g.font = '700 44px "Be Vietnam Pro", monospace'
     g.fillStyle = '#ffffff'
     g.fillText(fmt(elapsed), 128, 92)
@@ -110,82 +76,126 @@ function Label({ session, self }: { session: Session; self: boolean }) {
   )
 }
 
-export default function Meditators({ active }: { active: boolean }) {
-  const sessions = useScene((s) => s.sessions)
-  const figRef = useRef<THREE.InstancedMesh>(null)
+// Một SLIME: thân tròn dẹt (gel), 2 mắt to + chấm sáng, CHỚP MẮT, nhún nhẹ,
+// luôn quay mặt về camera. Tự phát sáng nhẹ -> dễ thương trong sương.
+function Slime({
+  session,
+  x,
+  z,
+  bodyGeo,
+  eyeGeo,
+  pupilGeo,
+}: {
+  session: Session
+  x: number
+  z: number
+  bodyGeo: THREE.SphereGeometry
+  eyeGeo: THREE.SphereGeometry
+  pupilGeo: THREE.SphereGeometry
+}) {
+  const grp = useRef<THREE.Group>(null)
+  const eyes = useRef<THREE.Group>(null)
+  const self = !!session.isSelf
 
-  const geo = useMemo(() => makeMeditator(), [])
-  const mat = useMemo(
-    () => new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 0.9 }),
+  const color = useMemo(() => {
+    if (self) return 0xffd98a
+    return BODY_COLORS[hashStr(session.clientId) % BODY_COLORS.length]
+  }, [session.clientId, self])
+
+  const bodyMat = useMemo(() => {
+    const c = new THREE.Color(color)
+    return new THREE.MeshStandardMaterial({
+      color: c,
+      roughness: 0.38,
+      metalness: 0,
+      emissive: c.clone().multiplyScalar(0.18),
+    })
+  }, [color])
+  const eyeMat = useMemo(
+    () => new THREE.MeshStandardMaterial({ color: 0x2a2f2c, roughness: 0.3 }),
     []
   )
-  const glowTex = useMemo(() => glowTexture(), [])
+  const pupilMat = useMemo(
+    () => new THREE.MeshBasicMaterial({ color: 0xffffff }),
+    []
+  )
 
-  const shown = sessions.slice(0, CAP)
-  const n = shown.length
+  const phase = useMemo(
+    () => ((hashStr(session.clientId) % 1000) / 1000) * TAU,
+    [session.clientId]
+  )
+  const nextBlink = useRef(1 + Math.random() * 3)
+  const blinkLeft = useRef(0)
 
-  const glowPos = useMemo(() => {
-    const arr = new Float32Array(CAP * 3)
-    for (let i = 0; i < CAP; i++) {
-      const [x, , z] = positionFor(i, Math.max(1, n))
-      arr[i * 3] = x
-      arr[i * 3 + 1] = 0.2
-      arr[i * 3 + 2] = z
+  useFrame((state, dt) => {
+    const g = grp.current
+    if (!g) return
+    const t = state.clock.elapsedTime
+    // nhún + nhịp gel
+    const bob = Math.sin(t * 1.6 + phase) * 0.05
+    g.position.set(x, 0.4 + bob, z)
+    // quay mặt về camera (chỉ yaw)
+    g.rotation.y = Math.atan2(state.camera.position.x - x, state.camera.position.z - z)
+    // chớp mắt
+    if (blinkLeft.current <= 0 && t > nextBlink.current) {
+      blinkLeft.current = 0.15
+      nextBlink.current = t + 2.2 + Math.random() * 4
     }
-    return arr
-  }, [n])
-
-  useLayoutEffect(() => {
-    const fig = figRef.current
-    if (!fig) return
-    const dummy = new THREE.Object3D()
-    const col = new THREE.Color()
-    for (let i = 0; i < CAP; i++) {
-      if (i < n) {
-        const [x, y, z] = positionFor(i, n)
-        dummy.position.set(x, y, z)
-        // hơi nhấp nhô để bớt cứng
-        dummy.rotation.set(0, Math.atan2(-x, -z), 0)
-        dummy.scale.setScalar(1)
-        col.set(shown[i].isSelf ? 0xffd9a0 : 0xffffff)
-      } else {
-        dummy.position.set(0, -999, 0) // ẩn instance thừa
-        dummy.scale.setScalar(0.0001)
-        col.set(0xffffff)
-      }
-      dummy.updateMatrix()
-      fig.setMatrixAt(i, dummy.matrix)
-      fig.setColorAt(i, col)
+    let open = 1
+    if (blinkLeft.current > 0) {
+      blinkLeft.current -= Math.min(dt, 0.05)
+      const p = 1 - Math.max(0, blinkLeft.current) / 0.15 // 0..1
+      open = 1 - Math.sin(p * Math.PI) * 0.92 // nháy xuống ~0.08 rồi mở lại
     }
-    fig.instanceMatrix.needsUpdate = true
-    if (fig.instanceColor) fig.instanceColor.needsUpdate = true
-  }, [n, shown])
+    if (eyes.current) eyes.current.scale.y = open
+  })
+
+  return (
+    <group ref={grp}>
+      {/* thân gel dẹt */}
+      <mesh geometry={bodyGeo} material={bodyMat} castShadow scale={[1.15, 0.82, 1.15]} />
+      {/* mắt (chớp = co scale.y) */}
+      <group ref={eyes} position={[0, 0.12, 0.3]}>
+        <mesh geometry={eyeGeo} material={eyeMat} position={[-0.13, 0, 0.06]} />
+        <mesh geometry={eyeGeo} material={eyeMat} position={[0.13, 0, 0.06]} />
+        <mesh geometry={pupilGeo} material={pupilMat} position={[-0.1, 0.04, 0.11]} />
+        <mesh geometry={pupilGeo} material={pupilMat} position={[0.16, 0.04, 0.11]} />
+      </group>
+    </group>
+  )
+}
+
+export default function Meditators({ active }: { active: boolean }) {
+  const sessions = useScene((s) => s.sessions)
+  const bots = useScene((s) => s.bots)
+
+  // gộp người thật + người ảo
+  const all = useMemo(() => [...sessions, ...bots].slice(0, CAP), [sessions, bots])
+  const n = all.length
+
+  const bodyGeo = useMemo(() => new THREE.SphereGeometry(0.42, 16, 12), [])
+  const eyeGeo = useMemo(() => new THREE.SphereGeometry(0.072, 10, 8), [])
+  const pupilGeo = useMemo(() => new THREE.SphereGeometry(0.03, 8, 6), [])
 
   if (!active) return null
 
   return (
     <group>
-      <instancedMesh ref={figRef} args={[geo, mat, CAP]} castShadow />
-      {/* hào quang dưới mỗi người */}
-      <points>
-        <bufferGeometry>
-          <bufferAttribute attach="attributes-position" args={[glowPos, 3]} />
-        </bufferGeometry>
-        <pointsMaterial
-          map={glowTex}
-          size={1.6}
-          sizeAttenuation
-          transparent
-          depthWrite={false}
-          blending={THREE.AdditiveBlending}
-        />
-      </points>
-      {/* nhãn tên + đồng hồ phiên trên đầu */}
-      {shown.map((s, i) => {
+      {all.map((s, i) => {
         const [x, , z] = positionFor(i, n)
         return (
-          <group key={s.clientId} position={[x, 1.7, z]}>
-            <Label session={s} self={!!s.isSelf} />
+          <group key={s.clientId}>
+            <Slime
+              session={s}
+              x={x}
+              z={z}
+              bodyGeo={bodyGeo}
+              eyeGeo={eyeGeo}
+              pupilGeo={pupilGeo}
+            />
+            <group position={[x, 1.5, z]}>
+              <Label session={s} self={!!s.isSelf} />
+            </group>
           </group>
         )
       })}
