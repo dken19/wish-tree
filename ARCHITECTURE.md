@@ -70,8 +70,8 @@ components/
     WishPapers.tsx     # điều ước đã duyệt (InstancedMesh) — CLICK đọc; dây nối cành
     CalligraphyDesk.tsx# bàn thư pháp 3D; onClick -> mở composer; có hào quang
     Monastery.tsx      # ĐỀN 3 tầng cầu kỳ trên đỉnh núi xa (peakCenter, quay về tâm): bệ đá+bậc, cột son, mái đầu đao, cửa/đèn lồng PHÁT SÁNG + cột sáng/hào quang/hạt sáng nhấp nháy mời bấm -> setRoomOpen(true)
-    FocusRoom.tsx      # PHÒNG RỪNG TRÚC: RoomCamera tự xoay + fog/đèn riêng + nền SỎI TRẮNG (texture) + sỏi 3D (đổ bóng) + TIA NẮNG xuyên ngọn (cone additive) + sương; gate active
-    Bamboo.tsx         # rừng trúc: thân CÓ ĐỐT mọc theo CỤM (3–7 cây/cụm, đổ bóng) + NHÁNH LÁ rủ dọc thân (cross-plane, lá hẹp nhọn) + LÁ ĐƠN rơi (Points, JS)
+    FocusRoom.tsx      # PHÒNG RỪNG TRÚC: RoomCamera tự xoay + fog/đèn riêng + ghìm exposure≤0.9 (đỡ loá) + nền SỎI ngà (texture) + sỏi 3D (đổ bóng) + TIA NẮNG xuyên ngọn (cone additive, dịu) + sương + Backdrop (cylinder phông NÚI ĐỒI nhiều lớp, MeshBasic fog/tonemap=off — thay nền trắng); gate active
+    Bamboo.tsx         # rừng trúc: thân CÓ ĐỐT mọc theo CỤM (4–8 cây/cụm, vòng r7.5–19.5 dày, đổ bóng) + NHÁNH LÁ rủ dọc thân (cross-plane, lá hẹp nhọn) + LÁ ĐƠN rơi (Points, JS)
     Meditators.tsx     # avatar người thiền (instanced, từ store.sessions) + nhãn tên/đồng hồ phiên (sprite canvas, 1Hz)
     Petals.tsx         # cánh hoa rơi (Points), ẩn khi mưa
     Rain.tsx           # mưa (LineSegments), hiện khi điều kiện = rain

@@ -113,6 +113,73 @@ function shaftTexture(): THREE.CanvasTexture {
   return new THREE.CanvasTexture(c)
 }
 
+// Phông cảnh THUNG LŨNG bọc quanh phòng: núi xa nhiều lớp mờ + rặng rừng.
+// Phần trời (đỉnh canvas) để TRONG SUỐT -> #sky (CSS) hiện phía trên núi.
+function valleyBackdropTexture(): THREE.CanvasTexture {
+  const W = 2048
+  const H = 512
+  const c = document.createElement('canvas')
+  c.width = W
+  c.height = H
+  const g = c.getContext('2d')!
+  g.clearRect(0, 0, W, H)
+  // dải mù nhạt quanh đường chân núi cho chiều sâu khí quyển
+  const haze = g.createLinearGradient(0, 0, 0, H)
+  haze.addColorStop(0, 'rgba(210,226,210,0)')
+  haze.addColorStop(0.36, 'rgba(210,226,210,0)')
+  haze.addColorStop(0.46, 'rgba(216,230,216,0.34)')
+  haze.addColorStop(0.62, 'rgba(216,230,216,0)')
+  g.fillStyle = haze
+  g.fillRect(0, 0, W, H)
+  // các rặng xa -> gần (nhạt dần khi xa = phối cảnh khí quyển)
+  const layers = [
+    { base: 0.4, amp: 0.06, h1: 2, h2: 5, color: '#a6bb9c' }, // núi xa mờ
+    { base: 0.49, amp: 0.095, h1: 3, h2: 6, color: '#86a578' }, // đồi giữa
+    { base: 0.58, amp: 0.08, h1: 4, h2: 9, color: '#688c5c' }, // đồi gần
+    { base: 0.67, amp: 0.06, h1: 8, h2: 17, color: '#4a6b40' }, // rặng rừng
+  ]
+  for (const L of layers) {
+    g.fillStyle = L.color
+    g.beginPath()
+    g.moveTo(0, H)
+    for (let x = 0; x <= W; x += 6) {
+      const t = x / W
+      // 2 sóng hài SỐ NGUYÊN -> liền mạch khi cuốn quanh trụ
+      const wv =
+        Math.sin(t * TAU * L.h1) * 0.62 + Math.sin(t * TAU * L.h2 + 1.7) * 0.38
+      g.lineTo(x, (L.base + L.amp * wv) * H)
+    }
+    g.lineTo(W, H)
+    g.closePath()
+    g.fill()
+  }
+  const tex = new THREE.CanvasTexture(c)
+  tex.wrapS = THREE.RepeatWrapping
+  tex.repeat.set(2, 1) // cuốn 2 vòng -> cảnh nhỏ lại, nhiều lớp
+  return tex
+}
+
+// Vòng phông cảnh bọc quanh phòng (BackSide). KHÔNG nhận fog/tonemap ->
+// luôn hiện rõ sau lớp sương, thay cho nền trắng trống.
+function Backdrop() {
+  const tex = useMemo(() => valleyBackdropTexture(), [])
+  const geo = useMemo(() => new THREE.CylinderGeometry(46, 46, 40, 64, 1, true), [])
+  const mat = useMemo(
+    () =>
+      new THREE.MeshBasicMaterial({
+        map: tex,
+        side: THREE.BackSide,
+        transparent: true,
+        depthWrite: false,
+        fog: false,
+        toneMapped: false,
+      }),
+    [tex]
+  )
+  // tâm y để rặng rừng nằm quanh chân trời, núi vươn lên trên
+  return <mesh geometry={geo} material={mat} position={[0, 13, 0]} renderOrder={-1} />
+}
+
 function Shafts() {
   const tex = useMemo(() => shaftTexture(), [])
   const geo = useMemo(() => {
@@ -212,6 +279,8 @@ export default function FocusRoom({ active }: { active: boolean }) {
   return (
     <group>
       <RoomCamera active={active} />
+      {/* phông cảnh núi rừng bọc quanh (thay nền trắng trống) */}
+      <Backdrop />
       {/* đèn fill dịu (bóng thật do mặt trời của SceneEnv tạo) */}
       <ambientLight intensity={0.3} color={0xe6f0d8} />
       <directionalLight position={[5, 9, 3]} intensity={0.32} color={0xfff2d6} />
