@@ -2,6 +2,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { useScene } from '@/store/useScene'
 import { storeName } from '@/lib/presence'
+import { containsProfanity } from '@/lib/profanity'
 
 type Phase = 'idle' | 'focus' | 'break'
 type Preset = { label: string; focus: number; brk: number }
@@ -47,6 +48,7 @@ export default function FocusHUD() {
   const showToast = useScene((s) => s.showToast)
 
   const online = sessions.length + bots.length
+  const profToastAt = useRef(0) // throttle toast cảnh báo tên có từ bậy
 
   // panel mở/thu gọn: MẶC ĐỊNH THU GỌN khi vào phòng (đỡ che cảnh), tự mở khi bấm.
   const [open, setOpen] = useState(false)
@@ -97,7 +99,9 @@ export default function FocusHUD() {
         setPhase(next)
         endsAt.current = Date.now() + mins * 60_000
         setLeft(mins * 60)
-        showToast(next === 'focus' ? 'Hết giải lao — quay lại tập trung 🧘' : 'Hết phiên — nghỉ một chút ☕')
+        // chỉ báo khi đang Ở TRONG phòng (đừng để popup lọt sang màn khác)
+        if (useScene.getState().roomOpen)
+          showToast(next === 'focus' ? 'Hết giải lao — quay lại tập trung 🧘' : 'Hết phiên — nghỉ một chút ☕')
       }
       raf = requestAnimationFrame(tick)
     }
@@ -216,8 +220,18 @@ export default function FocusHUD() {
           value={nickname}
           placeholder="Bạn ẩn danh"
           onChange={(e) => {
-            setNickname(e.target.value)
-            storeName(e.target.value)
+            const v = e.target.value
+            // tên broadcast cho người khác -> LỌC TỪ BẬY: chứa từ cấm thì không lưu/phát
+            if (containsProfanity(v)) {
+              const now = Date.now()
+              if (now - profToastAt.current > 2000) {
+                profToastAt.current = now
+                showToast('Tên hiển thị có từ chưa phù hợp 🙏')
+              }
+              return
+            }
+            setNickname(v)
+            storeName(v)
           }}
         />
       </div>

@@ -8,15 +8,34 @@ import Meditators from './Meditators'
 const TAU = Math.PI * 2
 
 // Camera phòng: tự xoay chậm quanh vòng người thiền (tĩnh tâm, mượt mobile).
+const clamp = (lo: number, hi: number, v: number) => Math.max(lo, Math.min(hi, v))
+
+// Camera phòng: NGƯỜI DÙNG tự xoay (kéo) + zoom (lăn/pinch). KHÔNG tự quay.
+// Orbit quanh tâm vòng người thiền (0,1,0), bán kính giữ TRONG vòng trúc (r7.5).
 function RoomCamera({ active }: { active: boolean }) {
   const camera = useThree((s) => s.camera)
-  const theta = useRef(0.5)
+  const gl = useThree((s) => s.gl)
   const isMobile = useMemo(
     () =>
       typeof window !== 'undefined' &&
       (matchMedia('(pointer:coarse)').matches || window.innerWidth < 760),
     []
   )
+  const TARGET = useMemo(() => new THREE.Vector3(0, 1, 0), [])
+  const r0 = isMobile ? 7.3 : 6.6
+  const st = useRef({
+    theta: 0.5,
+    phi: 1.32,
+    radius: r0,
+    tTheta: 0.5,
+    tPhi: 1.32,
+    tRadius: r0,
+    dragging: false,
+    lastX: 0,
+    lastY: 0,
+    pinchDist: 0,
+  })
+
   // mobile (màn dọc hẹp): nới GÓC NHÌN rộng hơn để thấy rõ cảnh; khôi phục khi rời.
   useEffect(() => {
     if (!active || !isMobile) return
@@ -29,13 +48,71 @@ function RoomCamera({ active }: { active: boolean }) {
       cam.updateProjectionMatrix()
     }
   }, [active, isMobile, camera])
-  useFrame((_, dt) => {
+
+  // điều khiển orbit thủ công (port gọn từ CameraRig, tâm + giới hạn riêng cho phòng)
+  useEffect(() => {
     if (!active) return
-    theta.current += Math.min(dt, 0.05) * 0.05
-    // mobile lùi xa hơn chút (vẫn TRONG vòng trúc r7.5) -> thấy nhiều cảnh hơn
-    const r = isMobile ? 7.2 : 6.5
-    camera.position.set(Math.sin(theta.current) * r, 2.4, Math.cos(theta.current) * r)
-    camera.lookAt(0, 1, 0)
+    const el = gl.domElement
+    const s = st.current
+    const onDown = (e: PointerEvent) => {
+      s.dragging = true
+      s.lastX = e.clientX
+      s.lastY = e.clientY
+    }
+    const onMove = (e: PointerEvent) => {
+      if (!s.dragging || s.pinchDist) return
+      s.tTheta -= (e.clientX - s.lastX) * 0.005
+      s.tPhi = clamp(0.75, 1.5, s.tPhi - (e.clientY - s.lastY) * 0.005)
+      s.lastX = e.clientX
+      s.lastY = e.clientY
+    }
+    const onUp = () => {
+      s.dragging = false
+    }
+    const onWheel = (e: WheelEvent) => {
+      e.preventDefault()
+      s.tRadius = clamp(3.8, 7.3, s.tRadius + e.deltaY * 0.005)
+    }
+    const onTouchMove = (e: TouchEvent) => {
+      if (e.touches.length === 2) {
+        const dx = e.touches[0].clientX - e.touches[1].clientX
+        const dy = e.touches[0].clientY - e.touches[1].clientY
+        const d = Math.hypot(dx, dy)
+        if (s.pinchDist) s.tRadius = clamp(3.8, 7.3, s.tRadius + (s.pinchDist - d) * 0.02)
+        s.pinchDist = d
+      }
+    }
+    const onTouchEnd = () => {
+      s.pinchDist = 0
+    }
+    el.addEventListener('pointerdown', onDown)
+    el.addEventListener('pointermove', onMove)
+    window.addEventListener('pointerup', onUp)
+    el.addEventListener('wheel', onWheel, { passive: false })
+    el.addEventListener('touchmove', onTouchMove, { passive: true })
+    el.addEventListener('touchend', onTouchEnd)
+    return () => {
+      el.removeEventListener('pointerdown', onDown)
+      el.removeEventListener('pointermove', onMove)
+      window.removeEventListener('pointerup', onUp)
+      el.removeEventListener('wheel', onWheel)
+      el.removeEventListener('touchmove', onTouchMove)
+      el.removeEventListener('touchend', onTouchEnd)
+    }
+  }, [gl, active])
+
+  useFrame(() => {
+    if (!active) return
+    const s = st.current
+    s.theta += (s.tTheta - s.theta) * 0.12
+    s.phi += (s.tPhi - s.phi) * 0.12
+    s.radius += (s.tRadius - s.radius) * 0.12
+    camera.position.set(
+      TARGET.x + s.radius * Math.sin(s.phi) * Math.sin(s.theta),
+      TARGET.y + s.radius * Math.cos(s.phi),
+      TARGET.z + s.radius * Math.sin(s.phi) * Math.cos(s.theta)
+    )
+    camera.lookAt(TARGET)
   })
   return null
 }
