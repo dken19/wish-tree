@@ -8,29 +8,82 @@ import { useIsMobile } from './useIsMobile'
 
 const TAU = Math.PI * 2
 
-// Texture thân trúc: nền sáng + ĐỐT (vạch tối + cổ đốt sáng), lặp dọc -> đốt đều.
-function culmTexture(): THREE.CanvasTexture {
-  const W = 16
-  const H = 128
-  const c = document.createElement('canvas')
-  c.width = W
-  c.height = H
-  const g = c.getContext('2d')!
-  const grd = g.createLinearGradient(0, 0, W, 0)
-  grd.addColorStop(0, '#79924f')
-  grd.addColorStop(0.5, '#eef3d8')
-  grd.addColorStop(1, '#79924f')
-  g.fillStyle = grd
-  g.fillRect(0, 0, W, H)
-  g.fillStyle = 'rgba(54,66,32,0.85)'
-  g.fillRect(0, H - 6, W, 5) // vạch đốt tối
-  g.fillStyle = 'rgba(255,255,255,0.4)'
-  g.fillRect(0, H - 9, W, 2) // cổ đốt sáng
-  const t = new THREE.CanvasTexture(c)
-  t.wrapS = THREE.RepeatWrapping
-  t.wrapT = THREE.RepeatWrapping
-  t.repeat.set(1, 7)
-  return t
+// Dáng thân trúc (chia sẻ giữa geometry & vị trí nhánh lá)
+const BASE_H = 10 // cao (đơn vị local; nhân scale đều mỗi cây)
+const NODES = 13 // số đốt -> đốt NGẮN
+const CURVE = 0.72 // độ cong NGỌN (lệch X ở đỉnh)
+const CURVE_EXP = 2.5 // cong dồn về ngọn
+
+// Thân trúc tuỳ biến: thuôn dần lên ngọn, CONG ở ngọn, có GỜ NỔI + rãnh tối ở
+// mỗi mấu đốt (như tre thật). Bóng mấu bake vào vertex color. Lấy mẫu DÀY quanh
+// mấu để gờ sắc nét mà tổng đỉnh vẫn ít.
+function makeCulmGeometry(detailed: boolean): THREE.BufferGeometry {
+  const rBase = 0.062
+  const rTip = 0.014
+  const RS = detailed ? 6 : 5
+  const intLen = BASE_H / NODES
+  const bulgeW = intLen * 0.14 // bề rộng gờ nổi
+  const bulge = 0.32 // gờ phình thêm bao nhiêu (theo bán kính)
+  const grooveW = intLen * 0.05 // rãnh tối sát mấu
+
+  // danh sách độ cao lấy mẫu: thưa dọc đốt + DÀY quanh mỗi mấu
+  const ys = new Set<number>()
+  const perInt = detailed ? 4 : 3
+  for (let n = 0; n < NODES; n++)
+    for (let k = 0; k <= perInt; k++) ys.add((n + k / perInt) * intLen)
+  const g = 0.05
+  const ring = detailed
+    ? [-2 * g, -g, -0.4 * g, 0, 0.4 * g, g, 1.8 * g]
+    : [-g, 0, g, 1.8 * g]
+  for (let n = 1; n < NODES; n++)
+    for (const o of ring) ys.add(n * intLen + o)
+  const levels = [...ys].filter((y) => y >= 0 && y <= BASE_H).sort((a, b) => a - b)
+
+  const pos: number[] = []
+  const col: number[] = []
+  const uv: number[] = []
+  const idx: number[] = []
+  for (let j = 0; j < levels.length; j++) {
+    const y = levels[j]
+    const v = y / BASE_H
+    let r = THREE.MathUtils.lerp(rBase, rTip, Math.pow(v, 0.8))
+    // khoảng cách tới mấu gần nhất
+    const np = y / intLen
+    const fr = np - Math.floor(np)
+    const dNode = Math.min(fr, 1 - fr) * intLen
+    if (dNode < bulgeW) {
+      const k = 1 - dNode / bulgeW
+      r *= 1 + bulge * k * k // gờ nổi quanh mấu
+    }
+    // bóng: rãnh tối ngay mấu + cổ đốt sáng ngay TRÊN mấu
+    let shade = 0.92
+    if (dNode < grooveW) shade -= 0.36 * (1 - dNode / grooveW)
+    if (fr > 0.02 && fr < 0.14) shade += 0.1
+    shade = Math.min(1, Math.max(0.42, shade))
+    const dx = CURVE * Math.pow(v, CURVE_EXP) // cong về ngọn
+    for (let s = 0; s <= RS; s++) {
+      const a = (s / RS) * TAU
+      pos.push(Math.cos(a) * r + dx, y, Math.sin(a) * r)
+      col.push(shade, shade, shade)
+      uv.push(s / RS, v)
+    }
+  }
+  for (let j = 0; j < levels.length - 1; j++) {
+    for (let s = 0; s < RS; s++) {
+      const a = j * (RS + 1) + s
+      const b = a + 1
+      const c = a + (RS + 1)
+      const d = c + 1
+      idx.push(a, b, d, a, d, c)
+    }
+  }
+  const geo = new THREE.BufferGeometry()
+  geo.setIndex(idx)
+  geo.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3))
+  geo.setAttribute('color', new THREE.Float32BufferAttribute(col, 3))
+  geo.setAttribute('uv', new THREE.Float32BufferAttribute(uv, 2))
+  geo.computeVertexNormals()
+  return geo
 }
 
 // MỘT lá trúc thật: phình dưới-giữa, NHỌN ở đầu (lanceolate). Dùng cho lá rơi.
@@ -118,7 +171,7 @@ function makeCross(): THREE.BufferGeometry {
   return out
 }
 
-// Rừng trúc: thân CÓ ĐỐT mọc theo CỤM + nhánh lá rủ dọc thân + LÁ ĐƠN rơi lả tả.
+// Rừng trúc: thân CÓ ĐỐT + NGỌN CONG mọc theo CỤM + nhánh lá rủ + LÁ ĐƠN rơi.
 export default function Bamboo() {
   const isMobile = useIsMobile()
   const CLUSTERS = isMobile ? 26 : 56 // rừng dày hơn (instanced nên vẫn nhẹ)
@@ -129,22 +182,24 @@ export default function Bamboo() {
   const sprigRef = useRef<THREE.InstancedMesh>(null)
   const fallRef = useRef<THREE.Points>(null)
 
-  const culmTex = useMemo(() => culmTexture(), [])
   const sprigTex = useMemo(() => sprigTexture(), [])
   const singleLeafTex = useMemo(() => singleLeafTexture(), [])
 
-  const culmGeo = useMemo(() => {
-    const g = new THREE.CylinderGeometry(0.035, 0.06, 1, 7, 8)
-    g.translate(0, 0.5, 0)
-    return g
-  }, [])
+  const culmGeo = useMemo(() => makeCulmGeometry(!isMobile), [isMobile])
   const sprigGeo = useMemo(() => makeCross(), [])
 
   const culmMat = useMemo(() => {
-    const m = makeWindMaterial({ color: 0x9ec06a, amp: 0.04, swayZ: 0.035, speed: 1.0, side: THREE.DoubleSide })
-    m.map = culmTex
+    // bóng mấu = vertex color; uốn gió nhẹ (geometry cao nên amp nhỏ)
+    const m = makeWindMaterial({
+      color: 0x95b863,
+      amp: 0.018,
+      swayZ: 0.012,
+      speed: 0.9,
+      side: THREE.DoubleSide,
+    })
+    m.vertexColors = true
     return m
-  }, [culmTex])
+  }, [])
   const sprigMat = useMemo(() => {
     const m = makeWindMaterial({ color: 0xffffff, amp: 0.08, swayZ: 0.07, speed: 1.3, side: THREE.DoubleSide })
     m.map = sprigTex
@@ -154,9 +209,9 @@ export default function Bamboo() {
     return m
   }, [sprigTex])
 
-  // thân mọc theo CỤM (3–7 cây sát nhau, toả nhẹ ra ngoài), vòng nền r8..24
+  // thân mọc theo CỤM (4–8 cây sát nhau, toả nhẹ ra ngoài), vòng nền r7.5..19.5
   const data = useMemo(() => {
-    const arr: { x: number; z: number; yaw: number; h: number; lean: number; lz: number }[] = []
+    const arr: { x: number; z: number; yaw: number; sc: number; lean: number; lz: number }[] = []
     for (let cI = 0; cI < CLUSTERS; cI++) {
       const ca = Math.random() * TAU
       const cr = 7.5 + Math.random() * 12 // vòng sát hơn -> tường trúc dày
@@ -169,10 +224,10 @@ export default function Bamboo() {
         arr.push({
           x: cx + (Math.random() - 0.5) * 1.2,
           z: cz + (Math.random() - 0.5) * 1.2,
-          yaw: Math.random() * TAU,
-          h: 7 + Math.random() * 6,
-          lean: outX * 0.06 + (Math.random() - 0.5) * 0.06,
-          lz: outZ * 0.06 + (Math.random() - 0.5) * 0.06,
+          yaw: Math.random() * TAU, // hướng cong ngẫu nhiên
+          sc: 0.82 + Math.random() * 0.42, // cao 8.2..12.4
+          lean: outX * 0.05 + (Math.random() - 0.5) * 0.05,
+          lz: outZ * 0.05 + (Math.random() - 0.5) * 0.05,
         })
       }
     }
@@ -200,25 +255,30 @@ export default function Bamboo() {
     const dummy = new THREE.Object3D()
     const culm = culmRef.current
     const sprig = sprigRef.current
+    const axis = new THREE.Vector3()
+    const eul = new THREE.Euler()
     let si = 0
     data.forEach((b, i) => {
       dummy.position.set(b.x, 0, b.z)
       dummy.rotation.set(b.lean, b.yaw, b.lz)
-      dummy.scale.set(1, b.h, 1)
+      dummy.scale.setScalar(b.sc) // scale ĐỀU -> giữ tỉ lệ đốt
       dummy.updateMatrix()
       culm?.setMatrixAt(i, dummy.matrix)
-      // nhánh lá rủ dọc nửa trên thân
+      // nhánh lá rủ ở nửa trên thân — bám theo NGỌN CONG
+      eul.set(b.lean, b.yaw, b.lz)
       for (let s = 0; s < SPRIGS; s++) {
-        const frac = 0.55 + (s / Math.max(1, SPRIGS - 1)) * 0.4
-        const yaw = b.yaw + s * 2.4 + Math.random() * 0.6
+        const frac = 0.55 + (s / Math.max(1, SPRIGS - 1)) * 0.38 // 0.55..0.93
+        const dx = CURVE * Math.pow(frac, CURVE_EXP)
+        axis.set(dx, frac * BASE_H, 0).multiplyScalar(b.sc).applyEuler(eul)
+        const yaw2 = b.yaw + s * 2.4 + Math.random() * 0.6
         dummy.position.set(
-          b.x + Math.cos(yaw) * 0.18,
-          b.h * frac,
-          b.z + Math.sin(yaw) * 0.18
+          b.x + axis.x + Math.cos(yaw2) * 0.14,
+          axis.y,
+          b.z + axis.z + Math.sin(yaw2) * 0.14
         )
-        dummy.rotation.set(0.25, yaw, 0) // hơi chúi xuống cho lá rủ
-        const sc = 1.3 + Math.random() * 0.8
-        dummy.scale.set(sc, sc, sc)
+        dummy.rotation.set(0.25, yaw2, 0) // hơi chúi xuống cho lá rủ
+        const scl = (1.3 + Math.random() * 0.8) * b.sc
+        dummy.scale.setScalar(scl)
         dummy.updateMatrix()
         sprig?.setMatrixAt(si++, dummy.matrix)
       }
