@@ -163,6 +163,21 @@ canvas {
     transform: translateX(-50%) translateY(-4px);
   }
 }
+/* mobile: hint xuống dòng gọn, không tràn ngang (đừng nowrap) */
+@media (max-width: 760px) {
+  .hint {
+    display: block;
+    white-space: normal;
+    text-align: center;
+    max-width: min(86vw, 340px);
+    font-size: 11px;
+    line-height: 1.5;
+    padding: 8px 14px;
+    letter-spacing: 0.2px;
+    /* tránh đè lên NavDock góc dưới-phải */
+    bottom: max(14px, env(safe-area-inset-bottom));
+  }
+}
 
 /* nút Viết điều ước */
 .write {

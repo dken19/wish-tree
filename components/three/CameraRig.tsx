@@ -30,7 +30,8 @@ export default function CameraRig({ disabled = false }: { disabled?: boolean }) 
   useEffect(() => {
     const isMobile =
       matchMedia('(pointer:coarse)').matches || window.innerWidth < 760
-    const r = isMobile ? 10.4 : 9.2
+    // mobile: lùi camera xa hơn -> cây nhỏ lại, thấy thêm cảnh phía sau
+    const r = isMobile ? 12.5 : 9.2
     s.current.radius = r
     s.current.tRadius = r
   }, [])
