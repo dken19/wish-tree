@@ -10,10 +10,12 @@ export const size = { width: 1200, height: 630 };
 export const contentType = "image/png";
 
 export default async function Image() {
-  const [semibold, regular] = await Promise.all([
+  const [semibold, regular, logo] = await Promise.all([
     readFile(join(process.cwd(), "app/_fonts/BeVietnamPro-SemiBold.ttf")),
     readFile(join(process.cwd(), "app/_fonts/BeVietnamPro-Regular.ttf")),
+    readFile(join(process.cwd(), "public/logo.png")),
   ]);
+  const logoSrc = `data:image/png;base64,${logo.toString("base64")}`;
 
   // Giấy ước đỏ treo trên cây: vị trí + độ nghiêng khác nhau cho tự nhiên.
   const wishes = [
@@ -159,8 +161,11 @@ export default async function Image() {
               color: "#4d7a3f",
               marginBottom: 18,
               display: "flex",
+              alignItems: "center",
+              gap: 16,
             }}
           >
+            <img src={logoSrc} width={64} height={64} style={{ borderRadius: 14 }} alt="" />
             cayuocnguyen.io.vn
           </div>
           <div
