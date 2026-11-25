@@ -17,6 +17,15 @@ export function formatWishTime(ms?: number | null): string {
   })
 }
 
+/** "25/11/2026 16:14" -> ["25/11/2026", "16:14"] (giờ VN) — cho cuống vé. */
+export function splitWishTime(ms?: number | null): [string, string] {
+  const t = formatWishTime(ms)
+  if (!t) return ['', '']
+  const parts = t.split(/,?\s+/)
+  // vi-VN có thể trả "16:14 25/11/2026" hoặc "25/11/2026, 16:14"
+  return [parts.find((x) => x.includes('/')) ?? '', parts.find((x) => x.includes(':')) ?? '']
+}
+
 /** Bỏ dấu tiếng Việt + chữ thường: "Điểm Toán" -> "diem toan". */
 export function foldVi(s: string): string {
   return s
@@ -57,3 +66,11 @@ export const isReportReason = (r: unknown): r is ReportReason =>
 
 /** Số lượt báo cáo (từ các tài khoản KHÁC nhau) để tự ẩn nội dung chờ admin xem. */
 export const AUTO_HIDE_REPORTS = 3
+
+/** Tiến độ điều ước do CHÍNH người viết (đăng nhập) tự đánh dấu ở /tai-khoan. Thiếu trường = 'trying'. */
+export type WishProgress = 'trying' | 'achieved'
+export const PROGRESS_LABEL: Record<WishProgress, string> = {
+  trying: 'Đang cố gắng',
+  achieved: 'Đã đạt được',
+}
+export const isProgress = (v: unknown): v is WishProgress => v === 'trying' || v === 'achieved'

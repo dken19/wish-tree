@@ -60,6 +60,12 @@ export default function WishCard() {
             {openWish.createdAt > 0 && <span>{formatWishTime(openWish.createdAt)}</span>}
           </div>
         )}
+        {openWish?.achieved && (
+          <div className="wish-done">
+            <Icon name="check" size={14} />
+            Đã đạt được
+          </div>
+        )}
         <p className="text">{openWish ? `“${openWish.text}”` : ''}</p>
         <div className="meta">
           {/* Có tên (người đăng nhập) -> thư pháp; không tên -> "Ẩn danh" chữ thường */}

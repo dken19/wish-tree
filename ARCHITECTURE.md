@@ -48,6 +48,8 @@ app/
   gioi-thieu/page.tsx  # Giới thiệu (PageShell plainTitle — tiêu đề font thường cho người duyệt OAuth; tĩnh, không Canvas, không cần login) — là "Application home page" trên Google OAuth consent screen (Google bắt home page nêu tên app + mục đích + link privacy)
   chinh-sach-bao-mat/page.tsx # Chính sách bảo mật (tĩnh) — link Privacy policy của Google OAuth consent screen
   dieu-khoan/page.tsx  # Điều khoản sử dụng (tĩnh) — link Terms of service của consent screen
+  tai-khoan/
+    page.tsx, AccountView.tsx # "Điều ước của tôi" (PageShell, noindex): watchAuth -> chưa đăng nhập = nút Google; đã đăng nhập = số đã viết/đang cố gắng/đã đạt + chip lọc + VÉ mỗi điều ước (trạng thái duyệt + nút 2 nấc Đang cố gắng/Đã đạt được, đổi lạc quan) -> /api/me/wishes. Dev chưa có Firebase: dữ liệu mẫu (DEMO, mốc giờ cố định cho khớp hydrate)
   dieu-uoc/
     page.tsx           # server: metadata + <Suspense><WishesView/></Suspense> (route /dieu-uoc, KHÔNG Canvas)
     WishesView.tsx     # client (PageShell): số đang treo + chờ duyệt (/api/wishes/stats) ở đầu trang; mỗi điều ước là 1 VÉ (cuống #số bấm để lọc + giờ gửi + dấu "Hôm nay", thân lời ước); ô tìm (#số hoặc từ khoá) + ngày gửi + sắp xếp mới/cũ + chủ đề + phân trang SỐ (state qua URL ?q=&date=&sort=&theme=&page=) -> /api/wishes/list; thẻ có #số + giờ gửi + 💬 bình luận (WishThread) + ⚑ báo cáo; mount AuthBridge
@@ -58,6 +60,7 @@ app/
     wishes/[id]/comments/route.ts # GET bình luận (ai cũng đọc, lọc hidden, `mine` nếu kèm token) / POST bình luận — CHỈ người đăng nhập (verifyIdToken), validateComment + rate-limit theo uid, tăng commentCount (transaction)
     reports/route.ts   # POST báo cáo điều ước/bình luận — CHỈ người đăng nhập, 1 lần/tài khoản/nội dung, đủ AUTO_HIDE_REPORTS (3) -> tự ẩn
     admin/reports/route.ts # GET báo cáo chưa xử lý (gộp theo nội dung) / PATCH hide|dismiss — checkAdmin
+    me/wishes/route.ts # GET: điều ước CỦA CHÍNH người đăng nhập (where uid==, đơn trường, sort bộ nhớ, ≤500, mọi trạng thái) / PATCH {id, progress} — chỉ chủ (uid khớp, không thì 404), ghi progress + achievedAt, rate-limit theo uid
     wishes/stats/route.ts # GET: {approved, pending} bằng count() (Admin SDK) — cache CDN 30s + memo instance 30s; fallback SEED
     wishes/list/route.ts # GET ?page=&theme=&q=&date=&sort=: approved; q="#888" -> where no==; q chữ -> keywords array-contains + lọc bộ nhớ; còn lại count + orderBy createdAt + offset/limit (sort cũ = lấy đoạn từ cuối rồi đảo, KHỎI index ASC); fallback SEED
     wishes/funny/collections/route.ts # GET: các "bộ xàm xí" (lib/funnyCollections, ẩn bộ rỗng), cache CDN 60s
@@ -105,15 +108,16 @@ components/
     useIsMobile.ts     # hook phát hiện mobile (SSR-safe)
   ui/
     SkyBackdrop.tsx    # div #sky gradient theo điều kiện thời tiết
-    WeatherPanel.tsx   # huy hiệu góc trên-phải: icon thời tiết + GIỜ VIỆT NAM (ghi qua ref) — KHÔNG còn nút chuyển; mobile chỉ icon + giờ
-    WishCard.tsx       # thẻ đọc điều ước (mở khi click giấy): #số + giờ gửi, nút Bình luận mở WishThread (thẻ cuộn được), Báo cáo; `verified` -> lấp lánh + tên người gửi viết thư pháp
+    AccountButton.tsx  # nút HÌNH NGƯỜI cạnh huy hiệu giờ (trong WeatherPanel): menu nhỏ — chưa đăng nhập: Tiếp tục với Google + Điều ước của tôi; đã đăng nhập: ảnh/tên + Điều ước của tôi (/tai-khoan) + Đăng xuất; user từ store (AuthBridge)
+    WeatherPanel.tsx   # huy hiệu góc trên-phải (+ AccountButton): icon thời tiết + GIỜ VIỆT NAM (ghi qua ref) — KHÔNG còn nút chuyển; mobile chỉ icon + giờ
+    WishCard.tsx       # thẻ đọc điều ước (mở khi click giấy): #số + giờ gửi, dấu "Đã đạt được" nếu achieved, nút Bình luận mở WishThread (thẻ cuộn được), Báo cáo; `verified` -> lấp lánh + tên người gửi viết thư pháp
     Sparkles.tsx       # làm thẻ/vé ước của người đăng nhập NỔI BẬT: viền vàng conic xoay (mask chừa mép 2px), hào quang thở (prop `glow`, tắt cho vé vì mask cắt mép), sao 4 cánh nhấp nháy, vệt sáng quét; nền giấy ánh kim + dấu "Ước" mạ vàng ở globals.css. Chỉ animate transform/opacity, tắt khi reduced-motion; tên người gửi `.spk-name` viết thư pháp, KHÔNG kèm ảnh
     WishThread.tsx     # bình luận 1 điều ước (đọc: ai cũng được; viết: đăng nhập Google) + export ReportButton (chọn lý do -> /api/reports)
     LegalPage.tsx      # khung trang pháp lý (PageShell + .pg-prose) + CONTACT_EMAIL/UPDATED_AT
     PageShell.tsx      # khung chung trang KHÔNG Canvas: PageSky (4 lớp trời + sao + đèn trời .ld-lantern) + hero (về cây, tiêu đề thư pháp/plainTitle, lead, stats, giờ HN) + tờ nội dung; data-sky cập nhật mỗi phút qua ref
     Icon.tsx           # icon nét SVG inline (currentColor) — THAY emoji làm icon ở mọi nơi
-    Composer.tsx       # bảng viết: chọn theme + nhập text -> POST /api/wishes
-    NavDock.tsx        # MENU dock tròn góc dưới-phải (icon SVG): xòe 5 mục (Cây/Viết/Phòng ôn bài qua store; Kỹ năng sống -> router.push('/ky-nang')); ẩn khi roomOpen/composerOpen
+    Composer.tsx       # bảng viết: chọn theme + nhập text -> POST /api/wishes; chưa đăng nhập: CTA ít chữ (1 dòng + 3 nhãn icon + nút "Tiếp tục với Google" có vệt sáng quét CSS) và nút gửi đổi thành "Gửi ẩn danh"
+    NavDock.tsx        # MENU dock tròn góc dưới-phải (icon SVG): xòe các mục (có "Điều ước của tôi" -> /tai-khoan) (Cây/Viết/Phòng ôn bài qua store; Kỹ năng sống -> router.push('/ky-nang')); ẩn khi roomOpen/composerOpen
     FocusHUD.tsx       # overlay phòng (tông mực trúc + nhấn vàng đèn): MẶC ĐỊNH THU GỌN (thanh mini: online + giờ Pomodoro + Rời phòng) — bấm mở bảng: số FLIP lớn = đếm ngược Pomodoro (màu theo phase), giờ Hà Nội 1 dòng nhỏ (ref), chọn 25/50 phút, Bắt đầu/Đặt lại, tên + Rời phòng; nút "Ra bàn thờ xin lời chúc" (walkTo shrine) + "Về chỗ ngồi"; mini bar có icon đèn khi được chúc phúc; ẩn khi shrineOpen; số online = sessions + bots
     ShrineHUD.tsx      # bảng BÀN THỜ (bottom sheet cùng tông FocusHUD): vái 3 lần (bowNonce + chuông WebAudio, 3 nén nhang sáng dần) -> rút 1 lời chúc/NGÀY giờ VN (lib/blessings, localStorage) + buff 60 phút; nút nổi "Vái tượng" khi nearShrine; toast hướng dẫn đi lại lần đầu
     LacBird.tsx        # <img> chim Lạc (public/chim-lac.jpg) + mix-blend-mode
@@ -141,7 +145,7 @@ lib/
   blessings.ts         # 24 lời chúc (ấm áp, không phán vận hạn), BOWS_NEEDED=3, BUFF_MINUTES=60, vnDayKey, load/save/draw (localStorage 'wish-tree:blessing')
   funnyCollections.ts  # "bộ xàm xí": hằng số giới hạn + loadCollections (getAll điều ước, lọc status funny, không author)
   wishes.ts            # type Wish (+no, commentCount), SEED_WISHES (no 1..8), subscribeApproved() (onSnapshot, sort client)
-  wishMeta.ts          # client+server: formatNo, formatWishTime (giờ VN), foldVi/searchTokens (bỏ dấu -> keywords), parseNoQuery, REPORT_REASONS, AUTO_HIDE_REPORTS
+  wishMeta.ts          # client+server: formatNo, formatWishTime (giờ VN), splitWishTime (cuống vé), WishProgress/PROGRESS_LABEL/isProgress, foldVi/searchTokens (bỏ dấu -> keywords), parseNoQuery, REPORT_REASONS, AUTO_HIDE_REPORTS
   wishServer.ts        # server-only: ensureNumbering (lần đầu đánh số TẤT CẢ ước cũ theo createdAt + keywords, rồi đặt meta/counters), counterRef, viewerFromRequest (verifyIdToken), publicWish
   firebase.client.ts   # init client SDK: getDb (đọc Firestore) + getAuthClient (Auth); null nếu thiếu env
   firebase.admin.ts    # init Admin SDK (server-only): getAdminDb + getAdminAuth (verifyIdToken)
@@ -177,6 +181,8 @@ firestore.indexes.json # composite index cho /api/wishes/list: (status,createdAt
 5. **Số thứ tự #N**: cấp lúc GỬI (cả ẩn danh/pending → bị bỏ thì danh sách công khai có "lỗ" số, chấp nhận) trong transaction với `meta/counters.wishNo`. Lần đầu chạy (chưa có counter) `ensureNumbering` đánh số mọi điều ước cũ 1..k theo `createdAt` (tất định → nhiều instance chạy song song vẫn ra cùng số) — gọi ở POST wishes, list, admin.
 6. **Bình luận**: subcollection `wishes/{id}/comments`. **Admin bình luận** (email đã xác minh ∈ `ADMIN_EMAILS`, server tự nhận qua `viewerFromRequest().admin`) → lưu `staff:true`, KHÔNG lưu ảnh Google; GET trả `author = adminDisplayName()` (env `ADMIN_DISPLAY_NAME`, mặc định "Người giữ cây") đọc lúc trả về → đổi env là đổi tên cả bình luận cũ; UI có dấu triện + nhãn "Giữ cây". `WishThread` GET (kèm token nếu có để biết `mine`) / POST (bắt buộc đăng nhập). `commentCount` trên doc điều ước (đọc realtime qua onSnapshot cho WishCard).
 7. **Báo cáo**: `ReportButton` → `POST /api/reports` (bắt buộc đăng nhập; không báo nội dung của chính mình; mỗi tài khoản 1 lần/nội dung nhờ doc id `uid__wishId__commentId|wish`). `reportCount` tăng; đủ `AUTO_HIDE_REPORTS`=3 → điều ước về `pending` + `flagged` (rời cây ngay), bình luận `hidden` (+ giảm commentCount). Admin tab "⚑ Bị báo cáo": **Gỡ/Ẩn** (wish→rejected / comment hidden) hoặc **Bỏ qua** (flagged→approved lại, unhide); cả hai đánh dấu `reports.resolved`.
+
+8. **Tài khoản / tiến độ** (`/tai-khoan`): `GET /api/me/wishes` (Bearer token → `where('uid','==')`, mọi trạng thái duyệt) · `PATCH` `{id, progress}` chỉ khi `doc.uid === viewer.uid`. `progress` là của NGƯỜI VIẾT, tách bạch với `status` (của admin). Dấu "Đã đạt" hiện công khai trên vé `/dieu-uoc` + WishCard (chỉ khi approved). Ước ẩn danh không có uid → không quản lí được. Lối vào: `AccountButton` (hình người, góc trên-phải trang chủ), NavDock, link "Ước của tôi" trong Composer.
 
 **Đăng nhập (Google/Facebook):** `AuthBridge` (`onAuthStateChanged`) → `useScene.user`. `Composer` hiện nút đăng nhập Google/đăng xuất (nút Facebook **tạm ẩn** vì provider Facebook chưa bật trên Firebase — `signInFacebook` vẫn giữ trong `lib/auth.ts`); khi gửi, đính `getIdToken()` vào header. Client KHÔNG bao giờ tự ghi Firestore — server `verifyIdToken` mới là nơi quyết định `approved`.
 
@@ -220,6 +226,8 @@ Chưa cấu hình Firebase: `getDb()` null → `subscribeSessions` trả về 1 
   funnyNote?: string,    // chỉ khi status 'funny': lí do không duyệt RIÊNG (admin ghi), hiện công khai ở /xam-xi
   funnyGroup?: string,   // id "bộ xàm xí" (funnyCollections) -> không có funnyNote thì dùng lí do chung của bộ
   commentCount: number, reportCount: number,
+  progress?: 'trying'|'achieved', // CHÍNH người viết tự đánh dấu ở /tai-khoan (thiếu = trying); publicWish/subscribeApproved chỉ trả `achieved` boolean
+  achievedAt?: serverTimestamp,   // khi đánh dấu achieved (xoá khi về trying)
   flagged?: boolean,     // true = TỰ ẩn do đủ báo cáo (status về pending), chờ admin
   reviewedAt?: serverTimestamp, reviewedBy?: string }  // ghi khi admin đổi trạng thái
 
@@ -263,6 +271,7 @@ Vercel: import `.env.local` khi tạo project.
 
 ## 8. Gotchas (đọc trước khi sửa)
 
+- **CTA đăng nhập ở bản dev không Firebase**: `Composer` hiện khối đăng nhập khi `isFirebaseConfigured` HOẶC `NODE_ENV !== 'production'` (để xem giao diện khi chưa có `.env.local`); bấm Google lúc đó chỉ báo toast. Prod thiếu Firebase thì vẫn ẩn.
 - **ESLint**: Next 16 bật rule React-Compiler (`purity`/`immutability`/`set-state-in-effect`) báo nhầm với code Three.js (Math.random trong useMemo, mutate buffer trong useFrame). Đã **tắt cho `components/three/**`** + vài file UI trong `eslint.config.mjs`. Đừng "sửa" các cảnh báo này bằng cách viết lại — chúng cố ý.
 - **Loader màu nước**: `WishTreeCanvas.onCreated` đợi 2 rAF rồi `setSceneReady(true)` → Loader mới loang mở. Nền giấy + chữ + con dấu vẽ **1 lần** vào canvas 2D (đợi `document.fonts.ready`, đo vị trí chữ HTML để vẽ đúng chỗ, rồi crossfade) → làm texture cho fragment shader (1 tam giác full màn hình, ~3.2s, xong thì `loseContext`). Lòng vết trong suốt đi **trễ** sau mép màu (2 ngưỡng `t` và `t-.2`) để luôn thấy dải màu loang. **KHÔNG bật `gl.BLEND`** (canvas `premultipliedAlpha:false`) — bật sẽ ra viền tối quanh vùng trong suốt.
 - **Firebase Auth – Authorized domains**: mọi tên miền chạy app (`cayuocnguyen.io.vn`, `www.` nếu có, domain `*.vercel.app`, `localhost`) PHẢI có trong Firebase Console → Authentication → Settings → Authorized domains; thiếu → popup Google đóng ngay, lỗi `auth/unauthorized-domain` (Composer toast báo riêng theo mã lỗi).

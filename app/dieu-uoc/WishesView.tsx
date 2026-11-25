@@ -2,7 +2,7 @@
 import { useCallback, useEffect, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { THEMES, THEME_KEYS, isThemeKey, type ThemeKey } from "@/lib/themes";
-import { formatNo, formatWishTime } from "@/lib/wishMeta";
+import { formatNo, splitWishTime } from "@/lib/wishMeta";
 import AuthBridge from "@/components/AuthBridge";
 import WishThread, { ReportButton } from "@/components/ui/WishThread";
 import PageShell from "@/components/ui/PageShell";
@@ -18,18 +18,8 @@ type Item = {
   createdAt: number;
   commentCount: number;
   verified?: boolean;
+  achieved?: boolean;
 };
-
-/** "25/11/2026 16:14" -> ["25/11/2026", "16:14"] (giờ Việt Nam). */
-function splitTime(ms: number): [string, string] {
-  const t = formatWishTime(ms);
-  if (!t) return ["", ""];
-  const parts = t.split(/,?\s+/);
-  // vi-VN có thể trả "16:14 25/11/2026" hoặc "25/11/2026, 16:14"
-  const time = parts.find((x) => x.includes(":")) ?? "";
-  const day = parts.find((x) => x.includes("/")) ?? "";
-  return [day, time];
-}
 
 type Filters = {
   theme: ThemeKey | null;
@@ -280,7 +270,7 @@ export default function WishesView() {
               const isSeed = w.id.startsWith("seed-");
               const fresh =
                 w.createdAt > 0 && now - w.createdAt < 24 * 3600_000;
-              const [day, time] = splitTime(w.createdAt);
+              const [day, time] = splitWishTime(w.createdAt);
               return (
                 <li
                   key={w.id}
@@ -315,7 +305,11 @@ export default function WishesView() {
                         {time}
                       </time>
                     )}
-                    {fresh && <span className="tk-stamp">Hôm nay</span>}
+                    {w.achieved ? (
+                      <span className="tk-stamp tk-done">Đã đạt</span>
+                    ) : (
+                      fresh && <span className="tk-stamp">Hôm nay</span>
+                    )}
                   </div>
                   <div className="tk-body">
                     <p className="tk-text">{w.text}</p>

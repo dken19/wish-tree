@@ -84,6 +84,8 @@ export function publicWish(d: DocumentSnapshot) {
     commentCount: typeof data.commentCount === 'number' ? data.commentCount : 0,
     // Gửi bởi người đăng nhập (có uid do server xác minh) -> thẻ lấp lánh. Chỉ trả boolean.
     verified: typeof data.uid === 'string' && data.uid.length > 0,
+    // người viết tự đánh dấu "Đã đạt được" ở /tai-khoan
+    achieved: data.progress === 'achieved',
   }
 }
 export type PublicWish = ReturnType<typeof publicWish>

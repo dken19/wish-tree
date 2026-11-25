@@ -12,6 +12,7 @@ Xây bằng **Next.js (App Router) + React Three Fiber + Firebase Firestore**.
 - Viết điều ước → lọc từ tục + rate-limit. **Đăng nhập Google → điều ước hiện NGAY trên cây** (khỏi chờ duyệt) và **thẻ ước lấp lánh** kèm tên người gửi viết thư pháp (không kèm ảnh); gửi ẩn danh → vào hàng chờ **duyệt** rồi mới hiện.
 - Dưới tiêu đề có huy hiệu **số điều ước trên cây + số đang chờ duyệt** (cập nhật mỗi phút, `/api/wishes/stats`); gửi ẩn danh sẽ được báo vị trí trong hàng chờ.
 - Mỗi điều ước có **số thứ tự** (`#1`, `#888`…) và **ngày giờ gửi**; gửi xong được báo số của mình.
+- **Tài khoản / Điều ước của tôi** (`/tai-khoan`, nút **hình người** cạnh huy hiệu giờ ở trang chủ, hoặc mục trong cuộn bí kíp): đăng nhập Google → xem mọi điều ước mình đã treo (kể cả chờ duyệt / không lên cây) và tự đánh dấu **Đang cố gắng** / **Đã đạt được**; điều ước đã đạt hiện dấu "Đã đạt" công khai trên cây và `/dieu-uoc`. Ước gửi ẩn danh không gắn tài khoản nên không hiện ở đây.
 - **Tất cả ước nguyện** (`/dieu-uoc`): **tìm theo số `#888` hoặc từ khoá** (không cần gõ dấu), lọc theo **chủ đề** / **ngày gửi**, sắp xếp mới/cũ nhất, **phân trang** ở server.
 - **Góc xàm xí** (`/xam-xi`): điều ước vui vui không treo lên cây; admin chọn bằng nút **Xàm xí…** trong `/admin` và ghi lí do không duyệt (hiện công khai, giấu tên người viết). Có thể **gộp 2–6 tờ liên quan thành một bộ** dùng **chung một lí do** (chọn được tờ ở mọi tab, tạo bộ là tờ tự sang Xàm xí; lí do riêng từng tờ không bắt buộc; tờ đã vào bộ chỉ hiện ở tab Bộ sưu tập, không lặp ở Từng tờ) — tab **Bộ sưu tập** ở `/xam-xi`.
 - **Bình luận & báo cáo** (cần đăng nhập Google): bình luận động viên dưới mỗi điều ước (trên cây hoặc `/dieu-uoc`); tài khoản admin bình luận dưới tên **"Người giữ cây"** (đổi bằng env `ADMIN_DISPLAY_NAME`) kèm dấu triện + nhãn "Giữ cây"; báo cáo điều ước/bình luận xấu — đủ 3 tài khoản báo cáo thì tự ẩn chờ admin xem ở tab **⚑ Bị báo cáo** trong `/admin`.
@@ -65,6 +66,7 @@ Không cần biến env mới — đăng nhập dùng lại config Firebase sẵ
 - `lib/*` — themes, tree (hình học + anchor tất định), weather, profanity, firebase, wishes, **auth** (đăng nhập Google/Facebook).
 - `app/api/*` — POST điều ước, bình luận, báo cáo, số điều ước (`wishes/stats`), **GET danh sách phân trang** (`wishes/list`), duyệt (admin).
 - `app/dieu-uoc/*` — trang "Tất cả ước nguyện" (lọc + phân trang, không Canvas).
+- `app/tai-khoan/*` — "Điều ước của tôi" (đăng nhập, đánh dấu tiến độ, không Canvas); API `app/api/me/wishes`.
 - `app/xam-xi/*` — trang "Góc xàm xí" (điều ước status `funny` + lí do không duyệt).
 - `app/gioi-thieu` — trang Giới thiệu (home page khai báo cho Google OAuth consent screen).
 - `app/chinh-sach-bao-mat`, `app/dieu-khoan` — Chính sách bảo mật & Điều khoản (dùng cho Google OAuth consent screen; email liên hệ ở `components/ui/LegalPage.tsx`). Có link nhỏ dưới nút đăng nhập trong `Composer`.
@@ -76,6 +78,6 @@ Không cần biến env mới — đăng nhập dùng lại config Firebase sẵ
 { text, theme, author?, uid?, status: 'pending'|'approved'|'rejected', createdAt }
 ```
 
-`uid` có khi điều ước được gửi bởi người đã đăng nhập (→ tự `approved`).
+`uid` có khi điều ước được gửi bởi người đã đăng nhập (→ tự `approved`). `progress` (`trying`|`achieved`) + `achievedAt`: chính người viết tự đánh dấu ở `/tai-khoan`.
 
 Mỗi `theme` là một "zone" treo trên cây; vị trí từng tờ là **tất định** theo id (không nhảy giữa các lần load).

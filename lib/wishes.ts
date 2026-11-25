@@ -20,6 +20,7 @@ export type Wish = {
   no?: number // số thứ tự #N (cấp lúc gửi, xem lib/wishServer)
   commentCount?: number
   verified?: boolean // người đăng nhập gửi (có uid) -> thẻ lấp lánh
+  achieved?: boolean // người viết tự đánh dấu "Đã đạt được" (/tai-khoan)
 }
 
 // Số tờ tối đa render cùng lúc (nhẹ cho mobile)
@@ -43,6 +44,8 @@ export const SEED_WISHES: Wish[] = ([
   ...(process.env.NODE_ENV !== 'production' && i % 3 === 0
     ? { verified: true, author: w.author ?? 'Người thử nghiệm' }
     : {}),
+  // ...và 1 tờ "Đã đạt được" để xem dấu mộc
+  ...(process.env.NODE_ENV !== 'production' && i === 3 ? { achieved: true } : {}),
 }))
 
 const MAX_RENDER =
@@ -86,6 +89,7 @@ export function subscribeApproved(cb: (wishes: Wish[]) => void): () => void {
             no: typeof data.no === 'number' ? data.no : undefined,
             commentCount: typeof data.commentCount === 'number' ? data.commentCount : 0,
             verified: typeof data.uid === 'string' && data.uid.length > 0,
+            achieved: data.progress === 'achieved',
           }
         })
         .sort((a, b) => b.createdAt - a.createdAt)

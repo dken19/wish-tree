@@ -8,7 +8,7 @@ export default function robots(): MetadataRoute.Robots {
       userAgent: "*",
       allow: "/",
       // Khu vực không cần Google index
-      disallow: ["/admin", "/api/"],
+      disallow: ["/admin", "/api/", "/tai-khoan"],
     },
     sitemap: `${BASE_URL}/sitemap.xml`,
     host: BASE_URL,

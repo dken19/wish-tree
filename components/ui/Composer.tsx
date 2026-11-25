@@ -1,11 +1,16 @@
 'use client'
 import { useState } from 'react'
+import Link from 'next/link'
 import { THEMES, THEME_KEYS, type ThemeKey } from '@/lib/themes'
 import { MAX_WISH_LEN, validateWish } from '@/lib/profanity'
 import { useScene } from '@/store/useScene'
 import { isFirebaseConfigured } from '@/lib/firebase.client'
 import { signInGoogle, signOutUser, getIdToken } from '@/lib/auth'
+import Icon from './Icon'
 import LacBird from './LacBird'
+
+// Bản dev chưa có Firebase (.env.local) vẫn hiện CTA đăng nhập để xem giao diện; prod giữ nguyên.
+const SHOW_AUTH = isFirebaseConfigured || process.env.NODE_ENV !== 'production'
 
 // Bảng viết điều ước -> POST /api/wishes.
 // Người đăng nhập Google (Facebook tạm ẩn — provider chưa bật trên Firebase): điều ước hiện NGAY; ẩn danh: vào hàng chờ duyệt.
@@ -22,6 +27,10 @@ export default function Composer() {
   const [sending, setSending] = useState(false)
 
   async function login() {
+    if (!isFirebaseConfigured) {
+      showToast('Bản dev chưa cấu hình Firebase (.env.local) nên chưa đăng nhập được.')
+      return
+    }
     try {
       await signInGoogle()
     } catch (e) {
@@ -74,8 +83,8 @@ export default function Composer() {
         approved
           ? `Đã treo điều ước${tag} lên cây.`
           : queuePos
-            ? `Đã gửi điều ước${tag}. Đang chờ duyệt, bạn đứng thứ ${queuePos} trong hàng; duyệt xong sẽ hiện trên cây.`
-            : `Đã gửi điều ước${tag}. Duyệt xong sẽ hiện trên cây.`
+            ? `Đã gửi điều ước${tag}. Đang chờ duyệt, bạn đứng thứ ${queuePos} trong hàng. Lần sau đăng nhập Google là hiện ngay.`
+            : `Đã gửi điều ước${tag}. Duyệt xong sẽ hiện trên cây. Lần sau đăng nhập Google là hiện ngay.`
       )
     } catch {
       showToast('Mất kết nối, thử lại sau nhé')
@@ -93,36 +102,48 @@ export default function Composer() {
       </div>
       <p className="sub">Chọn nơi treo, rồi viết điều mình mong nhất.</p>
 
-      {isFirebaseConfigured &&
+      {SHOW_AUTH &&
         (user ? (
           <div className="auth-row">
             <span className="auth-who">
               Đang đăng nhập: <b>{user.name}</b> · điều ước hiện ngay, thẻ lấp lánh
             </span>
+            <Link className="auth-out" href="/tai-khoan">
+              Ước của tôi
+            </Link>
             <button className="auth-out" onClick={() => signOutUser()}>
               Đăng xuất
             </button>
           </div>
         ) : (
-          <div className="auth-row">
-            <span className="auth-hint">
-              Đăng nhập để điều ước hiện ngay, khỏi chờ duyệt, và thẻ ước được lấp lánh:
-            </span>
-            <div className="auth-btns">
-              <button className="auth-in g" onClick={() => login()}>
-                Google
-              </button>
-            </div>
-            {stats && (
-              <span className="auth-queue">
-                {stats.pending > 0
-                  ? `Gửi ẩn danh: điều ước vào hàng chờ duyệt (hiện có ${stats.pending} điều ước đang chờ).`
-                  : 'Gửi ẩn danh: điều ước sẽ được duyệt trước khi hiện trên cây.'}
-              </span>
-            )}
+          // CTA đăng nhập: lợi ích rõ + nút Google lớn (nút gửi bên dưới cũng đổi thành "Gửi ẩn danh, chờ duyệt")
+          <div className="auth-cta">
+            <p className="auth-cta-t">Đăng nhập để treo ngay</p>
+            <ul className="auth-perks" aria-label="Quyền lợi khi đăng nhập">
+              <li>
+                <Icon name="tree" size={14} />
+                Hiện ngay
+              </li>
+              <li>
+                <Icon name="sparkle" size={14} />
+                Thẻ lấp lánh
+              </li>
+              <li>
+                <Icon name="comment" size={14} />
+                Bình luận
+              </li>
+            </ul>
+            <button className="auth-google" onClick={() => login()}>
+              <svg width="18" height="18" viewBox="0 0 48 48" aria-hidden="true">
+                <path fill="#EA4335" d="M24 9.5c3.5 0 6.6 1.2 9.1 3.6l6.8-6.8C35.8 2.4 30.3 0 24 0 14.6 0 6.6 5.4 2.6 13.2l7.9 6.2C12.4 13.6 17.7 9.5 24 9.5z" />
+                <path fill="#4285F4" d="M46.1 24.5c0-1.6-.1-3.1-.4-4.5H24v9h12.4c-.5 2.9-2.2 5.3-4.6 6.9l7.4 5.8c4.3-4 6.9-9.9 6.9-17.2z" />
+                <path fill="#FBBC05" d="M10.5 28.6c-.5-1.4-.8-3-.8-4.6s.3-3.2.8-4.6l-7.9-6.2C.9 16.5 0 20.1 0 24s.9 7.5 2.6 10.8l7.9-6.2z" />
+                <path fill="#34A853" d="M24 48c6.5 0 11.9-2.1 15.9-5.8l-7.4-5.8c-2.1 1.4-4.8 2.3-8.5 2.3-6.3 0-11.6-4.1-13.5-9.8l-7.9 6.2C6.6 42.6 14.6 48 24 48z" />
+              </svg>
+              Tiếp tục với Google
+            </button>
             <span className="auth-legal">
-              Đăng nhập là bạn đồng ý với <a href="/dieu-khoan">Điều khoản</a> &{' '}
-              <a href="/chinh-sach-bao-mat">Chính sách bảo mật</a>.
+              Đăng nhập là đồng ý <a href="/dieu-khoan">Điều khoản</a> & <a href="/chinh-sach-bao-mat">Bảo mật</a>
             </span>
           </div>
         ))}
@@ -160,7 +181,13 @@ export default function Composer() {
           Để sau
         </button>
         <button className="btn-send" onClick={send} disabled={sending}>
-          {sending ? 'Đang treo…' : 'Treo lên cây'}
+          {sending
+            ? user || !SHOW_AUTH
+              ? 'Đang treo…'
+              : 'Đang gửi…'
+            : user || !SHOW_AUTH
+              ? 'Treo lên cây'
+              : 'Gửi ẩn danh'}
         </button>
       </div>
     </div>

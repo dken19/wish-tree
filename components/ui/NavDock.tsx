@@ -65,6 +65,15 @@ const ITEMS: Item[] = [
     },
   },
   {
+    key: 'me',
+    icon: 'user',
+    label: 'Điều ước của tôi',
+    hint: 'Đánh dấu ước đã đạt được',
+    run: (router) => {
+      router.push('/tai-khoan')
+    },
+  },
+  {
     key: 'funny',
     icon: 'smile',
     label: 'Góc xàm xí',

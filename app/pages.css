@@ -1120,3 +1120,110 @@
   width: 18px;
   height: 18px;
 }
+
+/* ---------- Điều ước của tôi (/tai-khoan): tiến độ do chính người viết đánh dấu ---------- */
+.tk-stamp.tk-done {
+  color: #2f7d55;
+  border-color: #2f7d55;
+}
+:root[data-sky="night"] .tk-stamp.tk-done {
+  color: #7fd3a4;
+  border-color: #7fd3a4;
+}
+.acc-login {
+  margin: 28px auto;
+  max-width: 52ch;
+  text-align: center;
+  color: var(--pg-ink2);
+  line-height: 1.6;
+}
+.acc-login p {
+  margin: 0 0 16px;
+}
+.acc-who {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+}
+.acc-who img {
+  border-radius: 50%;
+  object-fit: cover;
+}
+.pg-status > p {
+  margin: 0 0 14px;
+}
+.tk-no.acc-no {
+  cursor: default;
+}
+.tk-no.acc-no:hover {
+  text-decoration: none;
+}
+.acc-review {
+  font-weight: 600;
+}
+.acc-review.s-pending,
+.acc-review.s-flagged {
+  color: #a8701a;
+}
+.acc-review.s-rejected,
+.acc-review.s-funny {
+  color: var(--pg-muted);
+}
+.acc-progress {
+  display: inline-flex;
+  margin-top: 12px;
+  border: 1.5px solid var(--pg-line);
+  border-radius: 10px;
+  overflow: hidden;
+}
+.acc-seg {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 38px;
+  padding: 0 14px;
+  font: inherit;
+  font-size: 14px;
+  font-weight: 600;
+  border: none;
+  background: transparent;
+  color: var(--pg-ink2);
+  cursor: pointer;
+  transition: background-color 0.15s, color 0.15s;
+}
+.acc-seg + .acc-seg {
+  border-left: 1.5px solid var(--pg-line);
+}
+.acc-seg:hover:not(:disabled):not([aria-pressed="true"]) {
+  background: var(--pg-paper-2);
+}
+.acc-seg[aria-pressed="true"].s-trying {
+  background: var(--pg-ink);
+  color: var(--pg-bg);
+}
+.acc-seg[aria-pressed="true"].s-achieved {
+  background: #2f7d55;
+  color: #fff;
+}
+.acc-seg:disabled {
+  cursor: progress;
+}
+.acc-hint {
+  margin: 22px 0 0;
+  font-size: 13px;
+  color: var(--pg-muted);
+}
+.acc-seg {
+  white-space: nowrap;
+}
+@media (max-width: 420px) {
+  .acc-progress {
+    display: flex;
+  }
+  .acc-seg {
+    flex: 1;
+    justify-content: center;
+    padding: 0 8px;
+    font-size: 13px;
+  }
+}
