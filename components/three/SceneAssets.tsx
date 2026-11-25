@@ -7,6 +7,9 @@ import * as THREE from 'three'
 
 const GROUND = ['/scene/ground_diff.webp', '/scene/ground_nor.webp']
 const BARK = ['/scene/bark_diff.webp', '/scene/bark_nor.webp']
+const LEAVES = '/scene/leaves.webp'
+/** Toàn bộ ảnh của cảnh cây (để SceneWarmup chờ trước khi mở màn chờ). */
+export const SCENE_TEXTURES = [...GROUND, ...BARK, LEAVES]
 export const ROCK_MODELS = ['/scene/rock_07.glb', '/scene/rock_09.glb'] as const
 
 function prep(diff: THREE.Texture, nor: THREE.Texture, rx: number, ry: number) {

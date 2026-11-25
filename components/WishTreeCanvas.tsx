@@ -1,4 +1,5 @@
 'use client'
+import { Suspense } from 'react'
 import { Canvas } from '@react-three/fiber'
 import { AdaptiveDpr, ContactShadows } from '@react-three/drei'
 import * as THREE from 'three'
@@ -19,6 +20,7 @@ import StonePath from './three/StonePath'
 import CameraRig from './three/CameraRig'
 import SceneEnv from './three/SceneEnv'
 import FocusRoom from './three/FocusRoom'
+import SceneWarmup from './three/SceneWarmup'
 import { useScene } from '@/store/useScene'
 
 export default function WishTreeCanvas() {
@@ -42,13 +44,13 @@ export default function WishTreeCanvas() {
       onCreated={({ gl }) => {
         gl.outputColorSpace = THREE.SRGBColorSpace
         gl.shadowMap.type = THREE.PCFSoftShadowMap
-        // đợi 2 khung hình (shader đã compile, cảnh đã vẽ) rồi mới báo sẵn sàng → tranh loader tách ra
-        requestAnimationFrame(() =>
-          requestAnimationFrame(() => useScene.getState().setSceneReady(true)),
-        )
+        // báo sẵn sàng do <SceneWarmup> làm (chờ asset + compile shader + 2 khung hình)
       }}
     >
       <AdaptiveDpr pixelated={false} />
+      <Suspense fallback={null}>
+        <SceneWarmup />
+      </Suspense>
       <SceneEnv />
       {/* ở phòng Rừng Trúc thì RoomCamera tiếp quản -> tắt orbit rig chính */}
       <CameraRig disabled={roomOpen} />

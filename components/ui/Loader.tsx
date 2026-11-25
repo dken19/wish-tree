@@ -17,7 +17,7 @@ const REVEAL_MS = 3200
 
 const VERT = `attribute vec2 p;varying vec2 v;void main(){v=p*.5+.5;gl_Position=vec4(p,0.,1.);}`
 const FRAG = `precision highp float;
-varying vec2 v;uniform sampler2D tex;uniform float t;uniform vec2 res;
+varying vec2 v;uniform sampler2D tex;uniform float t;uniform vec2 res;uniform float lag;
 float h(vec2 p){return fract(sin(dot(p,vec2(127.1,311.7)))*43758.5453);}
 float n(vec2 p){vec2 i=floor(p),f=fract(p);f=f*f*(3.-2.*f);
  return mix(mix(h(i),h(i+vec2(1.,0.)),f.x),mix(h(i+vec2(0.,1.)),h(i+vec2(1.,1.)),f.x),f.y);}
@@ -37,7 +37,7 @@ void main(){
  vec3 paper=texture2D(tex,vec2(v.x,1.-v.y)).rgb;
  float d=field(q,ra);
  float ef=d-t;          // >0: chưa ướt; mép màu nước (front)
- float er=d-(t-.2);     // >0: chưa trong; lòng vết trong suốt đi trễ phía sau
+ float er=d-(t-lag);    // >0: chưa trong; lòng vết trong suốt đi trễ phía sau (lag hẹp lại ở màn dọc)
  // sắc màu: son đỏ → hồng đào → chàm, loang theo vùng
  float hue=fbm(q*1.3+3.);
  vec3 pig=mix(vec3(.78,.24,.28),vec3(.93,.55,.45),smoothstep(.35,.55,hue));
@@ -52,11 +52,9 @@ void main(){
  vec3 col=paper*mix(vec3(1.),pig,clamp(wash,0.,1.)); // multiply như màu nước thật
  // hơi ẩm phía trước mép: giấy sẫm nhẹ
  col*=1.-.05*smoothstep(.08,0.,ef);
- // lòng vết: trong dần (mép mềm) → lộ cây 3D; còn vương chút màu
- float alpha=smoothstep(-.06,.02,er);
- float tint=(1.-alpha)*smoothstep(-.22,0.,er)*.25;
- vec3 outc=mix(pig,col,alpha);
- gl_FragColor=vec4(outc,max(alpha,tint));
+ // lòng vết: trong NGAY sau dải mép (lag hẹp) → lộ cây 3D sạch, KHÔNG vương lớp hồng phủ màn
+ float alpha=smoothstep(-.025,.012,er);
+ gl_FragColor=vec4(col,alpha);
 }`
 
 /** Vẽ nền giấy dó + mảng màu nước + chữ vào canvas 2D (kích thước = màn hình × dpr). */
@@ -152,8 +150,9 @@ function paintPaper(cv: HTMLCanvasElement, title: HTMLElement, sub: HTMLElement)
 function startReveal(gcv: HTMLCanvasElement, src: HTMLCanvasElement, onDone: () => void) {
   const gl = gcv.getContext('webgl', { premultipliedAlpha: false, alpha: true })
   if (!gl) return false
-  gcv.width = src.width
-  gcv.height = src.height
+  // nửa độ phân giải: hiệu ứng vốn mềm, mà fbm nhiều lớp ở full-res làm iPhone tụt khung (khung hồng đứng lâu)
+  gcv.width = Math.round(src.width / 2)
+  gcv.height = Math.round(src.height / 2)
   gl.viewport(0, 0, gcv.width, gcv.height)
 
   const sh = (type: number, code: string) => {
@@ -181,13 +180,18 @@ function startReveal(gcv: HTMLCanvasElement, src: HTMLCanvasElement, onDone: () 
   gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE)
   gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, src)
   gl.uniform2f(gl.getUniformLocation(prog, 'res'), gcv.width, gcv.height)
+  // Dải màu nước (giữa mép mực và lòng trong) đo theo CHIỀU CAO màn hình: màn dọc điện thoại hẹp
+  // nên dải 0.2 gần như phủ kín bề ngang -> cả màn ửng hồng ~1s. Thu hẹp theo tỉ lệ khung hình.
+  const ra = gcv.width / gcv.height
+  gl.uniform1f(gl.getUniformLocation(prog, 'lag'), 0.11 * Math.min(1, Math.max(0.5, ra * 1.4)))
+  const revealMs = ra < 0.8 ? REVEAL_MS * 0.8 : REVEAL_MS
   const uT = gl.getUniformLocation(prog, 't')
 
   // xa nhất từ vết giữa tới góc + biên nhiễu + độ trễ lòng trong → phủ hết màn hình
   const maxR = Math.hypot((0.5 * gcv.width) / gcv.height, 0.55) + 0.45
   const t0 = performance.now()
   const frame = (now: number) => {
-    const k = Math.min((now - t0) / REVEAL_MS, 1)
+    const k = Math.min((now - t0) / revealMs, 1)
     const ease = k < 0.5 ? 2 * k * k : 1 - Math.pow(-2 * k + 2, 2) / 2 // chạm nhẹ → loang → lắng
     gl.clearColor(0, 0, 0, 0)
     gl.clear(gl.COLOR_BUFFER_BIT)
