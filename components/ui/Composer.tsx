@@ -4,11 +4,11 @@ import { THEMES, THEME_KEYS, type ThemeKey } from '@/lib/themes'
 import { MAX_WISH_LEN, validateWish } from '@/lib/profanity'
 import { useScene } from '@/store/useScene'
 import { isFirebaseConfigured } from '@/lib/firebase.client'
-import { signInGoogle, signInFacebook, signOutUser, getIdToken } from '@/lib/auth'
+import { signInGoogle, signOutUser, getIdToken } from '@/lib/auth'
 import LacBird from './LacBird'
 
 // Bảng viết điều ước -> POST /api/wishes.
-// Người đăng nhập Google/Facebook: điều ước hiện NGAY; ẩn danh: vào hàng chờ duyệt.
+// Người đăng nhập Google (Facebook tạm ẩn — provider chưa bật trên Firebase): điều ước hiện NGAY; ẩn danh: vào hàng chờ duyệt.
 export default function Composer() {
   const open = useScene((s) => s.composerOpen)
   const setOpen = useScene((s) => s.setComposerOpen)
@@ -19,10 +19,9 @@ export default function Composer() {
   const [text, setText] = useState('')
   const [sending, setSending] = useState(false)
 
-  async function login(provider: 'google' | 'facebook') {
+  async function login() {
     try {
-      if (provider === 'google') await signInGoogle()
-      else await signInFacebook()
+      await signInGoogle()
     } catch {
       showToast('Đăng nhập chưa thành công, thử lại nhé')
     }
@@ -89,13 +88,14 @@ export default function Composer() {
               Đăng nhập để điều ước hiển thị ngay, khỏi chờ duyệt:
             </span>
             <div className="auth-btns">
-              <button className="auth-in g" onClick={() => login('google')}>
+              <button className="auth-in g" onClick={() => login()}>
                 Google
               </button>
-              <button className="auth-in f" onClick={() => login('facebook')}>
-                Facebook
-              </button>
             </div>
+            <span className="auth-legal">
+              Đăng nhập là bạn đồng ý với <a href="/dieu-khoan">Điều khoản</a> &{' '}
+              <a href="/chinh-sach-bao-mat">Chính sách bảo mật</a>.
+            </span>
           </div>
         ))}
 

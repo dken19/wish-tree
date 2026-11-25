@@ -1443,3 +1443,44 @@ canvas {
   margin-top: 8px;
 }
 
+
+/* ---------- Trang pháp lý (/chinh-sach-bao-mat, /dieu-khoan) — dùng khung .wishes-page ---------- */
+.legal-body {
+  background: rgba(255, 255, 255, 0.72);
+  border-radius: 18px;
+  padding: 22px 20px;
+  box-shadow: var(--shadow);
+  font-size: 15px;
+  line-height: 1.65;
+  color: #3a2f2a;
+}
+.legal-body h2 {
+  font-size: 17px;
+  margin: 22px 0 8px;
+  color: #6b3a5f;
+}
+.legal-body h2:first-of-type {
+  margin-top: 14px;
+}
+.legal-body p {
+  margin: 0 0 10px;
+}
+.legal-body ul {
+  margin: 0 0 10px;
+  padding-left: 20px;
+}
+.legal-body li {
+  margin-bottom: 6px;
+}
+.legal-body a {
+  color: #c01730;
+}
+.auth-legal {
+  flex-basis: 100%;
+  font-size: 11px;
+  color: #9a8472;
+}
+.auth-legal a {
+  color: inherit;
+  text-decoration: underline;
+}

@@ -38,10 +38,12 @@ app/
   # (public/llms.txt: mô tả site cho LLM/AI crawlers — ChatGPT/Claude/Perplexity)
   page.tsx             # server: chỉ render <HomeClient/>
   globals.css          # toàn bộ CSS (port từ prototype) + style chim Lạc, khung viết
-  admin/page.tsx       # client: trang duyệt (nhập ADMIN_SECRET, list pending, Duyệt/Bỏ)
+  admin/page.tsx       # client: quản trị — đăng nhập Google (email admin), tab Chờ/Đã duyệt/Đã bỏ/Tất cả, phân trang, Duyệt/Bỏ/Đưa về chờ
   ky-nang/
     page.tsx           # server: metadata + render <SkillsView/> (route /ky-nang, KHÔNG Canvas)
     SkillsView.tsx     # client: 4 tab (Nấu/Trồng/Chụp ảnh/Chăm sóc da) + thẻ accordion có ẢNH minh hoạ + link NGUỒN (đọc lib/skills); ảnh hỏng tự ẩn (onError)
+  chinh-sach-bao-mat/page.tsx # Chính sách bảo mật (tĩnh) — link Privacy policy của Google OAuth consent screen
+  dieu-khoan/page.tsx  # Điều khoản sử dụng (tĩnh) — link Terms of service của consent screen
   dieu-uoc/
     page.tsx           # server: metadata + <Suspense><WishesView/></Suspense> (route /dieu-uoc, KHÔNG Canvas)
     WishesView.tsx     # client: lọc theo chủ đề + phân trang SỐ (state qua URL ?theme=&page=) -> fetch /api/wishes/list
@@ -49,7 +51,7 @@ app/
     weather/route.ts   # GET: proxy Open-Meteo (Hà Nội), cache 10'
     wishes/route.ts    # POST: validate+lọc từ+rate-limit -> nếu có Bearer ID token hợp lệ thì approved (đăng ngay), không thì pending (Admin SDK)
     wishes/list/route.ts # GET ?page=&theme=: liệt kê approved, phân trang SERVER (count + orderBy createdAt + offset/limit); fallback SEED khi chưa cấu hình
-    admin/wishes/route.ts # GET list pending / PATCH duyệt|từ chối (header x-admin-secret)
+    admin/wishes/route.ts # GET ?status=&page= (list + counts) / PATCH approve|reject|pending — quyền qua lib/adminAuth
     presence/route.ts  # POST: heartbeat|leave phòng Rừng Trúc -> ghi `sessions` (Admin SDK)
 components/
   HomeClient.tsx       # 'use client'; dynamic import Canvas + lớp UI overlay
@@ -85,6 +87,7 @@ components/
     SkyBackdrop.tsx    # div #sky gradient theo điều kiện thời tiết
     WeatherPanel.tsx   # huy hiệu Hà Nội + công tắc Nắng/Mây/Mưa/Đêm/Tự động
     WishCard.tsx       # thẻ đọc điều ước (mở khi click giấy)
+    LegalPage.tsx      # khung trang pháp lý (dùng lại .wishes-page) + CONTACT_EMAIL/UPDATED_AT
     Composer.tsx       # bảng viết: chọn theme + nhập text -> POST /api/wishes
     NavDock.tsx        # MENU dock tròn góc dưới-phải: xòe 4 mục (Cây/Viết/Phòng ôn bài qua store; Kỹ năng sống -> router.push('/ky-nang')); ẩn khi roomOpen/composerOpen
     FocusHUD.tsx       # overlay phòng: MẶC ĐỊNH THU GỌN (thanh mini: online + đồng hồ Pomodoro + Rời) — bấm mở bảng đầy đủ (flip + Pomodoro + đổi tên + Rời); số online = sessions + bots; mobile RoomCamera nới FOV
@@ -109,6 +112,7 @@ lib/
   wishes.ts            # type Wish, SEED_WISHES, subscribeApproved() (onSnapshot, sort client)
   firebase.client.ts   # init client SDK: getDb (đọc Firestore) + getAuthClient (Auth); null nếu thiếu env
   firebase.admin.ts    # init Admin SDK (server-only): getAdminDb + getAdminAuth (verifyIdToken)
+  adminAuth.ts         # server-only: checkAdmin(req) — Bearer ID token + email_verified ∈ ADMIN_EMAILS, hoặc x-admin-secret
 store/
   useScene.ts          # zustand: autoCond/manual/temp, wishes, openWish, composerOpen, toast, loaded, roomOpen, sessions, nickname, navOpen, user
 scripts/seed.mjs       # seed vài điều ước 'approved' vào Firestore
@@ -133,10 +137,10 @@ firestore.indexes.json # composite index cho /api/wishes/list: (status,createdAt
    - **Có token hợp lệ** (đăng nhập Google/Facebook) → `getAdminAuth().verifyIdToken` → ghi doc `status:'approved'` + `uid` + `author=tên` → **hiện ngay** trên cây, KHỎI chờ duyệt.
    - **Không/ token lỗi** (ẩn danh) → ghi `status:'pending'` như cũ.
    - Lọc từ + rate-limit GIỮ NGUYÊN cho cả hai (auto-approve chỉ bỏ qua hàng chờ tay).
-3. **Duyệt** (chỉ cho ước ẩn danh): `/admin` (nhập `ADMIN_SECRET`) → `GET/PATCH /api/admin/wishes` (header `x-admin-secret`) → đặt `approved`/`rejected`. Khi `approved`, client `onSnapshot` tự thêm tờ mới → cây cập nhật realtime.
+3. **Duyệt**: `/admin` đăng nhập Google → gửi `Authorization: Bearer <idToken>` → `checkAdmin` (verifyIdToken + email đã xác minh ∈ `ADMIN_EMAILS`; dự phòng header `x-admin-secret`) → `GET /api/admin/wishes?status=&page=` / `PATCH` → đặt `approved`/`rejected`/`pending` + `reviewedAt`/`reviewedBy`. Khi `approved`, client `onSnapshot` tự thêm tờ mới → cây cập nhật realtime.
 4. **Xem tất cả** (`/dieu-uoc`, `WishesView`): trang KHÔNG Canvas, gọi `GET /api/wishes/list?page=&theme=` (Admin SDK) → phân trang **ở server** (`count()` cho tổng số trang + `orderBy('createdAt','desc').offset().limit()`), lọc theo chủ đề. State đọc/ghi qua URL (`?theme=&page=`) để share link + nút back hoạt động.
 
-**Đăng nhập (Google/Facebook):** `AuthBridge` (`onAuthStateChanged`) → `useScene.user`. `Composer` hiện nút đăng nhập/đăng xuất; khi gửi, đính `getIdToken()` vào header. Client KHÔNG bao giờ tự ghi Firestore — server `verifyIdToken` mới là nơi quyết định `approved`.
+**Đăng nhập (Google/Facebook):** `AuthBridge` (`onAuthStateChanged`) → `useScene.user`. `Composer` hiện nút đăng nhập Google/đăng xuất (nút Facebook **tạm ẩn** vì provider Facebook chưa bật trên Firebase — `signInFacebook` vẫn giữ trong `lib/auth.ts`); khi gửi, đính `getIdToken()` vào header. Client KHÔNG bao giờ tự ghi Firestore — server `verifyIdToken` mới là nơi quyết định `approved`.
 
 Chưa cấu hình Firebase: `getDb()`/`getAuthClient()` trả null → dùng `SEED_WISHES`, Composer ẩn nút đăng nhập; `/api/wishes` trả 503 gọn; `/api/wishes/list` phân trang SEED trong JS.
 
@@ -172,7 +176,8 @@ Chưa cấu hình Firebase: `getDb()` null → `subscribeSessions` trả về 1 
 ```ts
 { text: string(<=160), theme: ThemeKey, author?: string,
   uid?: string,  // có khi gửi bởi người đăng nhập Google/Facebook (-> auto-approve)
-  status: 'pending'|'approved'|'rejected', createdAt: serverTimestamp }
+  status: 'pending'|'approved'|'rejected', createdAt: serverTimestamp,
+  reviewedAt?: serverTimestamp, reviewedBy?: string }  // ghi khi admin đổi trạng thái
 ```
 Rules (`firestore.rules`): client `read` chỉ khi `status=='approved'`; `write:false` (mọi ghi qua Admin SDK). Query realtime của cây **không orderBy** (tránh composite index) — sort theo `createdAt` ở client. **Ngoại lệ:** trang `/dieu-uoc` phân trang ở server (`/api/wishes/list`) DÙNG `orderBy('createdAt')` + `where` → cần composite index, khai báo ở `firestore.indexes.json` (xem Gotchas).
 
@@ -191,7 +196,8 @@ Rules: `read: if true` (không chứa PII), `write: false` (ghi qua `/api/presen
 
 - `NEXT_PUBLIC_FIREBASE_*` (6 biến) — client đọc Firestore (công khai, an toàn).
 - `FIREBASE_PROJECT_ID` / `FIREBASE_CLIENT_EMAIL` / `FIREBASE_PRIVATE_KEY` — Admin SDK (server-only). Code xử lý `\n` an toàn (`.replace(/\\n/g,'\n')`).
-- `ADMIN_SECRET` — mã đăng nhập `/admin`.
+- `ADMIN_EMAILS` — (tuỳ chọn) email Google được vào `/admin`, phân tách dấu phẩy; mặc định `khuctruonghuy2000@gmail.com` (hardcode trong `lib/adminAuth.ts`).
+- `ADMIN_SECRET` — (tuỳ chọn) mã dự phòng cho API admin qua header `x-admin-secret`; UI không còn ô nhập mã.
 
 **Đăng nhập Google/Facebook KHÔNG cần biến env mới** — dùng lại `NEXT_PUBLIC_FIREBASE_*` (client) + creds Admin (`verifyIdToken`). Nhưng **CẦN cấu hình Firebase Console**: bật provider Google & Facebook (Facebook cần tạo Facebook Developer App, dán App ID/secret + OAuth redirect), và thêm **Authorized domains** (localhost + domain Vercel). Presence phòng Rừng Trúc vẫn ẩn danh, không liên quan Auth này.
 

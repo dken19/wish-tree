@@ -8,7 +8,7 @@ Xây bằng **Next.js (App Router) + React Three Fiber + Firebase Firestore**.
 
 - Cây 3D low-poly, giấy/hoa dùng `InstancedMesh` (nhẹ trên mobile).
 - Click tờ giấy → đọc điều ước (raycast theo `instanceId`).
-- Viết điều ước → lọc từ tục + rate-limit. **Đăng nhập Google/Facebook → điều ước hiện NGAY trên cây** (khỏi chờ duyệt); gửi ẩn danh → vào hàng chờ **duyệt** rồi mới hiện.
+- Viết điều ước → lọc từ tục + rate-limit. **Đăng nhập Google → điều ước hiện NGAY trên cây** (khỏi chờ duyệt); gửi ẩn danh → vào hàng chờ **duyệt** rồi mới hiện.
 - **Tất cả ước nguyện** (`/dieu-uoc`): xem mọi điều ước đã đăng, **lọc theo chủ đề** và **phân trang** (phân trang xử lý ở server).
 - Thời tiết Hà Nội qua Open-Meteo (đổi trời/ánh sáng/mưa/đêm); gió theo tốc độ gió thật.
 - Điều khiển camera orbit + pinch tự viết; tự xoay nhẹ khi rảnh.
@@ -31,7 +31,7 @@ npm run dev                        # http://localhost:3000
 1. Tạo project tại [Firebase Console](https://console.firebase.google.com), bật **Firestore**.
 2. Lấy config web app → điền các biến `NEXT_PUBLIC_FIREBASE_*`.
 3. Vào *Project settings > Service accounts > Generate new private key* → điền `FIREBASE_PROJECT_ID`, `FIREBASE_CLIENT_EMAIL`, `FIREBASE_PRIVATE_KEY`.
-4. Đặt `ADMIN_SECRET` (mã đăng nhập trang duyệt).
+4. (Tuỳ chọn) `ADMIN_EMAILS` — email Google được vào `/admin` (phân tách dấu phẩy; mặc định `khuctruonghuy2000@gmail.com`). `ADMIN_SECRET` vẫn dùng được làm mã dự phòng cho API.
 5. Triển khai security rules: nội dung trong `firestore.rules` (client đọc bản `approved` của `wishes` + đọc `sessions`; mọi ghi qua Admin SDK).
 6. **Index cho trang "Tất cả ước nguyện"**: deploy `firestore.indexes.json` bằng `firebase deploy --only firestore:indexes`, **hoặc** mở `/dieu-uoc` lần đầu rồi bấm link tạo index mà Firestore báo trong log server.
 
@@ -40,15 +40,16 @@ npm run dev                        # http://localhost:3000
 Trong Firebase Console > **Authentication > Sign-in method**:
 
 - Bật **Google**.
-- Bật **Facebook**: tạo một Facebook Developer App, dán **App ID** + **App secret** vào Console, rồi copy **OAuth redirect URI** mà Firebase hiển thị vào phần *Valid OAuth Redirect URIs* của Facebook App.
+- (Tạm ẩn nút Facebook trong `Composer` vì provider chưa bật — muốn mở lại thì bật provider rồi thêm lại nút.) Bật **Facebook**: tạo một Facebook Developer App, dán **App ID** + **App secret** vào Console, rồi copy **OAuth redirect URI** mà Firebase hiển thị vào phần *Valid OAuth Redirect URIs* của Facebook App.
 - **Authentication > Settings > Authorized domains**: thêm `localhost` và domain Vercel của bạn (nếu thiếu, đăng nhập báo `auth/unauthorized-domain`).
 
 Không cần biến env mới — đăng nhập dùng lại config Firebase sẵn có; server xác minh ID token bằng Admin SDK trước khi cho điều ước hiện ngay.
 
 ## Duyệt điều ước (cho người gửi ẩn danh)
 
-- Truy cập `/admin`, nhập `ADMIN_SECRET`.
-- Danh sách điều ước đang chờ → **Duyệt** (hiện lên cây) hoặc **Bỏ**. (Điều ước của người đã đăng nhập KHÔNG vào hàng chờ — đã tự hiện.)
+- Truy cập `/admin` → **Đăng nhập với Google** bằng email admin (trong `ADMIN_EMAILS`) là vào thẳng.
+- Tab **Chờ duyệt / Đã duyệt / Đã bỏ / Tất cả** (kèm số lượng, phân trang 20/trang): xem lại mọi điều ước, ai gửi, lúc nào, ai duyệt.
+- Nút **Duyệt** · **Bỏ** / **Gỡ khỏi cây** · **Đưa về chờ duyệt**. Điều ước của người đã đăng nhập tự duyệt (nhãn "đăng nhập · tự duyệt") nhưng vẫn gỡ được.
 
 ## Cấu trúc
 
@@ -57,6 +58,7 @@ Không cần biến env mới — đăng nhập dùng lại config Firebase sẵ
 - `lib/*` — themes, tree (hình học + anchor tất định), weather, profanity, firebase, wishes, **auth** (đăng nhập Google/Facebook).
 - `app/api/*` — proxy thời tiết, POST điều ước, **GET danh sách phân trang** (`wishes/list`), duyệt (admin).
 - `app/dieu-uoc/*` — trang "Tất cả ước nguyện" (lọc + phân trang, không Canvas).
+- `app/chinh-sach-bao-mat`, `app/dieu-khoan` — Chính sách bảo mật & Điều khoản (dùng cho Google OAuth consent screen; email liên hệ ở `components/ui/LegalPage.tsx`). Có link nhỏ dưới nút đăng nhập trong `Composer`.
 - `store/useScene.ts` — state (Zustand).
 
 ## Mô hình dữ liệu (collection `wishes`)

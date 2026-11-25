@@ -23,5 +23,17 @@ export default function sitemap(): MetadataRoute.Sitemap {
       changeFrequency: "weekly",
       priority: 0.6,
     },
+    {
+      url: `${BASE_URL}/chinh-sach-bao-mat`,
+      lastModified,
+      changeFrequency: "yearly",
+      priority: 0.2,
+    },
+    {
+      url: `${BASE_URL}/dieu-khoan`,
+      lastModified,
+      changeFrequency: "yearly",
+      priority: 0.2,
+    },
   ];
 }
