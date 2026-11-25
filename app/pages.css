@@ -640,6 +640,35 @@
 .wt-head img {
   border-radius: 50%;
 }
+/* bình luận của người giữ cây (admin): dấu triện đỏ + nhãn, nền ửng nhẹ */
+.wt-list li.wt-staff {
+  margin: 0 -8px;
+  padding: 8px;
+  border-radius: 8px;
+  background: color-mix(in srgb, var(--pg-act, #b22228) 8%, transparent);
+}
+.wt-staff .wt-head b {
+  color: var(--pg-act, #b22228);
+}
+.wt-seal {
+  display: inline-grid;
+  place-items: center;
+  width: 20px;
+  height: 20px;
+  border-radius: 4px;
+  background: var(--pg-act, #b22228);
+  color: var(--pg-act-ink, #f4ecdc);
+  transform: rotate(-6deg);
+}
+.wt-badge {
+  font-size: 11px;
+  font-weight: 700;
+  padding: 0 6px;
+  border: 1px solid currentColor;
+  border-radius: 999px;
+  color: var(--pg-act, #b22228);
+  white-space: nowrap;
+}
 .wt-time {
   margin-left: auto;
   font-size: 12px;

@@ -14,6 +14,16 @@ export function adminEmails(): string[] {
   return list.map((e) => e.trim().toLowerCase()).filter(Boolean)
 }
 
+/** Email (đã xác minh) có thuộc danh sách admin không. */
+export function isAdminEmail(email: string | null | undefined, verified: boolean | undefined): boolean {
+  return Boolean(email && verified && adminEmails().includes(email.toLowerCase()))
+}
+
+/** Tên hiển thị khi admin bình luận (thay tên Google). Đổi bằng env ADMIN_DISPLAY_NAME. */
+export function adminDisplayName(): string {
+  return (process.env.ADMIN_DISPLAY_NAME || 'Người giữ cây').trim().slice(0, 40)
+}
+
 export type AdminCheck =
   | { ok: true; email: string | null }
   | { ok: false; status: 401 | 403; error: string }
@@ -34,7 +44,7 @@ export async function checkAdmin(req: Request): Promise<AdminCheck> {
     const decoded = await auth.verifyIdToken(token)
     const email = decoded.email?.toLowerCase() ?? null
     // Bắt buộc email_verified để không ai tự đặt email giả qua provider khác.
-    if (email && decoded.email_verified && adminEmails().includes(email))
+    if (isAdminEmail(email, decoded.email_verified))
       return { ok: true, email }
     return { ok: false, status: 403, error: 'Tài khoản này không có quyền quản trị' }
   } catch {

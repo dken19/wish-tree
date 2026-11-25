@@ -14,6 +14,8 @@ type Comment = {
   photo: string | null
   createdAt: number
   mine: boolean
+  /** bình luận của người giữ cây (admin) — server đặt */
+  staff?: boolean
 }
 
 async function authed(input: string, init?: RequestInit) {
@@ -178,13 +180,19 @@ export default function WishThread({
       {items && items.length > 0 && (
         <ul className="wt-list">
           {items.map((c) => (
-            <li key={c.id}>
+            <li key={c.id} className={c.staff ? 'wt-staff' : undefined}>
               <div className="wt-head">
+                {c.staff && (
+                  <span className="wt-seal" aria-hidden="true">
+                    <Icon name="tree" size={13} />
+                  </span>
+                )}
                 {c.photo && (
                   // eslint-disable-next-line @next/next/no-img-element -- ảnh đại diện Google, nhỏ
                   <img src={c.photo} alt="" width={20} height={20} referrerPolicy="no-referrer" />
                 )}
                 <b>{c.author}</b>
+                {c.staff && <span className="wt-badge">Giữ cây</span>}
                 <span className="wt-time">{formatWishTime(c.createdAt)}</span>
               </div>
               <p>{c.text}</p>

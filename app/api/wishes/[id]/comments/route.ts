@@ -4,6 +4,7 @@ import { getAdminDb, isAdminConfigured } from '@/lib/firebase.admin'
 import { validateComment } from '@/lib/profanity'
 import { rateLimit } from '@/lib/ratelimit'
 import { millis, viewerFromRequest } from '@/lib/wishServer'
+import { adminDisplayName } from '@/lib/adminAuth'
 
 export const runtime = 'nodejs'
 
@@ -29,8 +30,10 @@ export async function GET(req: Request, ctx: { params: Promise<{ id: string }> }
     .map((d) => ({
       id: d.id,
       text: String(d.get('text') ?? ''),
-      author: String(d.get('author') ?? 'Người dùng'),
-      photo: d.get('photo') ? String(d.get('photo')) : null,
+      // bình luận của admin: tên hiển thị lấy theo env lúc ĐỌC -> đổi tên là đổi cho mọi bình luận cũ
+      author: d.get('staff') ? adminDisplayName() : String(d.get('author') ?? 'Người dùng'),
+      photo: !d.get('staff') && d.get('photo') ? String(d.get('photo')) : null,
+      staff: Boolean(d.get('staff')),
       createdAt: millis(d.get('createdAt')),
       mine: Boolean(viewer && viewer.uid === d.get('uid')),
     }))
@@ -53,6 +56,10 @@ export async function POST(req: Request, ctx: { params: Promise<{ id: string }> 
   if (!rateLimit(`comment:${viewer.uid}`, 10).ok)
     return deny(429, 'Bạn bình luận hơi nhanh, nghỉ chút rồi quay lại nhé.')
 
+  // Admin bình luận dưới tên đẹp (không lộ tên/ảnh Google); cờ staff do SERVER đặt -> người khác không giả được.
+  const author = viewer.admin ? adminDisplayName() : viewer.name
+  const photo = viewer.admin ? null : viewer.photo
+
   const db = getAdminDb()!
   const wishRef = db.collection('wishes').doc(id)
   const ref = wishRef.collection('comments').doc()
@@ -63,8 +70,9 @@ export async function POST(req: Request, ctx: { params: Promise<{ id: string }> 
       t.set(ref, {
         text,
         uid: viewer.uid,
-        author: viewer.name,
-        ...(viewer.photo ? { photo: viewer.photo } : {}),
+        author,
+        ...(photo ? { photo } : {}),
+        ...(viewer.admin ? { staff: true } : {}),
         hidden: false,
         reportCount: 0,
         createdAt: FieldValue.serverTimestamp(),
@@ -76,6 +84,6 @@ export async function POST(req: Request, ctx: { params: Promise<{ id: string }> 
   }
   return NextResponse.json({
     ok: true,
-    item: { id: ref.id, text, author: viewer.name, photo: viewer.photo, createdAt: Date.now(), mine: true },
+    item: { id: ref.id, text, author, photo, staff: viewer.admin, createdAt: Date.now(), mine: true },
   })
 }

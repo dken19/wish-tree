@@ -3,6 +3,7 @@ import 'server-only'
 import type { Firestore, DocumentSnapshot } from 'firebase-admin/firestore'
 import { getAdminAuth } from './firebase.admin'
 import { searchTokens } from './wishMeta'
+import { isAdminEmail } from './adminAuth'
 
 /** Doc đếm: { wishNo: số điều ước lớn nhất đã cấp }. */
 export const counterRef = (db: Firestore) => db.doc('meta/counters')
@@ -49,7 +50,8 @@ export async function ensureNumbering(db: Firestore): Promise<void> {
   numberingReady = true
 }
 
-export type Viewer = { uid: string; name: string; photo: string | null }
+/** admin = email đã xác minh nằm trong ADMIN_EMAILS (server tự quyết, không tin client). */
+export type Viewer = { uid: string; name: string; photo: string | null; admin: boolean }
 
 /** Đọc `Authorization: Bearer <Firebase ID token>`; null nếu không có / không hợp lệ. */
 export async function viewerFromRequest(req: Request): Promise<Viewer | null> {
@@ -62,6 +64,7 @@ export async function viewerFromRequest(req: Request): Promise<Viewer | null> {
       uid: d.uid,
       name: String(d.name || 'Người dùng').slice(0, 40),
       photo: typeof d.picture === 'string' ? d.picture : null,
+      admin: isAdminEmail(d.email, d.email_verified),
     }
   } catch {
     return null
