@@ -7,6 +7,7 @@ import FakePresence from './FakePresence'
 import AuthBridge from './AuthBridge'
 import SkyBackdrop from './ui/SkyBackdrop'
 import WeatherPanel from './ui/WeatherPanel'
+import ShrineHUD from './ui/ShrineHUD'
 import WishCard from './ui/WishCard'
 import Composer from './ui/Composer'
 import FocusHUD from './ui/FocusHUD'
@@ -47,7 +48,8 @@ export default function HomeClient() {
         </div>
       )}
 
-      <WeatherPanel />
+      {/* trong phòng ôn bài đã có giờ Hà Nội trên bảng -> ẩn huy hiệu cho đỡ trùng */}
+      {!roomOpen && <WeatherPanel />}
 
       {!roomOpen && (
         <div className="ui hint">
@@ -59,6 +61,7 @@ export default function HomeClient() {
       <WishCard />
       <Composer />
       <FocusHUD />
+      <ShrineHUD />
       <NavDock />
       <Toast />
       <Loader />

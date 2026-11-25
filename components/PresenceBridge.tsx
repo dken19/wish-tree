@@ -12,7 +12,7 @@ import {
 } from '@/lib/presence'
 
 // Cầu nối presence: CHỈ chạy khi đang ở phòng Rừng Trúc.
-// - heartbeat ngay + định kỳ (~18s) qua /api/presence (Admin SDK ghi)
+// - heartbeat ngay + định kỳ (~28s) qua /api/presence (Admin SDK ghi)
 // - subscribe sessions realtime -> store
 // - rời phòng / đóng tab -> sendBeacon "leave"
 export default function PresenceBridge() {

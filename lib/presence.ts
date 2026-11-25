@@ -2,7 +2,7 @@
 // Kiến trúc giống lib/wishes.ts: CLIENT chỉ ĐỌC collection `sessions` qua onSnapshot;
 // mọi GHI đi qua /api/presence (Admin SDK). Đồng hồ phiên tính ở client từ joinedAt
 // -> KHÔNG ghi mỗi giây. Phiên "còn sống" khi lastSeen còn mới hơn STALE_MS.
-import { collection, onSnapshot } from 'firebase/firestore'
+import { collection, limit, onSnapshot, orderBy, query } from 'firebase/firestore'
 import { getDb } from './firebase.client'
 
 export type PomoPhase = 'focus' | 'break' | 'idle'
@@ -17,9 +17,12 @@ export type Session = {
 }
 
 // Phiên cũ hơn ngưỡng này coi như đã rời (đóng tab mà không kịp gửi "leave").
-export const STALE_MS = 40_000
+export const STALE_MS = 65_000
 // Nhịp gửi heartbeat (nhỏ hơn STALE_MS / 2 để 1 nhịp lỡ vẫn còn "sống").
-export const HEARTBEAT_MS = 18_000
+// Mỗi heartbeat = 1 lượt đọc cho MỌI người đang nghe -> nhịp thưa giúp phòng đông không tốn/không giật.
+export const HEARTBEAT_MS = 28_000
+// Chỉ nghe N phiên mới nhất (index đơn trường lastSeen, Firestore tự tạo) -> dữ liệu mỗi máy có trần.
+export const LISTEN_LIMIT = 40
 
 const ID_KEY = 'wt_presence_id'
 const NAME_KEY = 'wt_presence_name'
@@ -81,24 +84,38 @@ export function subscribeSessions(
     cb([self])
     return () => {}
   }
-  return onSnapshot(
-    collection(db, 'sessions'),
+  let docs: Session[] = []
+  let lastSig = ''
+  // Chỉ báo ra ngoài khi thứ NHÌN THẤY đổi (ai trong phòng, tên, giờ vào, pha pomodoro).
+  // Heartbeat chỉ đổi lastSeen -> bỏ qua -> phòng đông không re-render liên tục.
+  const emit = () => {
+    const now = Date.now()
+    const list = docs.filter((s) => now - s.lastSeen < STALE_MS).sort((a, b) => a.joinedAt - b.joinedAt)
+    if (!list.some((s) => s.clientId === self.clientId)) list.unshift({ ...self })
+    for (const s of list) s.isSelf = s.clientId === self.clientId
+    const sig = list.map((s) => `${s.clientId}|${s.name}|${s.joinedAt}|${s.pomo?.phase ?? ''}`).join(',')
+    if (sig === lastSig) return
+    lastSig = sig
+    cb(list)
+  }
+  // quét phiên "ma" (đóng tab cứng) dù không có snapshot mới
+  const sweep = setInterval(emit, 10_000)
+  const unsub = onSnapshot(
+    query(collection(db, 'sessions'), orderBy('lastSeen', 'desc'), limit(LISTEN_LIMIT)),
     (snap) => {
-      const now = Date.now()
-      const list = snap.docs
-        .map((d) => parseDoc(d.id, d.data() as Record<string, unknown>))
-        .filter((s) => now - s.lastSeen < STALE_MS)
-        .sort((a, b) => a.joinedAt - b.joinedAt)
-      // luôn đảm bảo có chính mình (đề phòng snapshot chưa kịp về)
-      if (!list.some((s) => s.clientId === self.clientId)) list.unshift(self)
-      for (const s of list) s.isSelf = s.clientId === self.clientId
-      cb(list)
+      docs = snap.docs.map((d) => parseDoc(d.id, d.data() as Record<string, unknown>))
+      emit()
     },
     (err) => {
       console.error('subscribeSessions error, chỉ hiển thị mình', err)
-      cb([self])
+      docs = []
+      emit()
     }
   )
+  return () => {
+    clearInterval(sweep)
+    unsub()
+  }
 }
 
 type HeartbeatBody = {

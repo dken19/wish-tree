@@ -143,6 +143,7 @@ export default function WishPapers() {
   })
 
   const handleClick = (e: ThreeEvent<MouseEvent>) => {
+    if (useScene.getState().roomOpen) return // cảnh cây đang ẩn: raycast vẫn trúng vật ẩn
     if (pointer.moved > 7) return // đang xoay cây, bỏ qua
     if (e.instanceId == null) return
     e.stopPropagation()
@@ -179,7 +180,7 @@ export default function WishPapers() {
         args={[hitGeo, undefined, count]}
         frustumCulled={false}
         onClick={handleClick}
-        onPointerOver={() => setCursor('pointer')}
+        onPointerOver={() => !useScene.getState().roomOpen && setCursor('pointer')}
         onPointerOut={() => setCursor('auto')}
       >
         <meshBasicMaterial transparent opacity={0} depthWrite={false} />

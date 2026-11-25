@@ -673,40 +673,62 @@ canvas {
   opacity: 0;
 }
 
-/* ---------- Phòng Rừng Trúc (thiền viện) HUD ---------- */
+/* ---------- Phòng Rừng Trúc (thiền viện) HUD ----------
+   Tông mực xanh trúc, điểm nhấn vàng đèn lồng (cùng hệ với trang nội dung ban đêm).
+   Pomodoro là nhân vật chính: số flip lớn; giờ Hà Nội chỉ là dòng nhỏ. */
+.focus-hud,
+.fh-mini,
+.shrine-hud {
+  --fh-bg: rgba(18, 27, 22, 0.94);
+  --fh-ink: #edf2ea;
+  --fh-soft: #b4c3b6;
+  --fh-line: rgba(237, 242, 234, 0.14);
+  --fh-amber: #f2b555;
+  --fh-amber-ink: #1a1206;
+  --fh-break: #8fd3b6;
+}
 .focus-hud {
   position: fixed;
   z-index: 12;
   left: 50%;
   bottom: 0;
   transform: translate(-50%, 115%);
-  width: min(420px, 100%);
-  background: rgba(28, 38, 26, 0.92);
-  color: #eef3e6;
-  border-radius: 22px 22px 0 0;
-  padding: 18px 20px max(22px, env(safe-area-inset-bottom));
-  box-shadow: 0 -20px 60px -20px rgba(0, 0, 0, 0.6);
-  backdrop-filter: blur(8px);
-  transition: transform 0.5s cubic-bezier(0.2, 0.9, 0.3, 1.1);
+  width: min(400px, 100%);
+  background: var(--fh-bg);
+  color: var(--fh-ink);
+  border-radius: 20px 20px 0 0;
+  padding: 14px 18px max(16px, env(safe-area-inset-bottom));
+  box-shadow: 0 -20px 60px -24px rgba(0, 0, 0, 0.7);
+  backdrop-filter: blur(10px);
+  transition: transform 0.45s cubic-bezier(0.2, 0.9, 0.3, 1);
+  font-variant-numeric: tabular-nums;
 }
 .focus-hud.show {
   transform: translate(-50%, 0);
+}
+.focus-hud button {
+  font: inherit;
+  cursor: pointer;
+}
+.focus-hud :focus-visible,
+.fh-mini :focus-visible {
+  outline: 2px solid var(--fh-amber);
+  outline-offset: 2px;
 }
 .fh-top {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  margin-bottom: 14px;
+  gap: 10px;
 }
 .fh-online {
   display: inline-flex;
   align-items: center;
-  gap: 7px;
-  font-size: 13px;
+  gap: 8px;
+  font-size: 14px;
   font-weight: 500;
-  color: #cfe0c2;
 }
-/* chấm "đang online" (thay emoji 🟢) */
+/* chấm "đang online" */
 .fh-live {
   width: 8px;
   height: 8px;
@@ -715,47 +737,197 @@ canvas {
   box-shadow: 0 0 0 3px rgba(111, 208, 140, 0.22);
   flex: none;
 }
-.fh-leave {
-  font: inherit;
-  font-size: 12.5px;
-  font-weight: 600;
-  color: #eef3e6;
-  background: rgba(255, 255, 255, 0.12);
-  border: 1px solid rgba(255, 255, 255, 0.18);
-  padding: 7px 14px;
-  border-radius: 18px;
-  cursor: pointer;
-}
-.fh-leave:hover {
-  background: rgba(255, 255, 255, 0.2);
-}
-.fh-top-btns {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-}
-.fh-min {
+.fh-icon {
   display: grid;
   place-items: center;
-  font: inherit;
-  font-size: 15px;
-  line-height: 1;
-  color: #eef3e6;
-  background: rgba(255, 255, 255, 0.12);
-  border: 1px solid rgba(255, 255, 255, 0.18);
-  width: 30px;
-  height: 30px;
+  width: 40px;
+  height: 40px;
+  margin-right: -8px;
   border-radius: 50%;
-  cursor: pointer;
+  border: none;
+  background: transparent;
+  color: var(--fh-soft);
+}
+.fh-icon:hover {
+  color: var(--fh-ink);
+  background: rgba(255, 255, 255, 0.08);
+}
+.fh-status {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  margin: 10px 0 8px;
+  font-size: 13px;
+  color: var(--fh-soft);
+}
+.fh-phase {
+  font-weight: 600;
+  color: var(--fh-ink);
+}
+.focus-hud.focus .fh-phase {
+  color: var(--fh-amber);
+}
+.focus-hud.break .fh-phase {
+  color: var(--fh-break);
+}
+
+/* số flip Pomodoro */
+.flip-clock {
   display: flex;
   align-items: center;
   justify-content: center;
+  gap: 6px;
+  margin-bottom: 14px;
 }
-.fh-min:hover {
-  background: rgba(255, 255, 255, 0.2);
+.flip-card {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 58px;
+  height: 76px;
+  font-size: 50px;
+  font-weight: 700;
+  line-height: 1;
+  color: var(--fh-ink);
+  background: linear-gradient(#26342b 0 50%, #1e2a23 50% 100%);
+  border-radius: 10px;
+  box-shadow: inset 0 0 0 1px rgba(0, 0, 0, 0.45), 0 6px 14px -8px rgba(0, 0, 0, 0.8);
+}
+.flip-card::after {
+  content: "";
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 50%;
+  height: 1px;
+  background: rgba(0, 0, 0, 0.5);
+}
+.focus-hud.focus .flip-card {
+  color: var(--fh-amber);
+}
+.focus-hud.break .flip-card {
+  color: var(--fh-break);
+}
+.flip-colon {
+  font-size: 40px;
+  font-weight: 700;
+  color: var(--fh-soft);
+  padding: 0 2px;
 }
 
-/* thanh thu gọn phòng ôn bài (mobile / khi thu nhỏ) */
+/* độ dài phiên: nút chọn 2 ô */
+.pomo-presets {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+  margin-bottom: 10px;
+}
+.pomo-presets button {
+  display: flex;
+  justify-content: center;
+  align-items: baseline;
+  gap: 6px;
+  min-height: 42px;
+  border-radius: 12px;
+  border: 1.5px solid var(--fh-line);
+  background: transparent;
+  color: var(--fh-soft);
+  font-size: 14px;
+}
+.pomo-presets button b {
+  font-weight: 600;
+  color: var(--fh-ink);
+}
+.pomo-presets button span {
+  font-size: 12.5px;
+}
+.pomo-presets button[aria-pressed="true"] {
+  border-color: var(--fh-ink);
+  background: rgba(255, 255, 255, 0.08);
+}
+.pomo-row {
+  display: grid;
+  grid-template-columns: 2fr 1fr;
+  gap: 8px;
+}
+.pomo-row button {
+  min-height: 48px;
+  border-radius: 12px;
+  font-size: 15px;
+  font-weight: 700;
+  border: none;
+}
+.pomo-go {
+  background: var(--fh-amber);
+  color: var(--fh-amber-ink);
+}
+.pomo-go:hover {
+  background: #f6c675;
+}
+.pomo-reset {
+  background: rgba(255, 255, 255, 0.08);
+  color: var(--fh-ink);
+}
+.pomo-reset:disabled {
+  opacity: 0.4;
+  cursor: default;
+}
+
+/* tên + rời phòng */
+.fh-foot {
+  display: flex;
+  align-items: flex-end;
+  gap: 10px;
+  margin-top: 14px;
+  padding-top: 12px;
+  border-top: 1px solid var(--fh-line);
+}
+.fh-name {
+  flex: 1;
+  min-width: 0;
+  display: grid;
+  gap: 4px;
+  font-size: 12.5px;
+  color: var(--fh-soft);
+}
+.fh-name input {
+  width: 100%;
+  font: inherit;
+  font-size: 16px; /* iOS không tự zoom */
+  color: var(--fh-ink);
+  background: rgba(255, 255, 255, 0.06);
+  border: 1.5px solid var(--fh-line);
+  border-radius: 10px;
+  min-height: 42px;
+  padding: 0 12px;
+  outline: none;
+}
+.fh-name input::placeholder {
+  color: var(--fh-soft);
+}
+.fh-name input:focus {
+  border-color: var(--fh-amber);
+}
+.fh-leave {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 42px;
+  padding: 0 14px;
+  border-radius: 10px;
+  border: 1.5px solid var(--fh-line);
+  background: transparent;
+  color: var(--fh-ink);
+  font-size: 14px;
+  font-weight: 600;
+  white-space: nowrap;
+}
+.fh-leave:hover {
+  border-color: var(--fh-ink);
+}
+
+/* thanh thu gọn */
 .fh-mini {
   position: fixed;
   z-index: 12;
@@ -765,23 +937,24 @@ canvas {
   display: flex;
   align-items: center;
   gap: 8px;
-  animation: floaty 3.5s ease-in-out infinite;
+  font-variant-numeric: tabular-nums;
 }
 .fh-mini-main,
 .fh-mini-leave {
   font: inherit;
   cursor: pointer;
-  color: #eef3e6;
-  background: rgba(28, 38, 26, 0.92);
-  border: 1px solid rgba(255, 255, 255, 0.14);
-  backdrop-filter: blur(8px);
-  box-shadow: 0 8px 24px -10px rgba(0, 0, 0, 0.6);
+  min-height: 46px;
+  color: var(--fh-ink);
+  background: var(--fh-bg);
+  border: 1px solid var(--fh-line);
+  backdrop-filter: blur(10px);
+  box-shadow: 0 10px 26px -12px rgba(0, 0, 0, 0.7);
 }
 .fh-mini-main {
   display: flex;
   align-items: center;
   gap: 10px;
-  padding: 9px 16px;
+  padding: 0 16px;
   border-radius: 24px;
   white-space: nowrap;
 }
@@ -789,166 +962,267 @@ canvas {
   display: inline-flex;
   align-items: center;
   gap: 6px;
-  font-size: 13px;
+  font-size: 14px;
   font-weight: 600;
-  color: #bfe0b0;
+  color: var(--fh-soft);
 }
 .fh-mini-time {
-  font-family: var(--font-playfair), "Playfair Display", serif;
-  font-size: 16px;
+  font-size: 15px;
   font-weight: 700;
-  letter-spacing: 0.5px;
-  font-variant-numeric: tabular-nums;
 }
 .fh-mini-time.focus {
-  color: #ffd9a0;
+  color: var(--fh-amber);
+  font-size: 17px;
 }
 .fh-mini-time.break {
-  color: #9fe0c8;
-}
-.fh-mini-caret {
-  display: inline-grid;
-  opacity: 0.75;
+  color: var(--fh-break);
+  font-size: 17px;
 }
 .fh-mini-leave {
-  font-size: 12.5px;
+  font-size: 14px;
   font-weight: 600;
-  padding: 9px 14px;
-  border-radius: 22px;
+  padding: 0 16px;
+  border-radius: 24px;
+  white-space: nowrap;
+}
+@media (prefers-reduced-motion: reduce) {
+  .focus-hud {
+    transition: none;
+  }
 }
 
-/* đồng hồ flip */
-.flip-clock {
+/* nút mở bàn thờ trong bảng ôn bài */
+.fh-shrine {
   display: flex;
   align-items: center;
-  justify-content: center;
-  gap: 4px;
-  margin-bottom: 16px;
+  gap: 12px;
+  width: 100%;
+  margin-top: 12px;
+  padding: 10px 12px;
+  text-align: left;
+  border-radius: 12px;
+  border: 1.5px solid rgba(242, 181, 85, 0.45);
+  background: rgba(242, 181, 85, 0.08);
+  color: var(--fh-ink);
 }
-.flip-card {
+.fh-shrine > .pg-ic:first-child {
+  color: var(--fh-amber);
+}
+.fh-shrine > .pg-ic:last-child {
+  transform: rotate(-90deg);
+  color: var(--fh-soft);
+}
+.fh-shrine span {
+  flex: 1;
+  display: grid;
+  gap: 1px;
+}
+.fh-shrine b {
+  font-size: 14px;
+  font-weight: 600;
+}
+.fh-shrine i {
+  font-style: normal;
+  font-size: 12.5px;
+  color: var(--fh-soft);
+}
+.fh-shrine:hover {
+  border-color: var(--fh-amber);
+}
+.fh-blessed {
+  display: inline-grid;
+  color: var(--fh-amber);
+}
+
+/* về ghế */
+.fh-seat {
+  width: 100%;
+  min-height: 40px;
+  margin-top: 8px;
+  border-radius: 12px;
+  border: 1.5px solid var(--fh-line);
+  background: transparent;
+  color: var(--fh-ink);
+  font-size: 14px;
+  font-weight: 600;
+}
+.fh-seat:hover {
+  border-color: var(--fh-ink);
+}
+
+/* nút nổi khi đứng gần tượng */
+.sh-near {
+  position: fixed;
+  z-index: 12;
+  left: 50%;
+  bottom: calc(max(16px, env(safe-area-inset-bottom)) + 60px);
+  transform: translateX(-50%);
   display: inline-flex;
   align-items: center;
-  justify-content: center;
-  width: 34px;
-  height: 46px;
-  font-family: var(--font-playfair), "Playfair Display", serif;
-  font-size: 30px;
+  gap: 8px;
+  min-height: 48px;
+  padding: 0 22px;
+  border: none;
+  border-radius: 24px;
+  background: #f2b555;
+  color: #1a1206;
+  font: inherit;
+  font-size: 16px;
   font-weight: 700;
-  color: #f6f0df;
-  background: linear-gradient(#3b4a36 0 50%, #2c3829 50% 100%);
-  border-radius: 7px;
-  box-shadow: inset 0 0 0 1px rgba(0, 0, 0, 0.4), 0 4px 10px -4px rgba(0, 0, 0, 0.6);
-  position: relative;
+  cursor: pointer;
+  box-shadow: 0 10px 26px -10px rgba(0, 0, 0, 0.6), 0 0 0 4px rgba(242, 181, 85, 0.25);
+  animation: floaty 3s ease-in-out infinite;
 }
-.flip-card::after {
-  content: "";
-  position: absolute;
-  left: 0;
-  right: 0;
-  top: 50%;
-  height: 1px;
-  background: rgba(0, 0, 0, 0.45);
-}
-.flip-colon {
-  font-size: 26px;
-  font-weight: 700;
-  color: #9fb88c;
-  padding: 0 1px;
+@media (prefers-reduced-motion: reduce) {
+  .sh-near {
+    animation: none;
+  }
 }
 
-/* Pomodoro */
-.pomo {
-  text-align: center;
-  border-top: 1px solid rgba(255, 255, 255, 0.1);
-  padding-top: 14px;
+/* ---------- Bàn thờ (trò vái 3 lần nhận lời chúc) ---------- */
+.shrine-hud {
+  position: fixed;
+  z-index: 12;
+  left: 50%;
+  bottom: 0;
+  transform: translate(-50%, 115%);
+  width: min(400px, 100%);
+  background: var(--fh-bg);
+  color: var(--fh-ink);
+  border-radius: 20px 20px 0 0;
+  padding: 14px 18px max(18px, env(safe-area-inset-bottom));
+  box-shadow: 0 -20px 60px -24px rgba(0, 0, 0, 0.7);
+  backdrop-filter: blur(10px);
+  transition: transform 0.45s cubic-bezier(0.2, 0.9, 0.3, 1);
 }
-.pomo-time {
-  font-family: var(--font-playfair), "Playfair Display", serif;
-  font-size: 52px;
-  font-weight: 700;
-  line-height: 1;
-  letter-spacing: 1px;
-  color: #f6f0df;
+.shrine-hud.show {
+  transform: translate(-50%, 0);
 }
-.pomo-time.focus {
-  color: #ffd9a0;
-}
-.pomo-time.break {
-  color: #a8e0c0;
-}
-.pomo-label {
-  font-size: 12.5px;
-  color: #b9c9ac;
-  margin: 4px 0 12px;
-}
-.pomo-presets {
-  display: flex;
-  gap: 7px;
-  justify-content: center;
-  margin-bottom: 12px;
-}
-.pomo-presets button {
+.shrine-hud button {
   font: inherit;
-  font-size: 12px;
-  font-weight: 600;
-  color: #d7e3cb;
-  background: rgba(255, 255, 255, 0.08);
-  border: 1px solid rgba(255, 255, 255, 0.14);
-  padding: 6px 14px;
-  border-radius: 16px;
   cursor: pointer;
 }
-.pomo-presets button.on {
-  background: #6f9a52;
-  border-color: transparent;
-  color: #fff;
+.shrine-hud :focus-visible {
+  outline: 2px solid var(--fh-amber);
+  outline-offset: 2px;
 }
-.pomo-row {
+.sh-top {
   display: flex;
+  align-items: center;
+  justify-content: space-between;
   gap: 10px;
 }
-.pomo-row button {
-  flex: 1;
-  font: inherit;
-  font-weight: 600;
+.sh-top h2 {
+  font-size: 16px;
+  font-weight: 700;
+}
+.sh-note {
+  margin: 8px 0 12px;
   font-size: 14px;
-  padding: 12px;
-  border-radius: 14px;
-  cursor: pointer;
-  border: none;
+  line-height: 1.55;
+  color: var(--fh-soft);
 }
-.pomo-go {
-  background: linear-gradient(135deg, #7cb35f, #4f8a3a);
-  color: #fff;
+.sh-steps {
+  list-style: none;
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 8px;
+  margin: 0 0 12px;
+  padding: 0;
 }
-.pomo-reset {
-  background: rgba(255, 255, 255, 0.1);
-  color: #dfe9d4;
-}
-
-/* tên hiển thị */
-.fh-name {
-  margin-top: 14px;
-}
-.fh-name label {
-  display: block;
-  font-size: 11.5px;
-  color: #9fb88c;
-  margin-bottom: 5px;
-}
-.fh-name input {
-  width: 100%;
-  font: inherit;
-  font-size: 14px;
-  color: #eef3e6;
-  background: rgba(255, 255, 255, 0.07);
-  border: 1px solid rgba(255, 255, 255, 0.16);
+.sh-steps li {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  padding: 10px 0 8px;
   border-radius: 12px;
-  padding: 10px 12px;
-  outline: none;
+  border: 1.5px solid var(--fh-line);
+  font-size: 13px;
+  color: var(--fh-soft);
+  transition: border-color 0.3s, color 0.3s;
 }
-.fh-name input:focus {
-  border-color: #7cb35f;
+/* nén nhang: que + đốm lửa, sáng lên khi đã vái */
+.sh-steps li i {
+  position: relative;
+  width: 3px;
+  height: 26px;
+  border-radius: 2px;
+  background: #6d4a3a;
+}
+.sh-steps li i::before {
+  content: "";
+  position: absolute;
+  left: 50%;
+  top: -4px;
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  transform: translateX(-50%);
+  background: #4a3a30;
+  transition: background-color 0.3s, box-shadow 0.3s;
+}
+.sh-steps li.done {
+  border-color: var(--fh-amber);
+  color: var(--fh-ink);
+}
+.sh-steps li.done i {
+  background: #b0453a;
+}
+.sh-steps li.done i::before {
+  background: #ffb347;
+  box-shadow: 0 0 10px 3px rgba(255, 170, 70, 0.7);
+}
+.shrine-hud .sh-wide {
+  width: 100%;
+  min-height: 50px;
+  border: none;
+  border-radius: 12px;
+  font-size: 16px;
+  font-weight: 700;
+}
+.sh-bow:disabled {
+  opacity: 0.6;
+  cursor: default;
+}
+.sh-card {
+  display: grid;
+  gap: 6px;
+  margin-top: 12px;
+  padding: 16px 16px 18px;
+  border-radius: 14px;
+  background: linear-gradient(180deg, rgba(242, 181, 85, 0.16), rgba(242, 181, 85, 0.05));
+  border: 1.5px solid rgba(242, 181, 85, 0.55);
+}
+.sh-card-day {
+  font-size: 12.5px;
+  color: var(--fh-soft);
+}
+.sh-card b {
+  font-size: 24px;
+  font-weight: 700;
+  color: var(--fh-amber);
+}
+.sh-card p {
+  font-size: 16px;
+  line-height: 1.55;
+}
+.shrine-hud.fresh .sh-card {
+  animation: shCard 0.7s cubic-bezier(0.2, 0.9, 0.3, 1.2) both;
+}
+@keyframes shCard {
+  from {
+    opacity: 0;
+    transform: translateY(14px) scale(0.96);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .shrine-hud {
+    transition: none;
+  }
+  .shrine-hud.fresh .sh-card {
+    animation: none;
+  }
 }
 
 /* ---------- Menu dock (góc dưới-phải) ---------- */

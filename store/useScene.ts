@@ -26,6 +26,18 @@ type SceneState = {
   // Phòng Rừng Trúc (thiền viện)
   roomOpen: boolean
   setRoomOpen: (v: boolean) => void
+  /** Trò vái tượng (phòng Rừng Trúc): đang mở bàn thờ (camera bay tới tượng + bảng Vái). */
+  shrineOpen: boolean
+  setShrineOpen: (v: boolean) => void
+  /** Tăng mỗi lần bấm Vái -> cảnh 3D cúi camera + khói hương + chuông. */
+  bowNonce: number
+  bow: () => void
+  /** Nhân vật đang đứng gần bàn thờ (hiện nút Vái tượng). */
+  nearShrine: boolean
+  setNearShrine: (v: boolean) => void
+  /** Hết hạn buff "được chúc phúc" (ms), 0 = không có. */
+  blessedUntil: number
+  setBlessedUntil: (ms: number) => void
   sessions: Session[]
   setSessions: (s: Session[]) => void
   bots: Session[] // người "ảo" ngồi học sẵn (tương tác, không phải presence thật)
@@ -69,7 +81,15 @@ export const useScene = create<SceneState>((set) => ({
     set((s) => (s.stats ? { stats: { ...s.stats, [status]: s.stats[status] + 1 } } : {})),
 
   roomOpen: false,
-  setRoomOpen: (v) => set({ roomOpen: v }),
+  setRoomOpen: (v) => set(v ? { roomOpen: true } : { roomOpen: false, shrineOpen: false }),
+  shrineOpen: false,
+  setShrineOpen: (v) => set({ shrineOpen: v }),
+  bowNonce: 0,
+  bow: () => set((s) => ({ bowNonce: s.bowNonce + 1 })),
+  nearShrine: false,
+  setNearShrine: (v) => set({ nearShrine: v }),
+  blessedUntil: 0,
+  setBlessedUntil: (ms) => set({ blessedUntil: ms }),
   sessions: [],
   setSessions: (s) => set({ sessions: s }),
   bots: [],

@@ -40,11 +40,13 @@ export default function CalligraphyDesk() {
   })
 
   const onClick = (e: ThreeEvent<MouseEvent>) => {
+    if (useScene.getState().roomOpen) return // cảnh cây đang ẩn: raycast vẫn trúng vật ẩn
     if (pointer.moved > 7) return
     e.stopPropagation()
     setComposerOpen(true)
   }
   const hover = (v: boolean) => {
+    if (v && useScene.getState().roomOpen) return
     if (typeof document !== 'undefined')
       document.body.style.cursor = v ? 'pointer' : 'default'
   }

@@ -5,6 +5,7 @@ import * as THREE from 'three'
 import { windRef } from '@/lib/runtime'
 import { makeWindMaterial } from '@/lib/windMaterial'
 import { useIsMobile } from './useIsMobile'
+import { BAMBOO_CLUSTERS, setBambooCount } from '@/lib/roomMap'
 
 const TAU = Math.PI * 2
 
@@ -223,25 +224,27 @@ export default function Bamboo() {
     return m
   }, [fanTex])
 
-  // thân theo CỤM (4–8 cây), vòng nền r7.5..19.5
+  // thân theo CỤM (4–8 cây) tại BAMBOO_CLUSTERS (lib/roomMap, tất định) -> khớp va chạm của nhân vật
   const data = useMemo(() => {
+    setBambooCount(CLUSTERS)
+    let seed = 991
+    const rnd = () => {
+      seed = (seed * 16807) % 2147483647
+      return seed / 2147483647
+    }
     const arr: { x: number; z: number; yaw: number; sc: number; lean: number; lz: number }[] = []
-    for (let cI = 0; cI < CLUSTERS; cI++) {
-      const ca = Math.random() * TAU
-      const cr = 7.5 + Math.random() * 12
-      const cx = Math.cos(ca) * cr
-      const cz = Math.sin(ca) * cr
-      const per = 4 + ((Math.random() * 5) | 0)
+    for (const c of BAMBOO_CLUSTERS.slice(0, CLUSTERS)) {
+      const ca = Math.atan2(c.z, c.x)
       const outX = Math.cos(ca)
       const outZ = Math.sin(ca)
-      for (let k = 0; k < per; k++) {
+      for (let k = 0; k < c.per; k++) {
         arr.push({
-          x: cx + (Math.random() - 0.5) * 1.2,
-          z: cz + (Math.random() - 0.5) * 1.2,
-          yaw: Math.random() * TAU,
-          sc: 0.82 + Math.random() * 0.42,
-          lean: outX * 0.05 + (Math.random() - 0.5) * 0.05,
-          lz: outZ * 0.05 + (Math.random() - 0.5) * 0.05,
+          x: c.x + (rnd() - 0.5) * 1.2,
+          z: c.z + (rnd() - 0.5) * 1.2,
+          yaw: rnd() * TAU,
+          sc: 0.82 + rnd() * 0.42,
+          lean: outX * 0.05 + (rnd() - 0.5) * 0.05,
+          lz: outZ * 0.05 + (rnd() - 0.5) * 0.05,
         })
       }
     }

@@ -1,9 +1,16 @@
 'use client'
-import { useEffect, useMemo, useRef } from 'react'
+import { Suspense, useEffect, useMemo, useRef } from 'react'
 import { useFrame, useThree } from '@react-three/fiber'
 import * as THREE from 'three'
 import Bamboo from './Bamboo'
 import Meditators from './Meditators'
+import Shrine, { SHRINE_POS } from './Shrine'
+import { RoomFloor, RoomPlants } from './RoomAssets'
+import { useScene } from '@/store/useScene'
+import { player, walkTo } from '@/lib/runtime'
+import PlayerController from './Player'
+import Pond from './Pond'
+import { POND } from '@/lib/roomMap'
 
 const TAU = Math.PI * 2
 
@@ -12,6 +19,30 @@ const clamp = (lo: number, hi: number, v: number) => Math.max(lo, Math.min(hi, v
 
 // Camera phòng: NGƯỜI DÙNG tự xoay (kéo) + zoom (lăn/pinch). KHÔNG tự quay.
 // Orbit quanh tâm vòng người thiền (0,1,0), bán kính giữ TRONG vòng trúc (r7.5).
+// điểm chạm gần nhất (vẽ vòng sáng nhỏ dưới đất)
+const tapMark = new THREE.Vector3(0, -10, 0)
+const tapMarkAt = { t: -1e9 }
+
+function TapMarker() {
+  const ref = useRef<THREE.Mesh>(null)
+  useFrame(() => {
+    const m = ref.current
+    if (!m) return
+    const k = (performance.now() - tapMarkAt.t) / 700
+    m.visible = k < 1 && player.hasTarget
+    if (!m.visible) return
+    m.position.copy(tapMark)
+    m.scale.setScalar(0.5 + k * 0.6)
+    ;(m.material as THREE.MeshBasicMaterial).opacity = 0.7 * (1 - k)
+  })
+  return (
+    <mesh ref={ref} rotation-x={-Math.PI / 2} visible={false}>
+      <ringGeometry args={[0.32, 0.42, 32]} />
+      <meshBasicMaterial color={0xffe2a0} transparent depthWrite={false} toneMapped={false} />
+    </mesh>
+  )
+}
+
 function RoomCamera({ active }: { active: boolean }) {
   const camera = useThree((s) => s.camera)
   const gl = useThree((s) => s.gl)
@@ -22,6 +53,10 @@ function RoomCamera({ active }: { active: boolean }) {
     []
   )
   const TARGET = useMemo(() => new THREE.Vector3(0, 1, 0), [])
+  const HOME = useMemo(() => new THREE.Vector3(0, 1, 0), [])
+  const SHRINE_T = useMemo(() => new THREE.Vector3(SHRINE_POS.x, 1.35, SHRINE_POS.z), [])
+  // bàn thờ: camera đứng giữa tâm sân và tượng, nhìn vào tượng; mỗi lần Vái cúi xuống 1 nhịp
+  const focus = useRef({ open: false, bowAt: -1, nonce: 0 })
   const r0 = isMobile ? 7.3 : 6.6
   const st = useRef({
     theta: 0.5,
@@ -54,10 +89,19 @@ function RoomCamera({ active }: { active: boolean }) {
     if (!active) return
     const el = gl.domElement
     const s = st.current
+    // chạm nhanh (không kéo) xuống đất -> nhân vật đi tới đó
+    const tap = { x: 0, y: 0, t: 0, moved: 0 }
+    const ray = new THREE.Raycaster()
+    const ground = new THREE.Plane(new THREE.Vector3(0, 1, 0), 0)
+    const hit = new THREE.Vector3()
     const onDown = (e: PointerEvent) => {
       s.dragging = true
       s.lastX = e.clientX
       s.lastY = e.clientY
+      tap.x = e.clientX
+      tap.y = e.clientY
+      tap.t = performance.now()
+      tap.moved = 0
     }
     const onMove = (e: PointerEvent) => {
       if (!s.dragging || s.pinchDist) return
@@ -66,19 +110,33 @@ function RoomCamera({ active }: { active: boolean }) {
       s.lastX = e.clientX
       s.lastY = e.clientY
     }
-    const onUp = () => {
+    const onUp = (e: PointerEvent) => {
       s.dragging = false
+      const quick = performance.now() - tap.t < 350
+      const still = Math.hypot(e.clientX - tap.x, e.clientY - tap.y) < 8
+      if (!quick || !still || s.pinchDist || e.target !== el) return
+      if (useScene.getState().shrineOpen) return
+      const r = el.getBoundingClientRect()
+      ray.setFromCamera(
+        new THREE.Vector2(((e.clientX - r.left) / r.width) * 2 - 1, -((e.clientY - r.top) / r.height) * 2 + 1),
+        camera
+      )
+      if (ray.ray.intersectPlane(ground, hit) && Math.hypot(hit.x, hit.z) < 23) {
+        walkTo({ x: hit.x, z: hit.z })
+        tapMark.set(hit.x, 0.02, hit.z)
+        tapMarkAt.t = performance.now()
+      }
     }
     const onWheel = (e: WheelEvent) => {
       e.preventDefault()
-      s.tRadius = clamp(3.8, 7.3, s.tRadius + e.deltaY * 0.005)
+      s.tRadius = clamp(3.5, 11, s.tRadius + e.deltaY * 0.006)
     }
     const onTouchMove = (e: TouchEvent) => {
       if (e.touches.length === 2) {
         const dx = e.touches[0].clientX - e.touches[1].clientX
         const dy = e.touches[0].clientY - e.touches[1].clientY
         const d = Math.hypot(dx, dy)
-        if (s.pinchDist) s.tRadius = clamp(3.8, 7.3, s.tRadius + (s.pinchDist - d) * 0.02)
+        if (s.pinchDist) s.tRadius = clamp(3.5, 11, s.tRadius + (s.pinchDist - d) * 0.02)
         s.pinchDist = d
       }
     }
@@ -99,20 +157,52 @@ function RoomCamera({ active }: { active: boolean }) {
       el.removeEventListener('touchmove', onTouchMove)
       el.removeEventListener('touchend', onTouchEnd)
     }
-  }, [gl, active])
+  }, [gl, active, camera])
 
-  useFrame(() => {
+  useFrame((state) => {
     if (!active) return
     const s = st.current
+    const f = focus.current
+    const sc = useScene.getState()
+    if (sc.shrineOpen !== f.open) {
+      f.open = sc.shrineOpen
+      if (f.open) {
+        // hướng từ tượng nhìn về tâm sân -> đặt camera ở phía đó, quay theta gần nhất
+        // lệch 3/4 để nhân vật đứng vái không che tượng
+        const want = Math.atan2(-SHRINE_POS.x, -SHRINE_POS.z) - 0.55
+        s.tTheta = s.theta + ((((want - s.theta) % TAU) + TAU + Math.PI) % TAU) - Math.PI
+        s.tPhi = 1.36
+        s.tRadius = 4
+      } else {
+        s.tPhi = 1.32
+        s.tRadius = r0
+      }
+    }
+    if (sc.bowNonce !== f.nonce) {
+      f.nonce = sc.bowNonce
+      f.bowAt = state.clock.elapsedTime
+    }
+    // bám theo nhân vật của mình (đầu ngang ~1m); ở bàn thờ thì nhìn tượng
+    if (player.ready) HOME.set(player.x, 1, player.z)
+    TARGET.lerp(f.open ? SHRINE_T : HOME, f.open ? 0.06 : 0.1)
     s.theta += (s.tTheta - s.theta) * 0.12
     s.phi += (s.tPhi - s.phi) * 0.12
     s.radius += (s.tRadius - s.radius) * 0.12
+    // nhịp vái: cúi xuống rồi ngẩng lên trong 1 giây
+    let bow = 0
+    if (f.bowAt >= 0) {
+      const p = (state.clock.elapsedTime - f.bowAt) / 1.0
+      if (p >= 1) f.bowAt = -1
+      else bow = Math.sin(p * Math.PI)
+    }
+    const phi = s.phi + bow * 0.22
+    const rad = s.radius - bow * 0.35
     camera.position.set(
-      TARGET.x + s.radius * Math.sin(s.phi) * Math.sin(s.theta),
-      TARGET.y + s.radius * Math.cos(s.phi),
-      TARGET.z + s.radius * Math.sin(s.phi) * Math.cos(s.theta)
+      TARGET.x + rad * Math.sin(phi) * Math.sin(s.theta),
+      TARGET.y + rad * Math.cos(phi) - bow * 0.25,
+      TARGET.z + rad * Math.sin(phi) * Math.cos(s.theta)
     )
-    camera.lookAt(TARGET)
+    camera.lookAt(TARGET.x, TARGET.y - bow * 0.45, TARGET.z)
   })
   return null
 }
@@ -161,7 +251,7 @@ function gravelTexture(): THREE.CanvasTexture {
 function Pebbles() {
   const geo = useMemo(() => new THREE.SphereGeometry(1, 10, 8), [])
   const mat = useMemo(
-    () => new THREE.MeshStandardMaterial({ color: 0xeef0ea, roughness: 0.95 }),
+    () => new THREE.MeshStandardMaterial({ color: 0xa9a69b, roughness: 0.92 }),
     []
   )
   const data = useMemo(() => {
@@ -174,6 +264,9 @@ function Pebbles() {
     for (let i = 0; i < 22; i++) {
       const a = rnd() * TAU
       const r = 1.2 + rnd() * 8
+      // né bàn thờ + lối đá
+      if (Math.hypot(Math.cos(a) * r - SHRINE_POS.x, Math.sin(a) * r - SHRINE_POS.z) < 3.2) continue
+      if (Math.hypot(Math.cos(a) * r - POND.x, Math.sin(a) * r - POND.z) < POND.r + 0.6) continue
       arr.push({ x: Math.cos(a) * r, z: Math.sin(a) * r, s: 0.18 + rnd() * 0.28 })
     }
     return arr
@@ -189,7 +282,7 @@ function Pebbles() {
     })
     mesh.instanceMatrix.needsUpdate = true
   }
-  return <instancedMesh ref={ref} args={[geo, mat, data.length]} castShadow receiveShadow />
+  return <instancedMesh ref={ref} args={[geo, mat, Math.max(1, data.length)]} castShadow receiveShadow />
 }
 
 // Tia nắng xuyên ngọn trúc: vài cột sáng additive nhạt rọi xuống.
@@ -375,18 +468,33 @@ export default function FocusRoom({ active }: { active: boolean }) {
   return (
     <group>
       <RoomCamera active={active} />
+      <PlayerController active={active} />
+      <TapMarker />
       {/* phông cảnh núi rừng bọc quanh (thay nền trắng trống) */}
       <Backdrop />
       {/* đèn fill dịu (bóng thật do mặt trời của SceneEnv tạo) */}
       <ambientLight intensity={0.3} color={0xe6f0d8} />
       <directionalLight position={[5, 9, 3]} intensity={0.32} color={0xfff2d6} />
 
-      {/* nền SỎI (hơi ngà thay vì trắng tinh -> đỡ phản sáng chói) */}
-      <mesh rotation-x={-Math.PI / 2} receiveShadow>
-        <circleGeometry args={[28, 48]} />
-        <meshStandardMaterial map={gravelTex} roughness={1} color={0xe8e2d4} />
-      </mesh>
+      {/* nền SỎI scan Poly Haven (tải lười); đang tải thì dùng sỏi vẽ canvas */}
+      <Suspense
+        fallback={
+          <mesh rotation-x={-Math.PI / 2} receiveShadow>
+            <circleGeometry args={[28, 48]} />
+            <meshStandardMaterial map={gravelTex} roughness={1} color={0xe8e2d4} />
+          </mesh>
+        }
+      >
+        <RoomFloor />
+      </Suspense>
       <Pebbles />
+      {/* cây bụi + dương xỉ scan (instanced) */}
+      <Suspense fallback={null}>
+        <RoomPlants />
+      </Suspense>
+      {/* bàn thờ đá: vái 3 lần nhận lời chúc */}
+      <Shrine />
+      <Pond />
 
       <Bamboo />
       <Meditators active={active} />

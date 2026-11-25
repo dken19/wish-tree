@@ -4,12 +4,14 @@ import { useScene } from '@/store/useScene'
 import { storeName } from '@/lib/presence'
 import { containsProfanity } from '@/lib/profanity'
 import Icon from './Icon'
+import { walkTo } from '@/lib/runtime'
+import { vnClock } from '@/lib/skyPhase'
 
 type Phase = 'idle' | 'focus' | 'break'
-type Preset = { label: string; focus: number; brk: number }
+type Preset = { label: string; sub: string; focus: number; brk: number }
 const PRESETS: Preset[] = [
-  { label: '25 / 5', focus: 25, brk: 5 },
-  { label: '50 / 10', focus: 50, brk: 10 },
+  { label: '25 phút', sub: 'nghỉ 5', focus: 25, brk: 5 },
+  { label: '50 phút', sub: 'nghỉ 10', focus: 50, brk: 10 },
 ]
 
 function beep() {
@@ -47,6 +49,19 @@ export default function FocusHUD() {
   const nickname = useScene((s) => s.nickname)
   const setNickname = useScene((s) => s.setNickname)
   const showToast = useScene((s) => s.showToast)
+  const shrineOpen = useScene((s) => s.shrineOpen)
+  const blessedUntil = useScene((s) => s.blessedUntil)
+  // buff còn hạn? (kiểm tra theo nhịp render; buff 60 phút nên lệch vài giây không sao)
+  const [blessed, setBlessed] = useState(false)
+  useEffect(() => {
+    const check = () => setBlessed(blessedUntil > Date.now())
+    const first = setTimeout(check, 0)
+    const id = setInterval(check, 30_000)
+    return () => {
+      clearTimeout(first)
+      clearInterval(id)
+    }
+  }, [blessedUntil])
 
   const online = sessions.length + bots.length
   const profToastAt = useRef(0) // throttle toast cảnh báo tên có từ bậy
@@ -62,18 +77,17 @@ export default function FocusHUD() {
     if (!roomOpen) initOpen.current = false
   }, [roomOpen])
 
-  // ----- đồng hồ flip: giờ hiện tại -----
-  const [clock, setClock] = useState('00:00:00')
+  // ----- giờ Hà Nội (dòng nhỏ trên bảng) — ghi thẳng DOM qua ref, không re-render -----
+  const clockRef = useRef<HTMLSpanElement>(null)
   useEffect(() => {
+    if (!roomOpen) return
     const update = () => {
-      const d = new Date()
-      const p = (n: number) => String(n).padStart(2, '0')
-      setClock(`${p(d.getHours())}:${p(d.getMinutes())}:${p(d.getSeconds())}`)
+      if (clockRef.current) clockRef.current.textContent = vnClock()
     }
     update()
-    const id = setInterval(update, 1000)
+    const id = setInterval(update, 15_000)
     return () => clearInterval(id)
-  }, [])
+  }, [roomOpen, open])
 
   // ----- Pomodoro -----
   const [preset, setPreset] = useState<Preset>(PRESETS[0])
@@ -139,69 +153,64 @@ export default function FocusHUD() {
   return (
     <>
       {/* Thanh thu gọn: luôn thấy số online + đồng hồ Pomodoro; bấm để mở bảng */}
-      {roomOpen && !open && (
+      {roomOpen && !open && !shrineOpen && (
         <div className="fh-mini">
           <button className="fh-mini-main" onClick={() => setOpen(true)} aria-label="Mở bảng ôn bài">
             <span className="fh-mini-online">
               <i className="fh-live" aria-hidden="true" />
               {online}
             </span>
+            {blessed && (
+              <span className="fh-blessed" title="Đang được chúc phúc">
+                <Icon name="lantern" size={15} />
+              </span>
+            )}
             <span className={`fh-mini-time ${phase}`}>
-              {phase === 'idle' ? 'Phòng ôn bài' : `${mm}:${ss}`}
+              {phase === 'idle' ? 'Hẹn giờ ôn bài' : `${mm}:${ss}`}
             </span>
-            <span className="fh-mini-caret">
-              <Icon name="up" size={16} />
-            </span>
+            <Icon name="up" size={16} />
           </button>
-          <button className="fh-mini-leave" onClick={() => setRoomOpen(false)} aria-label="Rời phòng">
-            Rời
+          <button className="fh-mini-leave" onClick={() => setRoomOpen(false)}>
+            Rời phòng
           </button>
         </div>
       )}
 
-      <div className={`focus-hud${roomOpen && open ? ' show' : ''}`}>
+      <section
+        className={`focus-hud ${phase}${roomOpen && open && !shrineOpen ? ' show' : ''}`}
+        aria-label="Bảng ôn bài"
+        aria-hidden={!(roomOpen && open && !shrineOpen)}
+      >
         <div className="fh-top">
           <span className="fh-online">
             <i className="fh-live" aria-hidden="true" />
             {online} người đang ôn cùng bạn
           </span>
-          <div className="fh-top-btns">
-            <button className="fh-min" onClick={() => setOpen(false)} aria-label="Thu gọn" title="Thu gọn">
-              <Icon name="chev" size={18} />
-            </button>
-            <button className="fh-leave" onClick={() => setRoomOpen(false)}>
-              Rời phòng
-            </button>
-          </div>
+          <button className="fh-icon" onClick={() => setOpen(false)} aria-label="Thu gọn bảng">
+            <Icon name="chev" size={18} />
+          </button>
         </div>
 
-      {/* đồng hồ flip (giờ hiện tại) */}
-      <div className="flip-clock">
-        {clock.split('').map((c, i) =>
-          c === ':' ? (
-            <span key={i} className="flip-colon">
-              :
-            </span>
-          ) : (
-            <FlipCard key={i} ch={c} />
-          )
-        )}
-      </div>
-
-      {/* Pomodoro */}
-      <div className="pomo">
-        <div className={`pomo-time ${phase}`}>
-          {mm}:{ss}
+        {/* Pomodoro: số flip lớn */}
+        <div className="fh-status">
+          <span className="fh-phase">{pomoLabel}</span>
+          <span className="fh-clock">
+            Hà Nội <span ref={clockRef} />
+          </span>
         </div>
-        <div className="pomo-label">{pomoLabel}</div>
-        <div className="pomo-presets">
+        <div className="flip-clock" role="timer" aria-label={`Còn ${mm} phút ${ss} giây`}>
+          <FlipCard ch={mm[0]} />
+          <FlipCard ch={mm[1]} />
+          <span className="flip-colon">:</span>
+          <FlipCard ch={ss[0]} />
+          <FlipCard ch={ss[1]} />
+        </div>
+
+        <div className="pomo-presets" role="group" aria-label="Độ dài một phiên">
           {PRESETS.map((p) => (
-            <button
-              key={p.label}
-              className={preset.label === p.label ? 'on' : ''}
-              onClick={() => pickPreset(p)}
-            >
-              {p.label}
+            <button key={p.label} aria-pressed={preset.label === p.label} onClick={() => pickPreset(p)}>
+              <b>{p.label}</b>
+              <span>{p.sub}</span>
             </button>
           ))}
         </div>
@@ -215,36 +224,65 @@ export default function FocusHUD() {
               Tạm dừng
             </button>
           )}
-          <button className="pomo-reset" onClick={reset}>
+          <button className="pomo-reset" onClick={reset} disabled={phase === 'idle' && !running}>
             Đặt lại
           </button>
         </div>
-      </div>
 
-      {/* tên hiển thị */}
-      <div className="fh-name">
-        <label>Tên hiển thị</label>
-        <input
-          maxLength={24}
-          value={nickname}
-          placeholder="Bạn ẩn danh"
-          onChange={(e) => {
-            const v = e.target.value
-            // tên broadcast cho người khác -> LỌC TỪ BẬY: chứa từ cấm thì không lưu/phát
-            if (containsProfanity(v)) {
-              const now = Date.now()
-              if (now - profToastAt.current > 2000) {
-                profToastAt.current = now
-                showToast('Tên hiển thị có từ chưa phù hợp.')
-              }
-              return
-            }
-            setNickname(v)
-            storeName(v)
+        <button
+          className="fh-shrine"
+          onClick={() => {
+            setOpen(false)
+            walkTo('shrine')
           }}
-        />
-      </div>
-      </div>
+        >
+          <Icon name="lantern" size={18} />
+          <span>
+            <b>{blessed ? 'Bạn đang được chúc phúc' : 'Ra bàn thờ xin lời chúc'}</b>
+            <i>{blessed ? 'Xem lại lời chúc hôm nay' : 'Vái 3 lần, nhận may mắn cho hôm nay'}</i>
+          </span>
+          <Icon name="chev" size={16} />
+        </button>
+
+        <button
+          className="fh-seat"
+          onClick={() => {
+            setOpen(false)
+            walkTo('seat')
+          }}
+        >
+          Về chỗ ngồi của mình
+        </button>
+
+        <div className="fh-foot">
+          <label className="fh-name">
+            <span>Tên của bạn</span>
+            <input
+              maxLength={24}
+              value={nickname}
+              placeholder="Bạn ẩn danh"
+              onChange={(e) => {
+                const v = e.target.value
+                // tên broadcast cho người khác -> LỌC TỪ BẬY: chứa từ cấm thì không lưu/phát
+                if (containsProfanity(v)) {
+                  const now = Date.now()
+                  if (now - profToastAt.current > 2000) {
+                    profToastAt.current = now
+                    showToast('Tên hiển thị có từ chưa phù hợp.')
+                  }
+                  return
+                }
+                setNickname(v)
+                storeName(v)
+              }}
+            />
+          </label>
+          <button className="fh-leave" onClick={() => setRoomOpen(false)}>
+            <Icon name="logout" size={16} />
+            Rời phòng
+          </button>
+        </div>
+      </section>
     </>
   )
 }

@@ -80,9 +80,13 @@ components/
     WishPapers.tsx     # điều ước đã duyệt (InstancedMesh) — CLICK đọc; dây nối cành
     CalligraphyDesk.tsx# bàn thư pháp 3D; onClick -> mở composer; có hào quang
     Monastery.tsx      # ĐỀN 3 tầng cầu kỳ trên đỉnh núi xa (peakCenter, quay về tâm): bệ đá+bậc, cột son, mái đầu đao, cửa/đèn lồng PHÁT SÁNG + cột sáng/hào quang/hạt sáng nhấp nháy mời bấm -> setRoomOpen(true)
-    FocusRoom.tsx      # PHÒNG RỪNG TRÚC: RoomCamera NGƯỜI DÙNG tự xoay/zoom (orbit thủ công, KHÔNG auto, mobile nới FOV) + fog/đèn riêng + ghìm exposure≤0.9 (đỡ loá) + nền SỎI ngà (texture) + sỏi 3D (đổ bóng) + TIA NẮNG xuyên ngọn (cone additive, dịu) + sương + Backdrop (cylinder phông NÚI ĐỒI nhiều lớp, MeshBasic fog/tonemap=off — thay nền trắng); gate active
-    Bamboo.tsx         # rừng trúc: thân geometry TUỲ BIẾN (makeCulmGeometry: thuôn dần + NGỌN CONG + GỜ NỔI/rãnh tối ở mấu + SỌC DỌC xanh, đốt ngắn, bóng/sọc = vertex color) theo CỤM (4–8 cây, vòng r7.5–19.5, scale ĐỀU, đổ bóng, gió GPU) + CÀNH cong ARCH (lên rồi cong xuống, TubeGeometry) ở nửa trên thân -> TÁN LÁ xòe LÊN đón ngọn (cross-plane, fanTexture) + LÁ ĐƠN rơi (Points, JS)
-    Meditators.tsx     # SLIME tròn pastel (thân gel + 2 mắt CHỚP + chấm sáng, nhún nhẹ, quay mặt về camera) từ store.sessions + store.bots + nhãn tên/đồng hồ phiên (sprite canvas, 1Hz)
+    FocusRoom.tsx      # PHÒNG RỪNG TRÚC: RoomCamera NGƯỜI DÙNG tự xoay/zoom (orbit thủ công, KHÔNG auto, mobile nới FOV) + fog/đèn riêng + ghìm exposure≤0.9 (đỡ loá) + nền (RoomFloor, fallback sỏi canvas) + sỏi 3D (đổ bóng) + TIA NẮNG xuyên ngọn (cone additive, dịu) + sương + Backdrop (cylinder phông NÚI ĐỒI nhiều lớp, MeshBasic fog/tonemap=off — thay nền trắng); gate active
+    Player.tsx         # PlayerController: nhân vật của mình ĐI LẠI (WASD/mũi tên theo hướng camera, hoặc CHẠM ĐẤT -> walkTo), va chạm tròn + lách vật cản (lib/roomMap), đứng yên tại ghế -> ngồi thiền; tới bàn thờ -> setShrineOpen; cập nhật store.nearShrine. Trạng thái ở `player` (lib/runtime, KHÔNG re-render). RoomCamera bám theo nhân vật, tap ngắn (<350ms, <8px) = đi tới + vòng sáng TapMarker
+    Shrine.tsx         # BÀN THỜ đá (tượng ngồi trên toà sen, hào quang, bàn hương + 3 nén nhang, 2 đèn đá) ở SHRINE_POS; khói nhang phụt theo bowNonce, chùm hạt vàng khi được chúc phúc; bấm tượng -> walkTo('shrine')
+    Pond.tsx           # AO SEN (mặt nước, bờ đá, lá + hoa sen) ở POND
+    RoomAssets.tsx     # asset Poly Haven (CC0) trong public/room/: RoomFloor (texture sỏi + normal, nền đá lát quanh bàn thờ + lối đi) + RoomPlants (shrub_03/04 + fern_02 INSTANCED, nửa số trên mobile, né bàn thờ/ao) — bọc <Suspense>
+    Bamboo.tsx         # rừng trúc: thân geometry TUỲ BIẾN (makeCulmGeometry: thuôn dần + NGỌN CONG + GỜ NỔI/rãnh tối ở mấu + SỌC DỌC xanh, đốt ngắn, bóng/sọc = vertex color) theo CỤM (4–8 cây) tại BAMBOO_CLUSTERS TẤT ĐỊNH (lib/roomMap, khớp va chạm; seed cố định, scale ĐỀU, đổ bóng, gió GPU) + CÀNH cong ARCH (lên rồi cong xuống, TubeGeometry) ở nửa trên thân -> TÁN LÁ xòe LÊN đón ngọn (cross-plane, fanTexture) + LÁ ĐƠN rơi (Points, JS)
+    Meditators.tsx     # NGƯỜI CHIBI ngồi thiền trên bồ đoàn (đầu to, tóc 4 kiểu, má hồng, miệng cười, mắt CHỚP, thở nhẹ, quay mặt về camera) từ store.sessions + store.bots; màu da/tóc/áo/quần/bồ đoàn chọn TẤT ĐỊNH theo hash clientId (murmur mix), mình = áo vàng; mỗi người 1 geometry GỘP vertex-color + 1 mesh mắt = 2 draw call. Nhãn tên/đồng hồ phiên (sprite canvas, 1Hz, bóng chữ; THU NHỎ khi gần camera <6 đơn vị). Avatar CỦA MÌNH = PlayerAvatar: dáng ngồi (bồ đoàn ở ghế) ↔ dáng ĐỨNG (thân+đầu gộp, chân/tay riêng đánh nhịp khi đi, thân trên gập ở hông khi vái theo bowNonce) + Aura hạt vàng khi blessedUntil > now
     Petals.tsx         # cánh hoa rơi (Points), ẩn khi mưa
     Rain.tsx           # mưa (LineSegments), hiện khi điều kiện = rain
     Dew.tsx            # giọt sương lấp lánh trôi (Points, JS)
@@ -100,7 +104,8 @@ components/
     Icon.tsx           # icon nét SVG inline (currentColor) — THAY emoji làm icon ở mọi nơi
     Composer.tsx       # bảng viết: chọn theme + nhập text -> POST /api/wishes
     NavDock.tsx        # MENU dock tròn góc dưới-phải (icon SVG): xòe 5 mục (Cây/Viết/Phòng ôn bài qua store; Kỹ năng sống -> router.push('/ky-nang')); ẩn khi roomOpen/composerOpen
-    FocusHUD.tsx       # overlay phòng: MẶC ĐỊNH THU GỌN (thanh mini: online + đồng hồ Pomodoro + Rời) — bấm mở bảng đầy đủ (flip + Pomodoro + đổi tên + Rời); số online = sessions + bots; mobile RoomCamera nới FOV
+    FocusHUD.tsx       # overlay phòng (tông mực trúc + nhấn vàng đèn): MẶC ĐỊNH THU GỌN (thanh mini: online + giờ Pomodoro + Rời phòng) — bấm mở bảng: số FLIP lớn = đếm ngược Pomodoro (màu theo phase), giờ Hà Nội 1 dòng nhỏ (ref), chọn 25/50 phút, Bắt đầu/Đặt lại, tên + Rời phòng; nút "Ra bàn thờ xin lời chúc" (walkTo shrine) + "Về chỗ ngồi"; mini bar có icon đèn khi được chúc phúc; ẩn khi shrineOpen; số online = sessions + bots
+    ShrineHUD.tsx      # bảng BÀN THỜ (bottom sheet cùng tông FocusHUD): vái 3 lần (bowNonce + chuông WebAudio, 3 nén nhang sáng dần) -> rút 1 lời chúc/NGÀY giờ VN (lib/blessings, localStorage) + buff 60 phút; nút nổi "Vái tượng" khi nearShrine; toast hướng dẫn đi lại lần đầu
     LacBird.tsx        # <img> chim Lạc (public/chim-lac.jpg) + mix-blend-mode
     Toast.tsx
     WishStats.tsx      # huy hiệu dưới tiêu đề: "N điều ước trên cây" + "M đang chờ duyệt" (luôn hiện, kể cả 0; icon SVG) từ store.stats, bấm -> /dieu-uoc
@@ -121,7 +126,9 @@ lib/
   windMaterial.ts      # makeWindMaterial(): MeshLambertMaterial + vertex shader gió GPU (.tick)
   profanity.ts         # containsProfanity + validateWish + validateComment (≤300) (giữ dấu, khớp theo TỪ; ưu tiên KHÔNG chặn nhầm)
   ratelimit.ts         # rate-limit theo IP (in-memory)
-  runtime.ts           # windRef {current,target} + pointer {moved,dragging} — chia sẻ KHÔNG re-render
+  runtime.ts           # windRef {current,target} + pointer {moved,dragging} + player (vị trí/hướng/ngồi/đích/phím/người khác) + walkTo() — chia sẻ KHÔNG re-render
+  roomMap.ts           # BỐ CỤC map phòng Rừng Trúc (tất định): SHRINE_POS/FACE/STAND, POND, BAMBOO_CLUSTERS (né sân/bàn thờ/ao), vật cản tròn, resolveMove (đẩy khỏi vật cản + giới hạn WALK_R 22), steer (lách)
+  blessings.ts         # 24 lời chúc (ấm áp, không phán vận hạn), BOWS_NEEDED=3, BUFF_MINUTES=60, vnDayKey, load/save/draw (localStorage 'wish-tree:blessing')
   wishes.ts            # type Wish (+no, commentCount), SEED_WISHES (no 1..8), subscribeApproved() (onSnapshot, sort client)
   wishMeta.ts          # client+server: formatNo, formatWishTime (giờ VN), foldVi/searchTokens (bỏ dấu -> keywords), parseNoQuery, REPORT_REASONS, AUTO_HIDE_REPORTS
   wishServer.ts        # server-only: ensureNumbering (lần đầu đánh số TẤT CẢ ước cũ theo createdAt + keywords, rồi đặt meta/counters), counterRef, viewerFromRequest (verifyIdToken), publicWish
@@ -129,7 +136,7 @@ lib/
   firebase.admin.ts    # init Admin SDK (server-only): getAdminDb + getAdminAuth (verifyIdToken)
   adminAuth.ts         # server-only: checkAdmin(req) — Bearer ID token + email_verified ∈ ADMIN_EMAILS, hoặc x-admin-secret
 store/
-  useScene.ts          # zustand: cond (thời tiết), wishes, stats (approved/pending), openWish, composerOpen, toast, loaded, roomOpen, sessions, nickname, navOpen, user
+  useScene.ts          # zustand: cond (thời tiết), wishes, stats (approved/pending), openWish, composerOpen, toast, loaded, roomOpen, sessions, nickname, navOpen, user, shrineOpen, bowNonce/bow(), blessedUntil, nearShrine
 scripts/seed.mjs       # seed vài điều ước 'approved' vào Firestore
 firestore.rules        # client read 'approved' (wishes) + read sessions; write = false (ghi qua Admin SDK)
 firebase.json          # trỏ firestore.rules + firestore.indexes.json cho `firebase deploy`
@@ -173,11 +180,11 @@ KHÔNG gọi API thời tiết, KHÔNG có nút chuyển. `DataBridge` mỗi ph�
 - DecorPapers/WishPapers/Blossoms/Dew/Critters: cập nhật ma trận/điểm bằng JS (số lượng nhỏ, giảm theo mobile).
 
 ### Phòng Rừng Trúc / presence (thiền viện)
-Bấm **thiền viện** (`Monastery`, trên đỉnh núi xa) → `useScene.setRoomOpen(true)`. `WishTreeCanvas` ẩn cảnh cây (`<group visible={!roomOpen}>`, KHÔNG unmount) và bật `<FocusRoom active>`; `CameraRig` nhận `disabled={roomOpen}` (ngừng ghi camera) để `RoomCamera` tiếp quản. Cảnh phòng = rừng trúc + người thiền + (HUD HTML) đồng hồ flip & Pomodoro.
+Bấm **thiền viện** (`Monastery`, trên đỉnh núi xa) → `useScene.setRoomOpen(true)`. `WishTreeCanvas` ẩn cảnh cây (`<group visible={!roomOpen}>`, KHÔNG unmount) và bật `<FocusRoom active>`; `CameraRig` nhận `disabled={roomOpen}` (ngừng ghi camera) để `RoomCamera` tiếp quản. Cảnh phòng = MAP ĐI DẠO (bán kính 22m): sân giữa có vòng người ngồi thiền, bàn thờ đá ở hậu cảnh, ao sen, rừng trúc thành khóm + bụi cây/dương xỉ Poly Haven; nhân vật của mình đi lại (Player) + (HUD HTML) đồng hồ flip, Pomodoro, bảng bàn thờ. Vị trí nhân vật CHỈ ở client (không gửi presence) — người khác vẫn thấy mình ngồi ở ghế.
 
 Presence (giống mô hình điều ước: **client đọc, server ghi**):
-1. **Ghi**: `PresenceBridge` (chỉ khi `roomOpen`) gửi `heartbeat` ngay + mỗi `HEARTBEAT_MS` (18s) → `POST /api/presence` → Admin SDK `set` doc `sessions/{clientId}` với `lastSeen=serverTimestamp` (và `joinedAt` CHỈ khi doc chưa tồn tại). Đóng tab/ẩn tab → `navigator.sendBeacon('/api/presence', {action:'leave'})` (route đọc cả body `text/plain`).
-2. **Đọc**: `subscribeSessions` (`lib/presence`) `onSnapshot(collection 'sessions')` **không where/orderBy** → lọc client `now - lastSeen < STALE_MS` (40s, ẩn "ma" khi đóng tab cứng) + sort theo `joinedAt` → `useScene.setSessions`. `Meditators` render avatar instanced; **đồng hồ phiên = `now - joinedAt` tính ở client mỗi giây** (0 ghi Firestore).
+1. **Ghi**: `PresenceBridge` (chỉ khi `roomOpen`) gửi `heartbeat` ngay + mỗi `HEARTBEAT_MS` (28s) → `POST /api/presence` → Admin SDK `set` doc `sessions/{clientId}` với `lastSeen=serverTimestamp` (và `joinedAt` CHỈ khi doc chưa tồn tại). Đóng tab/ẩn tab → `navigator.sendBeacon('/api/presence', {action:'leave'})` (route đọc cả body `text/plain`).
+2. **Đọc**: `subscribeSessions` (`lib/presence`) `onSnapshot(query(sessions, orderBy('lastSeen','desc'), limit(40)))` (index đơn trường, không cần composite) → lọc client `now - lastSeen < STALE_MS` (65s, ẩn "ma" khi đóng tab cứng) + sort theo `joinedAt` → chỉ `useScene.setSessions` khi chữ ký danh sách đổi. `Meditators` render avatar instanced; **đồng hồ phiên = `now - joinedAt` tính ở client mỗi giây** (0 ghi Firestore).
 3. **Danh tính ẩn danh**: `clientId = crypto.randomUUID()` + `nickname` lưu `localStorage` (KHÔNG dùng Auth). Avatar của mình tô vàng (`isSelf`).
 
 Chưa cấu hình Firebase: `getDb()` null → `subscribeSessions` trả về 1 phiên "self" cục bộ (vẫn vào phòng được); `/api/presence` trả 503 gọn.
@@ -219,10 +226,10 @@ Rules (`firestore.rules`): client `read` chỉ khi `status=='approved'`; `write:
 // doc id = clientId
 { clientId: string, name: string(<=24),
   joinedAt: serverTimestamp,  // đặt 1 lần -> đếm giờ phiên ở client
-  lastSeen: serverTimestamp,  // cập nhật mỗi heartbeat -> lọc staleness 40s
+  lastSeen: serverTimestamp,  // cập nhật mỗi heartbeat -> lọc staleness 65s
   pomo?: { phase: 'focus'|'break'|'idle', endsAt: number } }  // (tuỳ chọn, chưa broadcast)
 ```
-Rules: `read: if true` (không chứa PII), `write: false` (ghi qua `/api/presence`). Đọc **không where/orderBy** → lọc staleness + sort ở client. Lượng ghi ≈ N người × 1 ghi/18s; đồng hồ giây = client tính từ `joinedAt` → 0 ghi. (Tuỳ chọn dọn ghost: Firestore TTL trên `lastSeen`.)
+Rules: `read: if true` (không chứa PII), `write: false` (ghi qua `/api/presence`). Đọc `orderBy(lastSeen) limit(40)` → lọc staleness + sort ở client. Lượng ghi ≈ N người × 1 ghi/28s; đồng hồ giây = client tính từ `joinedAt` → 0 ghi. (Tuỳ chọn dọn ghost: Firestore TTL trên `lastSeen`.)
 
 ## 7. Biến môi trường (`.env.local`, mẫu `.env.local.example`)
 
@@ -253,8 +260,13 @@ Vercel: import `.env.local` khi tạo project.
 - **Cảnh tĩnh phải TẤT ĐỊNH (không đổi giữa các lần load)**: cỏ/cỏ lau/hoa (Meadow), rừng thông (Scenery), tán lá + cành (Foliage), tảng đá (Ground) đều rải bằng `mulberry32(seed)` với **seed cố định**, KHÔNG dùng `Math.random` trực tiếp. `makeRock(seed)` và `makeBranch({rng})` nhận nguồn ngẫu nhiên qua tham số. Đừng thay lại bằng `Math.random` (sẽ làm cảnh nhảy mỗi lần tải).
 - **Đổi cảnh dùng 1 Canvas**: phòng Rừng Trúc KHÔNG mở Canvas thứ hai (tránh 2 WebGL context gây stall mobile). Cảnh cây bị `visible={false}` (KHÔNG unmount → vào lại tức thì) nhưng `useFrame` vẫn chạy; chỉ MỘT camera rig ghi `camera.position` (gate qua `roomOpen`/`disabled`). `Monastery` import `peakCenter` từ `lib/peaks` (KHÔNG từ `Scenery`) để tránh import vòng.
 - **Thiền viện ở xa (~r80)**: glow sprite dùng `sizeAttenuation:false` để giữ kích thước/vùng-chạm ổn định trên màn dù xa; click bỏ qua nếu `pointer.moved > 7` như các onClick khác.
-- **Presence ghi/ma**: heartbeat 18s, ẩn phiên nếu `now-lastSeen ≥ 40s` (lọc ở client). Đóng tab cứng không kịp `leave` → biến mất sau ≤40s. `sendBeacon` gửi `text/plain` nên route `/api/presence` đọc `req.text()` rồi `JSON.parse`. Rate-limit presence nới rộng (`30/phút`, key theo `clientId:ip`) — mặc định 5/10ph sẽ chặn nhầm heartbeat.
+- **Presence ghi/ma**: heartbeat 28s, ẩn phiên nếu `now-lastSeen ≥ 65s` (lọc ở client). Đóng tab cứng không kịp `leave` → biến mất sau ≤65s. `sendBeacon` gửi `text/plain` nên route `/api/presence` đọc `req.text()` rồi `JSON.parse`. Rate-limit presence nới rộng (`30/phút`, key theo `clientId:ip`) — mặc định 5/10ph sẽ chặn nhầm heartbeat.
 - **Nhãn avatar = sprite canvas, KHÔNG drei `<Html>`**: mỗi avatar 1 `CanvasTexture` vẽ lại **1 lần/giây** (throttle trong `useFrame`) → không tạo DOM/giây/avatar gây jank mobile. Số avatar cap `CAP=24` (dư ẩn).
+- **Raycast trúng vật đang ẩn**: cảnh cây chỉ `visible=false` khi vào phòng (không unmount) và three Raycaster KHÔNG bỏ qua vật ẩn → handler click/hover của CalligraphyDesk, Monastery, WishPapers phải tự `return` khi `roomOpen` (và Shrine khi `!roomOpen`). Thiếu là chạm đất trong phòng mở nhầm bảng viết điều ước. Thêm vật bấm được mới thì nhớ guard.
+- **Asset Poly Haven** (public/room/, CC0): tải qua `api.polyhaven.com/files/<id>`, nén bằng `npx @gltf-transform/cli@4 optimize in.gltf out.glb --compress false --texture-compress webp --texture-size 512 --simplify true --simplify-ratio 0.25`; texture `cwebp`. Model lấy mesh đầu tiên làm instancedMesh (áp matrixWorld vào geometry), chuẩn hoá chiều cao theo bounding box. Tổng ~880KB, chỉ tải khi vào phòng (Suspense).
+- **Phòng đông người không lag**: `subscribeSessions` nghe `orderBy(lastSeen desc) limit(40)` (index đơn trường, tự có) và CHỈ gọi callback khi chữ ký (id|tên|joinedAt|pha pomo) đổi — heartbeat chỉ đổi lastSeen nên không re-render; quét phiên "ma" mỗi 10s. Heartbeat 28s / STALE 65s. Vẽ tối đa 14 người (mobile 9), MÌNH luôn đứng đầu (không bị cắt, ghế cố định góc 0), người khác trượt mượt khi đổi ghế, vòng ghế nới theo số người; nhãn xa >11m ẩn + ngừng vẽ canvas. Đi lại/vái/hiệu ứng chỉ ở client → số người không làm tăng tải.
+- **Chi phí Firestore**: mỗi heartbeat = 1 lượt đọc cho MỌI người đang nghe (≈ N²/28 đọc/giây). Nếu phòng thường xuyên >100 người, cân nhắc gom presence vào 1 doc tổng hợp do server cập nhật khi vào/ra.
+- **Nhân vật**: `dt` kẹp 0.1s (máy yếu/fps thấp vẫn đi đúng tốc độ); kẹt >1s thì bỏ đích. Va chạm khóm trúc dùng `setBambooCount` để khớp số khóm Bamboo vẽ (mobile ít hơn).
 - **ESLint**: thêm `components/PresenceBridge.tsx` + `components/ui/FocusHUD.tsx` vào danh sách tắt `set-state-in-effect` (đồng bộ localStorage/timer). Ghi ref trong render bị `react-hooks/refs` chặn → cập nhật ref trong `useEffect`.
 - **Auto-approve do SERVER quyết định, KHÔNG tin client**: client chỉ đính `Authorization: Bearer <ID token>`; `/api/wishes` `verifyIdToken` rồi mới đặt `status:'approved'`. Token sai/hết hạn → tự rớt về `pending`. Đừng để client gửi thẳng `status` (sẽ bị giả mạo). Client vẫn KHÔNG bao giờ ghi Firestore trực tiếp (`firestore.rules` `write:false`).
 - **`/dieu-uoc` cần composite index (ngoại lệ có chủ đích)**: cây dùng query không-orderBy để né index, nhưng phân trang số ở server BẮT BUỘC `orderBy('createdAt')` + `where('status')` [+ `where('theme')`] → 2 composite index trong `firestore.indexes.json`. Tạo bằng `firebase deploy --only firestore:indexes` HOẶC bấm link Console mà Firestore tự gợi ý ở lần query đầu (báo lỗi `FAILED_PRECONDITION`). Thiếu index → `/api/wishes/list` lỗi.
