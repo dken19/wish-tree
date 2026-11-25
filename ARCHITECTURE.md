@@ -62,7 +62,7 @@ app/
     wishes/list/route.ts # GET ?page=&theme=&q=&date=&sort=: approved; q="#888" -> where no==; q chữ -> keywords array-contains + lọc bộ nhớ; còn lại count + orderBy createdAt + offset/limit (sort cũ = lấy đoạn từ cuối rồi đảo, KHỎI index ASC); fallback SEED
     wishes/funny/collections/route.ts # GET: các "bộ xàm xí" (lib/funnyCollections, ẩn bộ rỗng), cache CDN 60s
     admin/funny-collections/route.ts # GET / POST {title, note = LÍ DO CHUNG bắt buộc, wishIds 2–6 tờ ở MỌI trạng thái -> batch: tạo bộ + tờ thành 'funny' + funnyGroup} / DELETE {id} (tờ không có lí do riêng nhận lí do chung làm funnyNote rồi rời bộ) — checkAdmin
-    wishes/funny/route.ts # GET ?page=: status=='funny' (index status+createdAt sẵn có) -> {no,text,theme,note,group:{title,note}|null,createdAt}, KHÔNG author; cache CDN 60s
+    wishes/funny/route.ts # GET ?page=: tab Từng tờ = status=='funny' KHÔNG có funnyGroup (tờ trong bộ chỉ hiện ở Bộ sưu tập); đọc tối đa 1000 rồi lọc + phân trang trong bộ nhớ (Firestore không query "thiếu trường") -> {no,text,theme,note,createdAt}, KHÔNG author; cache CDN 60s
     (app/admin/FunnyCollectionsPanel.tsx: tab Xàm xí — gộp các tờ đã tích "Chọn vào bộ" thành bộ + danh sách bộ)
     admin/wishes/route.ts # GET ?status=&page= (list + counts, có tab funny) / PATCH approve|reject|pending|funny (funny bắt buộc `note` ≤300 ký tự -> funnyNote; đổi sang trạng thái khác thì xoá funnyNote) — quyền qua lib/adminAuth
     presence/route.ts  # POST: heartbeat|leave phòng Rừng Trúc -> ghi `sessions` (Admin SDK)
@@ -225,7 +225,7 @@ Chưa cấu hình Firebase: `getDb()` null → `subscribeSessions` trả về 1 
 
 // funnyCollections/{id}  ("bộ xàm xí", chỉ Admin SDK; rules mặc định chặn client)
 { title, note /* lí do chung */, wishIds: string[2..6], createdAt, createdBy }
-// Tờ trong bộ có wishes.funnyGroup = id bộ; funnyNote (lí do riêng) KHÔNG bắt buộc — thiếu thì hiện lí do chung.
+// Tờ trong bộ có wishes.funnyGroup = id bộ, CHỈ hiện ở tab Bộ sưu tập (không lặp ở Từng tờ); funnyNote riêng không bắt buộc.
 // Tờ rời trạng thái 'funny' (PATCH khác) -> xoá funnyGroup + funnyNote, tự bị lọc khỏi bộ lúc đọc; bộ hết tờ thì ẩn.
 
 // wishes/{id}/comments/{cid}

@@ -15,7 +15,6 @@ type Item = {
   /** lí do riêng (rỗng nếu tờ dùng lí do chung của bộ) */
   note: string
   createdAt: number
-  group?: { title: string; note: string } | null
 }
 type Resp = { items: Item[]; page: number; total: number; totalPages: number }
 type Coll = { id: string; title: string; note: string; wishes: Item[] }
@@ -41,14 +40,6 @@ function Ticket({ w, compact }: { w: Item; compact?: boolean }) {
               Lí do không duyệt
             </span>
             {w.note}
-          </p>
-        ) : !compact && w.group?.note ? (
-          <p className="fx-note">
-            <span className="fx-note-k">
-              <Icon name="smile" size={15} />
-              Lí do chung của bộ “{w.group.title}”
-            </span>
-            {w.group.note}
           </p>
         ) : null}
         <div className="tk-meta">
@@ -174,8 +165,8 @@ export default function FunnyView() {
           {!error && loading && !data && <p className="pg-status">Đang mở hộp xàm xí…</p>}
           {!error && data && data.items.length === 0 && (
             <p className="pg-status">
-              Chưa có điều ước xàm xí nào. Mọi người đang ước rất nghiêm túc.{' '}
-              <Link href="/dieu-uoc">Xem các điều ước trên cây</Link>
+              Chưa có tờ lẻ nào (các tờ xàm xí đều đã vào bộ, hoặc mọi người đang ước rất nghiêm túc).{' '}
+              <Link href="/xam-xi?view=bo">Xem Bộ sưu tập</Link>
             </p>
           )}
           {data && data.items.length > 0 && (

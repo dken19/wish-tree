@@ -12,16 +12,6 @@ export const FC_NOTE_MAX = 300
 export type FunnyWish = { id: string; no: number | null; text: string; theme: string; note: string; createdAt: number }
 export type FunnyCollection = { id: string; title: string; note: string; createdAt: number; wishes: FunnyWish[] }
 
-/** Lí do chung + tên bộ cho các tờ (trang "Từng tờ": tờ không có lí do riêng thì hiện lí do chung). */
-export async function groupNotes(db: Firestore, groupIds: string[]) {
-  const ids = [...new Set(groupIds.filter(Boolean))]
-  const out = new Map<string, { title: string; note: string }>()
-  if (!ids.length) return out
-  const docs = await db.getAll(...ids.map((id) => db.collection('funnyCollections').doc(id)))
-  for (const d of docs) if (d.exists) out.set(d.id, { title: String(d.get('title') ?? ''), note: String(d.get('note') ?? '') })
-  return out
-}
-
 /** Đọc các bộ mới nhất + điều ước trong bộ (bỏ tờ đã rời trạng thái funny). KHÔNG trả tên người viết. */
 export async function loadCollections(db: Firestore, limit = 30): Promise<FunnyCollection[]> {
   const snap = await db.collection('funnyCollections').orderBy('createdAt', 'desc').limit(limit).get()
