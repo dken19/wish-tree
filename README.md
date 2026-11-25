@@ -58,6 +58,7 @@ Không cần biến env mới — đăng nhập dùng lại config Firebase sẵ
 - `lib/*` — themes, tree (hình học + anchor tất định), weather, profanity, firebase, wishes, **auth** (đăng nhập Google/Facebook).
 - `app/api/*` — proxy thời tiết, POST điều ước, **GET danh sách phân trang** (`wishes/list`), duyệt (admin).
 - `app/dieu-uoc/*` — trang "Tất cả ước nguyện" (lọc + phân trang, không Canvas).
+- `app/gioi-thieu` — trang Giới thiệu (home page khai báo cho Google OAuth consent screen).
 - `app/chinh-sach-bao-mat`, `app/dieu-khoan` — Chính sách bảo mật & Điều khoản (dùng cho Google OAuth consent screen; email liên hệ ở `components/ui/LegalPage.tsx`). Có link nhỏ dưới nút đăng nhập trong `Composer`.
 - `store/useScene.ts` — state (Zustand).
 

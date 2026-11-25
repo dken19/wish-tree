@@ -42,6 +42,7 @@ app/
   ky-nang/
     page.tsx           # server: metadata + render <SkillsView/> (route /ky-nang, KHÔNG Canvas)
     SkillsView.tsx     # client: 4 tab (Nấu/Trồng/Chụp ảnh/Chăm sóc da) + thẻ accordion có ẢNH minh hoạ + link NGUỒN (đọc lib/skills); ảnh hỏng tự ẩn (onError)
+  gioi-thieu/page.tsx  # Giới thiệu (tĩnh, không Canvas, không cần login) — là "Application home page" trên Google OAuth consent screen (Google bắt home page nêu tên app + mục đích + link privacy)
   chinh-sach-bao-mat/page.tsx # Chính sách bảo mật (tĩnh) — link Privacy policy của Google OAuth consent screen
   dieu-khoan/page.tsx  # Điều khoản sử dụng (tĩnh) — link Terms of service của consent screen
   dieu-uoc/
@@ -226,6 +227,8 @@ Vercel: import `.env.local` khi tạo project.
 - **`offset()` của Firestore tính phí cả doc bị skip**: phân trang `/api/wishes/list` dùng `offset((page-1)*PAGE_SIZE)`; trang càng sâu càng tốn đọc. Chấp nhận ở quy mô này; nếu dữ liệu lớn hẳn, đổi sang cursor `startAfter`.
 - **`/dieu-uoc` dùng `useSearchParams` → phải bọc `<Suspense>`** (Next App Router yêu cầu) — đã bọc trong `app/dieu-uoc/page.tsx`. Trang này KHÔNG mount Canvas (giống `/ky-nang`) để nhẹ pin. `WishesView.tsx` được thêm vào danh sách tắt `set-state-in-effect` trong `eslint.config.mjs` (đặt `loading` đồng bộ khi đổi `page`/`theme` — pattern fetch giống `app/admin/page.tsx`).
 - **App GIỜ CÓ dùng Firebase Auth**: phải thêm Authorized domains trong Firebase Console (localhost + domain Vercel) nếu không `signInWithPopup` báo `auth/unauthorized-domain`. (Ghi chú cũ "không dùng Auth" đã hết hiệu lực.)
+
+- **Google OAuth verification**: consent screen khai home page = `/gioi-thieu` (KHÔNG dùng `/`: trang chủ là Canvas 3D + loader, HTML chứa chữ "Đăng nhập… Google" của Composer → bot Google kết luận "home page behind login" + "không nêu mục đích"). App name trên consent screen phải khớp đúng "Cây Ước Nguyện". Trang chủ có link Giới thiệu · Bảo mật · Điều khoản dưới tiêu đề (`.brand-links`).
 
 ## 8b. Nhật ký lỗi đã sửa (ghi NGAY sau mỗi lần sửa)
 

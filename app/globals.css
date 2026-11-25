@@ -1484,3 +1484,47 @@ canvas {
   color: inherit;
   text-decoration: underline;
 }
+
+/* ---------- Trang Giới thiệu (/gioi-thieu) — home page khai báo cho Google OAuth ---------- */
+.about-hero {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+.about-hero img {
+  width: 96px;
+  height: 96px;
+  border-radius: 22px;
+  box-shadow: var(--shadow);
+  flex-shrink: 0;
+}
+.about-cta {
+  display: inline-block;
+  background: var(--red);
+  color: #fff !important;
+  text-decoration: none;
+  font-weight: 600;
+  padding: 10px 18px;
+  border-radius: 30px;
+}
+.about-foot {
+  margin-top: 18px;
+  text-align: center;
+  font-size: 12px;
+  color: #7a6557;
+}
+.about-foot a {
+  color: inherit;
+}
+/* Link nhỏ dưới tiêu đề trang chủ (server render, đọc được khi chưa đăng nhập) */
+.brand .brand-links {
+  margin-top: 6px;
+  font-size: 11px;
+  letter-spacing: 0.5px;
+  text-transform: none;
+}
+.brand .brand-links a {
+  color: #fff;
+  text-decoration: underline;
+  text-shadow: 0 1px 6px rgba(70, 40, 30, 0.5);
+}
