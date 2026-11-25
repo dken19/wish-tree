@@ -51,6 +51,8 @@ app/
   dieu-uoc/
     page.tsx           # server: metadata + <Suspense><WishesView/></Suspense> (route /dieu-uoc, KHÔNG Canvas)
     WishesView.tsx     # client (PageShell): số đang treo + chờ duyệt (/api/wishes/stats) ở đầu trang; mỗi điều ước là 1 VÉ (cuống #số bấm để lọc + giờ gửi + dấu "Hôm nay", thân lời ước); ô tìm (#số hoặc từ khoá) + ngày gửi + sắp xếp mới/cũ + chủ đề + phân trang SỐ (state qua URL ?q=&date=&sort=&theme=&page=) -> /api/wishes/list; thẻ có #số + giờ gửi + 💬 bình luận (WishThread) + ⚑ báo cáo; mount AuthBridge
+  xam-xi/
+    page.tsx, FunnyView.tsx # "Góc xàm xí": điều ước status 'funny' + lời phê (lí do không duyệt), KHÔNG hiện tên người viết; phân trang ?page=
   api/
     wishes/route.ts    # POST: validate+lọc từ+rate-limit -> nếu có Bearer ID token hợp lệ thì approved (đăng ngay), không thì pending; cấp số #N (transaction meta/counters) + keywords; trả {id,no,status}
     wishes/[id]/comments/route.ts # GET bình luận (ai cũng đọc, lọc hidden, `mine` nếu kèm token) / POST bình luận — CHỈ người đăng nhập (verifyIdToken), validateComment + rate-limit theo uid, tăng commentCount (transaction)
@@ -58,7 +60,8 @@ app/
     admin/reports/route.ts # GET báo cáo chưa xử lý (gộp theo nội dung) / PATCH hide|dismiss — checkAdmin
     wishes/stats/route.ts # GET: {approved, pending} bằng count() (Admin SDK) — cache CDN 30s + memo instance 30s; fallback SEED
     wishes/list/route.ts # GET ?page=&theme=&q=&date=&sort=: approved; q="#888" -> where no==; q chữ -> keywords array-contains + lọc bộ nhớ; còn lại count + orderBy createdAt + offset/limit (sort cũ = lấy đoạn từ cuối rồi đảo, KHỎI index ASC); fallback SEED
-    admin/wishes/route.ts # GET ?status=&page= (list + counts) / PATCH approve|reject|pending — quyền qua lib/adminAuth
+    wishes/funny/route.ts # GET ?page=: status=='funny' (index status+createdAt sẵn có) -> {no,text,theme,note,createdAt}, KHÔNG author; cache CDN 60s
+    admin/wishes/route.ts # GET ?status=&page= (list + counts, có tab funny) / PATCH approve|reject|pending|funny (funny bắt buộc `note` ≤300 ký tự -> funnyNote; đổi sang trạng thái khác thì xoá funnyNote) — quyền qua lib/adminAuth
     presence/route.ts  # POST: heartbeat|leave phòng Rừng Trúc -> ghi `sessions` (Admin SDK)
 components/
   HomeClient.tsx       # 'use client'; dynamic import Canvas + lớp UI overlay
@@ -100,7 +103,8 @@ components/
   ui/
     SkyBackdrop.tsx    # div #sky gradient theo điều kiện thời tiết
     WeatherPanel.tsx   # huy hiệu góc trên-phải: icon thời tiết + GIỜ VIỆT NAM (ghi qua ref) — KHÔNG còn nút chuyển; mobile chỉ icon + giờ
-    WishCard.tsx       # thẻ đọc điều ước (mở khi click giấy): #số + giờ gửi, nút Bình luận mở WishThread (thẻ cuộn được), Báo cáo
+    WishCard.tsx       # thẻ đọc điều ước (mở khi click giấy): #số + giờ gửi, nút Bình luận mở WishThread (thẻ cuộn được), Báo cáo; `verified` -> lấp lánh + tên người gửi viết thư pháp
+    Sparkles.tsx       # lấp lánh cho thẻ/vé ước của người đăng nhập (sao 4 cánh nhấp nháy + vệt sáng quét, thuần CSS transform/opacity, tắt khi reduced-motion); tên người gửi `.spk-name` viết thư pháp, KHÔNG kèm ảnh
     WishThread.tsx     # bình luận 1 điều ước (đọc: ai cũng được; viết: đăng nhập Google) + export ReportButton (chọn lý do -> /api/reports)
     LegalPage.tsx      # khung trang pháp lý (PageShell + .pg-prose) + CONTACT_EMAIL/UPDATED_AT
     PageShell.tsx      # khung chung trang KHÔNG Canvas: PageSky (4 lớp trời + sao + đèn trời .ld-lantern) + hero (về cây, tiêu đề thư pháp/plainTitle, lead, stats, giờ HN) + tờ nội dung; data-sky cập nhật mỗi phút qua ref
@@ -160,11 +164,11 @@ firestore.indexes.json # composite index cho /api/wishes/list: (status,createdAt
 ### Điều ước (chính)
 1. **Đọc**: `DataBridge` gọi `subscribeApproved()` (lib/wishes) → `onSnapshot` Firestore `wishes` where `status=='approved'` → `useScene.setWishes`. `WishPapers` đọc `wishes` từ store, render InstancedMesh, vị trí **tất định** theo `anchorFor(id, theme)` (lib/tree, PRNG seed theo id → không nhảy giữa các lần load). Mỗi `theme` = một "zone" (ngọn cành). Dây nối từ ngọn cành (`tipFor`) xuống tờ giấy.
 2. **Ghi**: `Composer` validate client (`validateWish`) → `POST /api/wishes` → server: kiểm theme, `validateWish` (lọc từ), `rateLimit` theo IP. Sau đó đọc header `Authorization: Bearer <ID token>`:
-   - **Có token hợp lệ** (đăng nhập Google/Facebook) → `getAdminAuth().verifyIdToken` → ghi doc `status:'approved'` + `uid` + `author=tên` → **hiện ngay** trên cây, KHỎI chờ duyệt.
+   - **Có token hợp lệ** (đăng nhập Google/Facebook) → `getAdminAuth().verifyIdToken` → ghi doc `status:'approved'` + `uid` + `author=tên` → **hiện ngay** trên cây, KHỎI chờ duyệt. Ước có `uid` được đánh dấu `verified` (client `subscribeApproved` + `publicWish` chỉ trả boolean, KHÔNG lộ uid) → thẻ đọc + vé `/dieu-uoc` **lấp lánh** (`Sparkles`) để khuyến khích đăng nhập.
    - **Không/ token lỗi** (ẩn danh) → ghi `status:'pending'` như cũ.
 3. **Đếm (minh bạch hàng chờ)**: client KHÔNG đọc được `pending` (rules) và `store.wishes` bị giới hạn `MAX_RENDER` → số liệu lấy từ `GET /api/wishes/stats` (count aggregation, server). `DataBridge` poll 60s → `useScene.stats` → `WishStats` (dưới tiêu đề) + dòng "hiện có M điều ước đang chờ" trong `Composer` khi ẩn danh. Gửi xong `bumpStats()` cộng tạm (optimistic), toast ẩn danh báo **vị trí trong hàng chờ** (= pending + 1); lần poll sau tự sửa số.
    - Lọc từ + rate-limit GIỮ NGUYÊN cho cả hai (auto-approve chỉ bỏ qua hàng chờ tay).
-3. **Duyệt**: `/admin` đăng nhập Google → gửi `Authorization: Bearer <idToken>` → `checkAdmin` (verifyIdToken + email đã xác minh ∈ `ADMIN_EMAILS`; dự phòng header `x-admin-secret`) → `GET /api/admin/wishes?status=&page=` / `PATCH` → đặt `approved`/`rejected`/`pending` + `reviewedAt`/`reviewedBy`. Khi `approved`, client `onSnapshot` tự thêm tờ mới → cây cập nhật realtime.
+3. **Duyệt**: `/admin` đăng nhập Google → gửi `Authorization: Bearer <idToken>` → `checkAdmin` (verifyIdToken + email đã xác minh ∈ `ADMIN_EMAILS`; dự phòng header `x-admin-secret`) → `GET /api/admin/wishes?status=&page=` / `PATCH` → đặt `approved`/`rejected`/`pending`/`funny` + `reviewedAt`/`reviewedBy`. **Xàm xí** (`funny`): không lên cây, không phải "bỏ" — admin bấm "Xàm xí…", ghi lí do (`funnyNote`) → hiện ở `/xam-xi` (`GET /api/wishes/funny`, không kèm tên người viết). Khi `approved`, client `onSnapshot` tự thêm tờ mới → cây cập nhật realtime.
 4. **Xem tất cả** (`/dieu-uoc`, `WishesView`): trang KHÔNG Canvas, gọi `GET /api/wishes/list?page=&theme=&q=&date=&sort=` (Admin SDK) → phân trang **ở server**. 3 chế độ: (a) `q` là `#888`/`888` → `where('no','==')`; (b) `q` là chữ → `searchTokens(q)`, `array-contains` từ DÀI nhất trên `keywords` (cap 500) rồi lọc tiếp mọi từ + chủ đề + ngày + sort trong bộ nhớ (khớp NGUYÊN TỪ, không dấu: "toan" = "Toán", nhưng "toa" không khớp "toán"); (c) còn lại: `where status [+theme] [+createdAt trong ngày theo giờ VN]` + `count()` + `orderBy('createdAt','desc').offset().limit()`; sort "cũ nhất" = lấy đoạn tương ứng tính từ cuối rồi đảo. State qua URL để share link + nút back.
 5. **Số thứ tự #N**: cấp lúc GỬI (cả ẩn danh/pending → bị bỏ thì danh sách công khai có "lỗ" số, chấp nhận) trong transaction với `meta/counters.wishNo`. Lần đầu chạy (chưa có counter) `ensureNumbering` đánh số mọi điều ước cũ 1..k theo `createdAt` (tất định → nhiều instance chạy song song vẫn ra cùng số) — gọi ở POST wishes, list, admin.
 6. **Bình luận**: subcollection `wishes/{id}/comments`. `WishThread` GET (kèm token nếu có để biết `mine`) / POST (bắt buộc đăng nhập). `commentCount` trên doc điều ước (đọc realtime qua onSnapshot cho WishCard).
@@ -208,7 +212,8 @@ Chưa cấu hình Firebase: `getDb()` null → `subscribeSessions` trả về 1 
   text: string(<=160), theme: ThemeKey, author?: string,
   keywords: string[],    // searchTokens(text): từ bỏ dấu, cho tìm kiếm array-contains
   uid?: string,  // có khi gửi bởi người đăng nhập Google/Facebook (-> auto-approve)
-  status: 'pending'|'approved'|'rejected', createdAt: serverTimestamp,
+  status: 'pending'|'approved'|'rejected'|'funny', createdAt: serverTimestamp,
+  funnyNote?: string,    // chỉ khi status 'funny': lí do không duyệt (admin ghi), hiện công khai ở /xam-xi
   commentCount: number, reportCount: number,
   flagged?: boolean,     // true = TỰ ẩn do đủ báo cáo (status về pending), chờ admin
   reviewedAt?: serverTimestamp, reviewedBy?: string }  // ghi khi admin đổi trạng thái

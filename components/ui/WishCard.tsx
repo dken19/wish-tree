@@ -5,6 +5,7 @@ import { useScene } from '@/store/useScene'
 import { formatNo, formatWishTime } from '@/lib/wishMeta'
 import WishThread, { ReportButton } from './WishThread'
 import Icon from './Icon'
+import Sparkles from './Sparkles'
 
 // Thẻ đọc điều ước (mở khi click một tờ giấy).
 export default function WishCard() {
@@ -17,6 +18,7 @@ export default function WishCard() {
   const showThread = openWish && threadFor === openWish.id
   const n = openWish && count?.id === openWish.id ? count.n : (openWish?.commentCount ?? 0)
   const isSeed = openWish?.id.startsWith('seed-')
+  const verified = !!openWish?.verified
 
   return (
     <div
@@ -25,7 +27,10 @@ export default function WishCard() {
         if (e.target === e.currentTarget) setOpenWish(null)
       }}
     >
-      <div className={`card${showThread ? ' with-thread' : ''}`}>
+      <div
+        className={`card${showThread ? ' with-thread' : ''}${verified ? ' is-verified' : ''}`}
+      >
+        {verified && <Sparkles key={openWish!.id} />}
         <button
           className="close"
           onClick={() => setOpenWish(null)}
@@ -57,7 +62,9 @@ export default function WishCard() {
         )}
         <p className="text">{openWish ? `“${openWish.text}”` : ''}</p>
         <div className="meta">
-          <span>{openWish?.author ? openWish.author : 'Một người gửi gió'}</span>
+          <span className={verified && openWish?.author ? 'spk-name' : undefined}>
+            {openWish?.author ? openWish.author : 'Một người gửi gió'}
+          </span>
         </div>
         {openWish && !isSeed && (
           <div className="card-actions">

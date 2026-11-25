@@ -7,7 +7,9 @@ import { ensureNumbering } from '@/lib/wishServer'
 export const runtime = 'nodejs'
 
 const PAGE_SIZE = 20
-const STATUSES = ['pending', 'approved', 'rejected'] as const
+// 'funny' = "xàm xí": không duyệt lên cây nhưng vui -> hiện ở /xam-xi kèm lí do (funnyNote)
+const STATUSES = ['pending', 'approved', 'rejected', 'funny'] as const
+const NOTE_MAX = 300
 type Status = (typeof STATUSES)[number]
 const isStatus = (s: unknown): s is Status => STATUSES.includes(s as Status)
 
@@ -15,7 +17,7 @@ function deny(status: number, error: string) {
   return NextResponse.json({ error }, { status })
 }
 
-// GET ?status=pending|approved|rejected|all&page= : danh sách điều ước cho admin.
+// GET ?status=pending|approved|rejected|funny|all&page= : danh sách điều ước cho admin.
 // Trả kèm số lượng từng trạng thái để hiện trên tab.
 // Index cần: status+createdAt (đã có trong firestore.indexes.json); "all" chỉ orderBy createdAt.
 export async function GET(req: Request) {
@@ -45,8 +47,8 @@ export async function GET(req: Request) {
         .limit(PAGE_SIZE)
         .get(),
     ])
-    const [all, pending, approved, rejected] = countSnaps.map((c) => c.data().count)
-    const counts = { all, pending, approved, rejected }
+    const [all, pending, approved, rejected, funny] = countSnaps.map((c) => c.data().count)
+    const counts = { all, pending, approved, rejected, funny }
     const total = status === 'all' ? all : counts[status]
 
     const items = snap.docs.map((d) => {
@@ -66,6 +68,7 @@ export async function GET(req: Request) {
         reportCount: typeof data.reportCount === 'number' ? data.reportCount : 0,
         commentCount: typeof data.commentCount === 'number' ? data.commentCount : 0,
         reviewedBy: data.reviewedBy ? String(data.reviewedBy) : null,
+        funnyNote: data.funnyNote ? String(data.funnyNote) : '',
         createdAt: ts?.toMillis ? ts.toMillis() : 0,
         reviewedAt: rv?.toMillis ? rv.toMillis() : 0,
       }
@@ -91,19 +94,29 @@ export async function GET(req: Request) {
   }
 }
 
-// PATCH { id, action: approve|reject|pending }: đổi trạng thái (duyệt, bỏ, hoặc đưa về chờ).
+// PATCH { id, action: approve|reject|pending|funny, note? }: đổi trạng thái. 'funny' BẮT BUỘC note
+// (lí do không duyệt, hiện công khai ở /xam-xi); đổi sang trạng thái khác thì xoá note.
 export async function PATCH(req: Request) {
   const auth = await checkAdmin(req)
   if (!auth.ok) return deny(auth.status, auth.error)
   if (!isAdminConfigured) return deny(503, 'Máy chủ chưa cấu hình Firebase Admin')
 
-  const { id, action } = (await req.json().catch(() => ({}))) as {
+  const { id, action, note } = (await req.json().catch(() => ({}))) as {
     id?: string
     action?: string
+    note?: unknown
   }
-  const next: Record<string, Status> = { approve: 'approved', reject: 'rejected', pending: 'pending' }
+  const next: Record<string, Status> = {
+    approve: 'approved',
+    reject: 'rejected',
+    pending: 'pending',
+    funny: 'funny',
+  }
   if (!id || typeof id !== 'string' || !action || !next[action])
     return deny(400, 'bad request')
+  const funnyNote = typeof note === 'string' ? note.trim().replace(/\s+/g, ' ') : ''
+  if (action === 'funny' && (!funnyNote || funnyNote.length > NOTE_MAX))
+    return deny(400, `Ghi lí do không duyệt (1–${NOTE_MAX} ký tự)`)
 
   const db = getAdminDb()!
   try {
@@ -115,6 +128,7 @@ export async function PATCH(req: Request) {
         flagged: false,
         reviewedAt: FieldValue.serverTimestamp(),
         reviewedBy: auth.email ?? 'secret',
+        funnyNote: action === 'funny' ? funnyNote : FieldValue.delete(),
       })
   } catch {
     return deny(404, 'Không tìm thấy điều ước')

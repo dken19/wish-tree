@@ -9,7 +9,7 @@ import {
 import { getDb } from './firebase.client'
 import type { ThemeKey } from './themes'
 
-export type WishStatus = 'pending' | 'approved' | 'rejected'
+export type WishStatus = 'pending' | 'approved' | 'rejected' | 'funny'
 
 export type Wish = {
   id: string
@@ -19,6 +19,7 @@ export type Wish = {
   createdAt: number // epoch ms
   no?: number // số thứ tự #N (cấp lúc gửi, xem lib/wishServer)
   commentCount?: number
+  verified?: boolean // người đăng nhập gửi (có uid) -> thẻ lấp lánh
 }
 
 // Số tờ tối đa render cùng lúc (nhẹ cho mobile)
@@ -77,6 +78,7 @@ export function subscribeApproved(cb: (wishes: Wish[]) => void): () => void {
             createdAt: ts?.toMillis ? ts.toMillis() : 0,
             no: typeof data.no === 'number' ? data.no : undefined,
             commentCount: typeof data.commentCount === 'number' ? data.commentCount : 0,
+            verified: typeof data.uid === 'string' && data.uid.length > 0,
           }
         })
         .sort((a, b) => b.createdAt - a.createdAt)

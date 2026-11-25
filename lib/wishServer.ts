@@ -79,6 +79,8 @@ export function publicWish(d: DocumentSnapshot) {
     author: data.author ? String(data.author) : null,
     createdAt: millis(data.createdAt),
     commentCount: typeof data.commentCount === 'number' ? data.commentCount : 0,
+    // Gửi bởi người đăng nhập (có uid do server xác minh) -> thẻ lấp lánh. Chỉ trả boolean.
+    verified: typeof data.uid === 'string' && data.uid.length > 0,
   }
 }
 export type PublicWish = ReturnType<typeof publicWish>

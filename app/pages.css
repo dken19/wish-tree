@@ -934,3 +934,56 @@
 .adm-acts .pg-btn {
   min-height: 40px;
 }
+
+/* ---------- Góc xàm xí (/xam-xi) + lời phê trong admin ---------- */
+.fx-lead {
+  margin: 6px 0 0;
+  max-width: 60ch;
+  font-size: 15px;
+  line-height: 1.55;
+  color: var(--pg-ink2);
+}
+.tk.fx .tk-stamp {
+  color: #b5652a;
+  border-color: #b5652a;
+}
+.fx-note,
+.adm-funny {
+  margin: 10px 0 0;
+  padding: 8px 12px;
+  border-left: 3px solid #b5652a;
+  background: rgba(181, 101, 42, 0.08);
+  border-radius: 0 8px 8px 0;
+  font-size: 14.5px;
+  line-height: 1.5;
+  color: var(--pg-ink);
+}
+.fx-note-k {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-bottom: 2px;
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  color: #c8753a;
+}
+.adm-funny-form {
+  display: grid;
+  gap: 6px;
+  margin-top: 12px;
+}
+.adm-funny-form label {
+  font-size: 13px;
+  color: var(--pg-ink2);
+}
+.adm-funny-form textarea {
+  font: inherit;
+  font-size: 16px; /* >=16px: iOS không tự zoom */
+  padding: 8px 10px;
+  border-radius: 8px;
+  border: 1px solid rgba(0, 0, 0, 0.2);
+  background: #fffdf7;
+  color: var(--pg-ink);
+  resize: vertical;
+}

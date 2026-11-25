@@ -7,6 +7,7 @@ import AuthBridge from "@/components/AuthBridge";
 import WishThread, { ReportButton } from "@/components/ui/WishThread";
 import PageShell from "@/components/ui/PageShell";
 import Icon from "@/components/ui/Icon";
+import Sparkles from "@/components/ui/Sparkles";
 
 type Item = {
   id: string;
@@ -16,6 +17,7 @@ type Item = {
   author: string | null;
   createdAt: number;
   commentCount: number;
+  verified?: boolean;
 };
 
 /** "25/11/2026 16:14" -> ["25/11/2026", "16:14"] (giờ Việt Nam). */
@@ -282,13 +284,14 @@ export default function WishesView() {
               return (
                 <li
                   key={w.id}
-                  className="tk"
+                  className={`tk${w.verified ? " tk-verified" : ""}`}
                   style={
                     {
                       "--tk-c": tk ? THEMES[tk].color : undefined,
                     } as React.CSSProperties
                   }
                 >
+                  {w.verified && <Sparkles />}
                   <div className="tk-stub">
                     {w.no ? (
                       <button
@@ -326,7 +329,11 @@ export default function WishesView() {
                         />
                         {tk ? THEMES[tk].label : w.theme}
                       </span>
-                      {w.author && <span>{w.author}</span>}
+                      {w.author && (
+                        <span className={w.verified ? "spk-name" : undefined}>
+                          {w.author}
+                        </span>
+                      )}
                     </div>
                     {!isSeed && (
                       <div className="tk-actions">

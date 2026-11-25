@@ -64,6 +64,15 @@ const ITEMS: Item[] = [
       router.push('/dieu-uoc')
     },
   },
+  {
+    key: 'funny',
+    icon: 'smile',
+    label: 'Góc xàm xí',
+    hint: 'Ước không lên cây, kèm lời phê',
+    run: (router) => {
+      router.push('/xam-xi')
+    },
+  },
 ]
 
 export default function NavDock() {

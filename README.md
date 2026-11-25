@@ -9,15 +9,16 @@ Xây bằng **Next.js (App Router) + React Three Fiber + Firebase Firestore**.
 - **Màn chờ**: chữ "Cây Ước Nguyện" thư pháp trên nền giấy dó, **đèn trời** lững lờ bay lên; tải xong thì **màu nước loang** (shader WebGL) mở dần ra cây 3D.
 - Cây 3D low-poly, giấy/hoa dùng `InstancedMesh` (nhẹ trên mobile).
 - Click tờ giấy → đọc điều ước (raycast theo `instanceId`).
-- Viết điều ước → lọc từ tục + rate-limit. **Đăng nhập Google → điều ước hiện NGAY trên cây** (khỏi chờ duyệt); gửi ẩn danh → vào hàng chờ **duyệt** rồi mới hiện.
+- Viết điều ước → lọc từ tục + rate-limit. **Đăng nhập Google → điều ước hiện NGAY trên cây** (khỏi chờ duyệt) và **thẻ ước lấp lánh** kèm tên người gửi viết thư pháp (không kèm ảnh); gửi ẩn danh → vào hàng chờ **duyệt** rồi mới hiện.
 - Dưới tiêu đề có huy hiệu **số điều ước trên cây + số đang chờ duyệt** (cập nhật mỗi phút, `/api/wishes/stats`); gửi ẩn danh sẽ được báo vị trí trong hàng chờ.
 - Mỗi điều ước có **số thứ tự** (`#1`, `#888`…) và **ngày giờ gửi**; gửi xong được báo số của mình.
 - **Tất cả ước nguyện** (`/dieu-uoc`): **tìm theo số `#888` hoặc từ khoá** (không cần gõ dấu), lọc theo **chủ đề** / **ngày gửi**, sắp xếp mới/cũ nhất, **phân trang** ở server.
+- **Góc xàm xí** (`/xam-xi`): điều ước vui vui không treo lên cây; admin chọn bằng nút **Xàm xí…** trong `/admin` và ghi lí do không duyệt (hiện công khai, giấu tên người viết).
 - **Bình luận & báo cáo** (cần đăng nhập Google): bình luận động viên dưới mỗi điều ước (trên cây hoặc `/dieu-uoc`); báo cáo điều ước/bình luận xấu — đủ 3 tài khoản báo cáo thì tự ẩn chờ admin xem ở tab **⚑ Bị báo cáo** trong `/admin`.
 - Trời trên cây: ngày/đêm theo giờ Việt Nam, ban ngày nắng/mây/mưa ngẫu nhiên (đổi sau 15 phút); huy hiệu góc phải hiện giờ Hà Nội.
 - Trang nội dung (Tất cả điều ước, Kỹ năng sống, Giới thiệu, pháp lý, admin): nền trời đèn trời đổi theo 4 mốc giờ VN (bình minh/trưa/hoàng hôn/đêm; xem thử bằng `?sky=dawn|day|dusk|night`), mỗi điều ước là một tấm vé có số #N + giờ gửi; đầu trang hiện số điều ước đang treo + đang chờ duyệt.
 - Điều khiển camera orbit + pinch tự viết; tự xoay nhẹ khi rảnh.
-- **Menu dock** (góc dưới-phải): bấm để chuyển nhanh giữa Cây · Viết điều ước · Phòng ôn bài · **Kỹ năng sống** · **Tất cả ước nguyện**.
+- **Menu dock** (góc dưới-phải): bấm để chuyển nhanh giữa Cây · Viết điều ước · Phòng ôn bài · **Kỹ năng sống** · **Tất cả ước nguyện** · **Góc xàm xí**.
 - **Kỹ năng sống** (`/ky-nang`): trang dạy kỹ năng cơ bản cho học sinh theo 4 nhóm — **nấu nướng** (nấu cơm, luộc rau, mì trứng, an toàn bếp…), **trồng trọt** (rau mầm, giá đỗ, hành lá, rau ban công…), **chụp ảnh** (bố cục 1/3, ánh sáng, chụp điện thoại…) và **chăm sóc da** (rửa mặt, chống nắng, da mụn…). Mỗi bài có ảnh minh hoạ (Wikimedia Commons) + nguồn tham khảo uy tín (Wikipedia, không quảng cáo). Sửa nội dung ở `lib/skills.ts`.
 - **Thiền viện → phòng Rừng Trúc**: chạm thiền viện trên đỉnh núi xa để vào một cảnh rừng trúc 3D, cùng nhau ôn bài/làm việc. Thấy nhau qua avatar người thiền, **đồng hồ phiên** hiện trên đầu; có **đồng hồ flip** và **hẹn giờ Pomodoro** (25/5, 50/10). Presence realtime ẩn danh (không cần đăng nhập). Phòng là **một map để đi dạo**: chạm xuống đất (máy tính: WASD/mũi tên) cho nhân vật đi; có ao sen, rừng trúc, bụi cây (asset CC0 Poly Haven). Cảnh cây ước dùng đất cỏ, vỏ cây và đá scan từ Poly Haven (CC0); cỏ phủ kín đồi, có đèn đá cạnh gốc cây rọi sáng khi trời tối. **Bàn thờ đá**: đi tới tượng, **vái 3 lần** để nhận một lời chúc trong ngày và hiệu ứng "được chúc phúc" 60 phút (hạt sáng vàng quanh nhân vật).
 
@@ -64,6 +65,7 @@ Không cần biến env mới — đăng nhập dùng lại config Firebase sẵ
 - `lib/*` — themes, tree (hình học + anchor tất định), weather, profanity, firebase, wishes, **auth** (đăng nhập Google/Facebook).
 - `app/api/*` — POST điều ước, bình luận, báo cáo, số điều ước (`wishes/stats`), **GET danh sách phân trang** (`wishes/list`), duyệt (admin).
 - `app/dieu-uoc/*` — trang "Tất cả ước nguyện" (lọc + phân trang, không Canvas).
+- `app/xam-xi/*` — trang "Góc xàm xí" (điều ước status `funny` + lí do không duyệt).
 - `app/gioi-thieu` — trang Giới thiệu (home page khai báo cho Google OAuth consent screen).
 - `app/chinh-sach-bao-mat`, `app/dieu-khoan` — Chính sách bảo mật & Điều khoản (dùng cho Google OAuth consent screen; email liên hệ ở `components/ui/LegalPage.tsx`). Có link nhỏ dưới nút đăng nhập trong `Composer`.
 - `store/useScene.ts` — state (Zustand).

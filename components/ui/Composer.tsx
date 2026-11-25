@@ -97,7 +97,7 @@ export default function Composer() {
         (user ? (
           <div className="auth-row">
             <span className="auth-who">
-              Đang đăng nhập: <b>{user.name}</b> · điều ước sẽ hiện ngay
+              Đang đăng nhập: <b>{user.name}</b> · điều ước hiện ngay, thẻ lấp lánh
             </span>
             <button className="auth-out" onClick={() => signOutUser()}>
               Đăng xuất
@@ -106,7 +106,7 @@ export default function Composer() {
         ) : (
           <div className="auth-row">
             <span className="auth-hint">
-              Đăng nhập để điều ước hiển thị ngay, khỏi chờ duyệt:
+              Đăng nhập để điều ước hiện ngay, khỏi chờ duyệt, và thẻ ước được lấp lánh:
             </span>
             <div className="auth-btns">
               <button className="auth-in g" onClick={() => login()}>

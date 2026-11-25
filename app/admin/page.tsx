@@ -8,8 +8,8 @@ import { getAuthClient } from '@/lib/firebase.client'
 import { signInGoogle, signOutUser } from '@/lib/auth'
 import ReportsPanel from './ReportsPanel'
 
-type Status = 'pending' | 'approved' | 'rejected' | 'all'
-type Action = 'approve' | 'reject' | 'pending'
+type Status = 'pending' | 'approved' | 'rejected' | 'funny' | 'all'
+type Action = 'approve' | 'reject' | 'pending' | 'funny'
 
 type Item = {
   id: string
@@ -23,6 +23,7 @@ type Item = {
   reportCount: number
   commentCount: number
   reviewedBy: string | null
+  funnyNote: string
   createdAt: number
   reviewedAt: number
 }
@@ -41,6 +42,7 @@ const TABS: { key: Status; label: string }[] = [
   { key: 'pending', label: 'Chờ duyệt' },
   { key: 'approved', label: 'Đã duyệt' },
   { key: 'rejected', label: 'Đã bỏ' },
+  { key: 'funny', label: 'Xàm xí' },
   { key: 'all', label: 'Tất cả' },
 ]
 
@@ -48,6 +50,7 @@ const STATUS_LABEL: Record<string, { text: string; color: string }> = {
   pending: { text: 'Chờ duyệt', color: '#c98a1b' },
   approved: { text: 'Đã duyệt', color: '#3f9d6b' },
   rejected: { text: 'Đã bỏ', color: '#9a8472' },
+  funny: { text: 'Xàm xí', color: '#b5652a' },
 }
 
 const fmt = (ms: number) =>
@@ -72,6 +75,9 @@ export default function AdminPage() {
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
   const [busy, setBusy] = useState<string | null>(null)
+  // đang ghi lí do "xàm xí" cho điều ước nào (id) + nội dung ô nhập
+  const [noteFor, setNoteFor] = useState<string | null>(null)
+  const [noteText, setNoteText] = useState('')
 
   useEffect(() => {
     const auth = getAuthClient()
@@ -123,19 +129,20 @@ export default function AdminPage() {
     load()
   }, [load])
 
-  async function act(id: string, action: Action) {
+  async function act(id: string, action: Action, note?: string) {
     setBusy(id)
     try {
       const r = await call('/api/admin/wishes', {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ id, action }),
+        body: JSON.stringify({ id, action, note }),
       })
       if (!r.ok) {
         const body = await r.json().catch(() => ({}))
         setError(body.error ?? 'Không cập nhật được')
         return
       }
+      setNoteFor(null)
       await load()
     } finally {
       setBusy(null)
@@ -247,6 +254,13 @@ export default function AdminPage() {
                       <span className="adm-warn">{it.reportCount} báo cáo</span>
                     )}
                     {it.commentCount > 0 && <span>{it.commentCount} bình luận</span>}
+                  </div>
+                  {it.status === 'funny' && it.funnyNote && noteFor !== it.id && (
+                    <p className="adm-funny">
+                      <b>Lí do không duyệt:</b> {it.funnyNote}
+                    </p>
+                  )}
+                  <div className="tk-meta">
                     {it.reviewedAt ? (
                       <span>
                         Xử lý {fmt(it.reviewedAt)}
@@ -271,7 +285,50 @@ export default function AdminPage() {
                         Đưa về chờ duyệt
                       </button>
                     )}
+                    {noteFor !== it.id && (
+                      <button
+                        className="pg-btn ghost"
+                        disabled={!!busy}
+                        onClick={() => {
+                          setNoteFor(it.id)
+                          setNoteText(it.funnyNote)
+                        }}
+                      >
+                        <Icon name="smile" size={16} />
+                        {it.status === 'funny' ? 'Sửa lí do' : 'Xàm xí…'}
+                      </button>
+                    )}
                   </div>
+                  {noteFor === it.id && (
+                    <form
+                      className="adm-funny-form"
+                      onSubmit={(e) => {
+                        e.preventDefault()
+                        if (noteText.trim()) act(it.id, 'funny', noteText)
+                      }}
+                    >
+                      <label htmlFor={`fn-${it.id}`}>
+                        Lí do không duyệt (hiện công khai ở trang Góc xàm xí, không kèm tên người viết)
+                      </label>
+                      <textarea
+                        id={`fn-${it.id}`}
+                        rows={2}
+                        maxLength={300}
+                        value={noteText}
+                        autoFocus
+                        placeholder="VD: Ước thế này thì ông Bụt cũng phải xin nghỉ phép."
+                        onChange={(e) => setNoteText(e.target.value)}
+                      />
+                      <div className="adm-acts">
+                        <button className="pg-btn primary" disabled={!!busy || !noteText.trim()}>
+                          Lưu vào Góc xàm xí
+                        </button>
+                        <button type="button" className="pg-btn ghost" onClick={() => setNoteFor(null)}>
+                          Huỷ
+                        </button>
+                      </div>
+                    </form>
+                  )}
                 </div>
               </li>
             )
