@@ -3,7 +3,7 @@ import Link from 'next/link'
 import LegalPage, { CONTACT_EMAIL } from '@/components/ui/LegalPage'
 
 export const metadata: Metadata = {
-  title: 'Điều khoản sử dụng — Cây Ước Nguyện',
+  title: 'Điều khoản sử dụng',
   description: 'Quy tắc khi viết điều ước và sử dụng Cây Ước Nguyện.',
   alternates: { canonical: '/dieu-khoan' },
 }

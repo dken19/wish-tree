@@ -6,7 +6,8 @@ import { CONTACT_EMAIL } from '@/components/ui/LegalPage'
 // Đây là "Application home page" khai báo trên Google OAuth consent screen:
 // Google yêu cầu trang này nêu rõ tên app + mục đích + link Chính sách bảo mật, và xem được khi chưa đăng nhập.
 export const metadata: Metadata = {
-  title: 'Giới thiệu — Cây Ước Nguyện',
+  title: { absolute: 'Cây Ước Nguyện' },
+  applicationName: 'Cây Ước Nguyện',
   description:
     'Cây Ước Nguyện là trang web miễn phí để viết điều ước, treo lên cây 3D và đọc điều ước của mọi người. Không cần đăng nhập để sử dụng.',
   alternates: { canonical: '/gioi-thieu' },
@@ -20,7 +21,7 @@ export default function AboutPage() {
           ← Vào Cây Ước Nguyện
         </Link>
 
-        <header className="wishes-hero about-hero">
+        <header className="wishes-hero about-hero about-plain">
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img src="/logo.png" alt="Logo Cây Ước Nguyện" width={96} height={96} />
           <div>
@@ -30,6 +31,9 @@ export default function AboutPage() {
         </header>
 
         <article className="legal-body">
+          <p className="about-appname">
+            Tên ứng dụng: <b>Cây Ước Nguyện</b>
+          </p>
           <h2>Cây Ước Nguyện là gì?</h2>
           <p>
             <b>Cây Ước Nguyện</b> (cayuocnguyen.io.vn) là một trang web <b>miễn phí, phi lợi nhuận</b>{' '}

@@ -3,7 +3,7 @@ import Link from 'next/link'
 import LegalPage, { CONTACT_EMAIL } from '@/components/ui/LegalPage'
 
 export const metadata: Metadata = {
-  title: 'Chính sách bảo mật — Cây Ước Nguyện',
+  title: 'Chính sách bảo mật',
   description: 'Cây Ước Nguyện thu thập dữ liệu gì, dùng vào việc gì và bạn có quyền gì với dữ liệu của mình.',
   alternates: { canonical: '/chinh-sach-bao-mat' },
 }

@@ -1528,3 +1528,14 @@ canvas {
   text-decoration: underline;
   text-shadow: 0 1px 6px rgba(70, 40, 30, 0.5);
 }
+
+/* /gioi-thieu: tiêu đề tên app bằng font thường (dễ đọc dấu tiếng Việt cho người duyệt Google) */
+.about-plain h1 {
+  font-family: inherit;
+  font-weight: 700;
+  font-size: clamp(30px, 7vw, 42px);
+}
+.about-appname {
+  font-size: 13px;
+  color: #7a6557;
+}
