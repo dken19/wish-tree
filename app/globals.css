@@ -1540,7 +1540,8 @@ canvas {
 }
 
 /* ---------- Lấp lánh: thẻ ước của người đăng nhập (components/ui/Sparkles) ---------- */
-/* Chỉ transform/opacity -> chạy compositor, nhẹ trên mobile. */
+/* Làm thẻ NỔI BẬT: viền vàng ánh chạy vòng, hào quang thở, nền giấy ánh kim, dấu "Ước" mạ vàng.
+   Chỉ animate transform/opacity -> chạy compositor, nhẹ trên mobile. */
 .spk {
   position: absolute;
   inset: 0;
@@ -1559,48 +1560,147 @@ canvas {
     100deg,
     transparent 0%,
     rgba(255, 232, 170, 0) 20%,
-    rgba(255, 236, 180, 0.26) 50%,
+    rgba(255, 236, 180, 0.32) 50%,
     rgba(255, 232, 170, 0) 80%,
     transparent 100%
   );
   transform: translateX(-120%) skewX(-12deg);
-  animation: spk-sheen 5.5s ease-in-out 0.6s infinite;
+  animation: spk-sheen 4.5s ease-in-out 0.6s infinite;
 }
 @keyframes spk-sheen {
   0% { transform: translateX(-120%) skewX(-12deg); }
-  38%, 100% { transform: translateX(320%) skewX(-12deg); }
+  40%, 100% { transform: translateX(320%) skewX(-12deg); }
 }
 .spk-star {
   position: absolute;
-  fill: #e9b949;
-  filter: drop-shadow(0 0 3px rgba(255, 210, 110, 0.9));
+  fill: #f0bf45;
+  filter: drop-shadow(0 0 4px rgba(255, 210, 110, 0.95));
   transform: translate(-50%, -50%) scale(0);
   opacity: 0;
-  animation: spk-twinkle 3.2s ease-in-out infinite;
+  animation: spk-twinkle 2.6s ease-in-out infinite;
 }
 @keyframes spk-twinkle {
   0%, 100% { transform: translate(-50%, -50%) scale(0) rotate(0deg); opacity: 0; }
   18% { transform: translate(-50%, -50%) scale(1) rotate(45deg); opacity: 1; }
-  36% { transform: translate(-50%, -50%) scale(0) rotate(90deg); opacity: 0; }
+  40% { transform: translate(-50%, -50%) scale(0) rotate(90deg); opacity: 0; }
 }
+/* Viền vàng: 1 dải conic xoay (transform) bên trong khung chỉ chừa lộ mép 2px (mask). */
+.spk-ring {
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  padding: 2px;
+  overflow: hidden;
+  pointer-events: none;
+  z-index: 2;
+  -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+  -webkit-mask-composite: xor;
+  mask: linear-gradient(#000 0 0) content-box exclude, linear-gradient(#000 0 0);
+}
+.spk-ring::before {
+  content: "";
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 250%;
+  aspect-ratio: 1;
+  translate: -50% -50%;
+  background: conic-gradient(
+    #c9952e, #fff1c2 8%, #c9952e 16%, #a8741c 30%, #e7bd57 45%,
+    #fff1c2 52%, #c9952e 60%, #a8741c 78%, #e7bd57 90%, #c9952e
+  );
+  animation: spk-spin 6s linear infinite;
+}
+@keyframes spk-spin {
+  to { transform: rotate(1turn); }
+}
+/* Hào quang ngoài thẻ: box-shadow cố định, chỉ "thở" bằng opacity. */
+.spk-glow {
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  pointer-events: none;
+  z-index: -1;
+  box-shadow: 0 0 22px 4px rgba(244, 196, 80, 0.55), 0 0 60px 10px rgba(244, 196, 80, 0.25);
+  animation: spk-breathe 3.2s ease-in-out infinite;
+}
+@keyframes spk-breathe {
+  0%, 100% { opacity: 0.45; }
+  50% { opacity: 1; }
+}
+
+/* Thẻ đọc (trang chủ) */
 .card.is-verified {
-  border-color: rgba(222, 176, 74, 0.75);
-  box-shadow: var(--shadow), 0 0 0 1px rgba(233, 185, 73, 0.35), 0 0 28px rgba(240, 196, 90, 0.35);
+  border-color: transparent;
+  background: radial-gradient(120% 120% at 50% 0%, #fffaf0 0%, #fbeccb 60%, #f3dca6 100%);
 }
+.card.is-verified::before {
+  border-color: rgba(201, 149, 46, 0.55);
+}
+.card.is-verified .seal {
+  color: #fff8e6 !important;
+  border-color: #b98522 !important;
+  background: radial-gradient(circle at 35% 30%, #ffe9a8, #d9a33a 55%, #a8741c);
+  box-shadow: 0 2px 8px rgba(168, 116, 28, 0.45), inset 0 0 0 2px rgba(255, 241, 194, 0.6);
+  opacity: 1;
+  text-shadow: 0 1px 1px rgba(110, 70, 0, 0.5);
+}
+.card.is-verified .meta {
+  border-top-color: rgba(201, 149, 46, 0.5);
+}
+
+/* Vé (/dieu-uoc) — mask khuyết tròn cắt mép nên không có hào quang ngoài */
 .tk-verified:nth-child(3n + 2) .spk-sheen { animation-delay: 2.4s; }
 .tk-verified:nth-child(3n) .spk-sheen { animation-delay: 4.1s; }
 .tk-verified {
-  box-shadow: inset 0 0 0 1.5px color-mix(in srgb, #d9a93c 60%, transparent);
+  background: linear-gradient(115deg, #fffaf0, #fbeccb 55%, #f3dca6);
 }
+.tk-verified .tk-stub {
+  background:
+    repeating-radial-gradient(circle at 0 0, transparent 0 7px, rgba(168, 116, 28, 0.12) 7px 8px),
+    linear-gradient(160deg, #ffe7a3, #e2ad45 60%, #c08a2a);
+  border-right-color: rgba(168, 116, 28, 0.55);
+}
+.tk-verified .tk-no {
+  color: #5a3a00;
+  text-shadow: 0 1px 0 rgba(255, 241, 194, 0.7);
+}
+.tk-verified .tk-date {
+  color: #5a3a00;
+}
+.tk-verified .tk-text {
+  color: #3d2c12;
+  font-weight: 500;
+}
+.tk-verified .tk-meta,
+.tk-verified .pg-act {
+  color: #7a5a2a;
+}
+:root[data-sky="night"] .pg .tk-verified {
+  background: linear-gradient(115deg, #2e2612, #3a2f14 55%, #4a3a16);
+}
+:root[data-sky="night"] .pg .tk-verified .tk-text {
+  color: #fff4d6;
+}
+:root[data-sky="night"] .pg .tk-verified .tk-meta,
+:root[data-sky="night"] .pg .tk-verified .pg-act {
+  color: #e6cf9a;
+}
+
 .spk-name {
   /* tên người đăng nhập viết bằng nét thư pháp, ánh vàng (không kèm ảnh đại diện) */
   font-family: var(--font-calli), "Dancing Script", cursive;
-  font-size: 1.45em;
+  font-size: 1.35em;
   font-weight: 700;
-  line-height: 1.1;
+  line-height: 1;
   letter-spacing: 0;
-  color: #b07a12;
+  color: #a8741c;
   text-shadow: 0 0 10px rgba(240, 196, 90, 0.45);
+}
+/* nét thư pháp to hơn chữ thường -> canh theo đường chân chữ cho thẳng hàng */
+.tk-meta:has(.spk-name),
+.card .meta:has(.spk-name) {
+  align-items: baseline;
 }
 :root[data-sky="night"] .pg .spk-name {
   color: #f2c35e;
@@ -1608,4 +1708,5 @@ canvas {
 @media (prefers-reduced-motion: reduce) {
   .spk-sheen { display: none; }
   .spk-star { animation: none; opacity: 0.85; transform: translate(-50%, -50%) scale(0.8); }
+  .spk-ring::before, .spk-glow { animation: none; }
 }

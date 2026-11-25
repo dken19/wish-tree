@@ -291,7 +291,7 @@ export default function WishesView() {
                     } as React.CSSProperties
                   }
                 >
-                  {w.verified && <Sparkles />}
+                  {w.verified && <Sparkles glow={false} />}
                   <div className="tk-stub">
                     {w.no ? (
                       <button
@@ -329,11 +329,13 @@ export default function WishesView() {
                         />
                         {tk ? THEMES[tk].label : w.theme}
                       </span>
-                      {w.author && (
-                        <span className={w.verified ? "spk-name" : undefined}>
-                          {w.author}
-                        </span>
-                      )}
+                      <span
+                        className={
+                          w.verified && w.author ? "spk-name" : undefined
+                        }
+                      >
+                        {w.author || "Ẩn danh"}
+                      </span>
                     </div>
                     {!isSeed && (
                       <div className="tk-actions">

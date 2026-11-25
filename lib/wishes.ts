@@ -36,7 +36,14 @@ export const SEED_WISHES: Wish[] = ([
   { id: 'seed-6', theme: 'mo', text: 'Lớn lên con muốn đi thật xa, nhưng vẫn nhớ đường về lớp học cũ.', createdAt: 0 },
   { id: 'seed-7', theme: 'ban', text: 'Mong nhóm mình mãi không tan, dù sau này mỗi đứa học một trường.', createdAt: 0 },
   { id: 'seed-8', theme: 'tam', text: 'Có hôm mệt lắm, chỉ muốn ai đó nói "cố lên, ổn mà". Mình tự nói với mình vậy.', createdAt: 0 },
-] as Wish[]).map((w, i) => ({ ...w, no: i + 1 }))
+] as Wish[]).map((w, i) => ({
+  ...w,
+  no: i + 1,
+  // Chỉ bản dev: cho vài tờ mẫu dạng "người đăng nhập" để xem hiệu ứng lấp lánh (prod: luôn false)
+  ...(process.env.NODE_ENV !== 'production' && i % 3 === 0
+    ? { verified: true, author: w.author ?? 'Người thử nghiệm' }
+    : {}),
+}))
 
 const MAX_RENDER =
   typeof window !== 'undefined' &&

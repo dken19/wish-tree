@@ -7,6 +7,7 @@ import { THEMES, isThemeKey } from '@/lib/themes'
 import { getAuthClient } from '@/lib/firebase.client'
 import { signInGoogle, signOutUser } from '@/lib/auth'
 import ReportsPanel from './ReportsPanel'
+import FunnyCollectionsPanel from './FunnyCollectionsPanel'
 
 type Status = 'pending' | 'approved' | 'rejected' | 'funny' | 'all'
 type Action = 'approve' | 'reject' | 'pending' | 'funny'
@@ -78,6 +79,10 @@ export default function AdminPage() {
   // đang ghi lí do "xàm xí" cho điều ước nào (id) + nội dung ô nhập
   const [noteFor, setNoteFor] = useState<string | null>(null)
   const [noteText, setNoteText] = useState('')
+  // các tờ xàm xí đang chọn để gộp thành bộ (giữ qua phân trang)
+  const [picked, setPicked] = useState<{ id: string; no: number | null; text: string }[]>([])
+  const togglePick = (it: Item) =>
+    setPicked((p) => (p.some((x) => x.id === it.id) ? p.filter((x) => x.id !== it.id) : [...p, { id: it.id, no: it.no, text: it.text }]))
 
   useEffect(() => {
     const auth = getAuthClient()
@@ -214,6 +219,14 @@ export default function AdminPage() {
       </div>
 
       {showReports && <ReportsPanel call={call} />}
+      {!showReports && tab === 'funny' && user && (
+        <FunnyCollectionsPanel
+          call={call}
+          picked={picked}
+          onUnpick={(id) => setPicked((p) => p.filter((x) => x.id !== id))}
+          onClear={() => setPicked([])}
+        />
+      )}
       {!showReports && error && <p className="pg-status err">{error}</p>}
       {!showReports && !error && !loading && data && data.items.length === 0 && (
         <p className="pg-status">Không có điều ước nào ở mục này.</p>
@@ -284,6 +297,16 @@ export default function AdminPage() {
                       <button className="pg-btn ghost" disabled={!!busy} onClick={() => act(it.id, 'pending')}>
                         Đưa về chờ duyệt
                       </button>
+                    )}
+                    {it.status === 'funny' && (
+                      <label className="fc-pick">
+                        <input
+                          type="checkbox"
+                          checked={picked.some((x) => x.id === it.id)}
+                          onChange={() => togglePick(it)}
+                        />
+                        Chọn vào bộ
+                      </label>
                     )}
                     {noteFor !== it.id && (
                       <button

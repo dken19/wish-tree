@@ -78,7 +78,7 @@ export async function GET(req: Request) {
       author: w.author ?? null,
       createdAt: w.createdAt,
       commentCount: 0,
-      verified: false,
+      verified: !!w.verified,
     }))
     if (no) return NextResponse.json(pageOf(seeds.filter((w) => w.no === no), 1))
     return NextResponse.json(pageOf(filterInMemory(seeds, { theme, range, words, sort }), page))

@@ -52,7 +52,7 @@ app/
     page.tsx           # server: metadata + <Suspense><WishesView/></Suspense> (route /dieu-uoc, KHÔNG Canvas)
     WishesView.tsx     # client (PageShell): số đang treo + chờ duyệt (/api/wishes/stats) ở đầu trang; mỗi điều ước là 1 VÉ (cuống #số bấm để lọc + giờ gửi + dấu "Hôm nay", thân lời ước); ô tìm (#số hoặc từ khoá) + ngày gửi + sắp xếp mới/cũ + chủ đề + phân trang SỐ (state qua URL ?q=&date=&sort=&theme=&page=) -> /api/wishes/list; thẻ có #số + giờ gửi + 💬 bình luận (WishThread) + ⚑ báo cáo; mount AuthBridge
   xam-xi/
-    page.tsx, FunnyView.tsx # "Góc xàm xí": điều ước status 'funny' + lời phê (lí do không duyệt), KHÔNG hiện tên người viết; phân trang ?page=
+    page.tsx, FunnyView.tsx # "Góc xàm xí": tab Từng tờ (status 'funny' + lời phê, ?page=) / Bộ sưu tập (?view=bo); KHÔNG hiện tên người viết
   api/
     wishes/route.ts    # POST: validate+lọc từ+rate-limit -> nếu có Bearer ID token hợp lệ thì approved (đăng ngay), không thì pending; cấp số #N (transaction meta/counters) + keywords; trả {id,no,status}
     wishes/[id]/comments/route.ts # GET bình luận (ai cũng đọc, lọc hidden, `mine` nếu kèm token) / POST bình luận — CHỈ người đăng nhập (verifyIdToken), validateComment + rate-limit theo uid, tăng commentCount (transaction)
@@ -60,7 +60,10 @@ app/
     admin/reports/route.ts # GET báo cáo chưa xử lý (gộp theo nội dung) / PATCH hide|dismiss — checkAdmin
     wishes/stats/route.ts # GET: {approved, pending} bằng count() (Admin SDK) — cache CDN 30s + memo instance 30s; fallback SEED
     wishes/list/route.ts # GET ?page=&theme=&q=&date=&sort=: approved; q="#888" -> where no==; q chữ -> keywords array-contains + lọc bộ nhớ; còn lại count + orderBy createdAt + offset/limit (sort cũ = lấy đoạn từ cuối rồi đảo, KHỎI index ASC); fallback SEED
+    wishes/funny/collections/route.ts # GET: các "bộ xàm xí" (lib/funnyCollections, ẩn bộ rỗng), cache CDN 60s
+    admin/funny-collections/route.ts # GET/POST {title,note,wishIds 2–6 tờ đang 'funny'}/DELETE {id} — checkAdmin
     wishes/funny/route.ts # GET ?page=: status=='funny' (index status+createdAt sẵn có) -> {no,text,theme,note,createdAt}, KHÔNG author; cache CDN 60s
+    (app/admin/FunnyCollectionsPanel.tsx: tab Xàm xí — gộp các tờ đã tích "Chọn vào bộ" thành bộ + danh sách bộ)
     admin/wishes/route.ts # GET ?status=&page= (list + counts, có tab funny) / PATCH approve|reject|pending|funny (funny bắt buộc `note` ≤300 ký tự -> funnyNote; đổi sang trạng thái khác thì xoá funnyNote) — quyền qua lib/adminAuth
     presence/route.ts  # POST: heartbeat|leave phòng Rừng Trúc -> ghi `sessions` (Admin SDK)
 components/
@@ -104,7 +107,7 @@ components/
     SkyBackdrop.tsx    # div #sky gradient theo điều kiện thời tiết
     WeatherPanel.tsx   # huy hiệu góc trên-phải: icon thời tiết + GIỜ VIỆT NAM (ghi qua ref) — KHÔNG còn nút chuyển; mobile chỉ icon + giờ
     WishCard.tsx       # thẻ đọc điều ước (mở khi click giấy): #số + giờ gửi, nút Bình luận mở WishThread (thẻ cuộn được), Báo cáo; `verified` -> lấp lánh + tên người gửi viết thư pháp
-    Sparkles.tsx       # lấp lánh cho thẻ/vé ước của người đăng nhập (sao 4 cánh nhấp nháy + vệt sáng quét, thuần CSS transform/opacity, tắt khi reduced-motion); tên người gửi `.spk-name` viết thư pháp, KHÔNG kèm ảnh
+    Sparkles.tsx       # làm thẻ/vé ước của người đăng nhập NỔI BẬT: viền vàng conic xoay (mask chừa mép 2px), hào quang thở (prop `glow`, tắt cho vé vì mask cắt mép), sao 4 cánh nhấp nháy, vệt sáng quét; nền giấy ánh kim + dấu "Ước" mạ vàng ở globals.css. Chỉ animate transform/opacity, tắt khi reduced-motion; tên người gửi `.spk-name` viết thư pháp, KHÔNG kèm ảnh
     WishThread.tsx     # bình luận 1 điều ước (đọc: ai cũng được; viết: đăng nhập Google) + export ReportButton (chọn lý do -> /api/reports)
     LegalPage.tsx      # khung trang pháp lý (PageShell + .pg-prose) + CONTACT_EMAIL/UPDATED_AT
     PageShell.tsx      # khung chung trang KHÔNG Canvas: PageSky (4 lớp trời + sao + đèn trời .ld-lantern) + hero (về cây, tiêu đề thư pháp/plainTitle, lead, stats, giờ HN) + tờ nội dung; data-sky cập nhật mỗi phút qua ref
@@ -136,6 +139,7 @@ lib/
   runtime.ts           # windRef {current,target} + pointer {moved,dragging} + player (vị trí/hướng/ngồi/đích/phím/người khác) + walkTo() — chia sẻ KHÔNG re-render
   roomMap.ts           # BỐ CỤC map phòng Rừng Trúc (tất định): SHRINE_POS/FACE/STAND, POND, BAMBOO_CLUSTERS (né sân/bàn thờ/ao), vật cản tròn, resolveMove (đẩy khỏi vật cản + giới hạn WALK_R 22), steer (lách)
   blessings.ts         # 24 lời chúc (ấm áp, không phán vận hạn), BOWS_NEEDED=3, BUFF_MINUTES=60, vnDayKey, load/save/draw (localStorage 'wish-tree:blessing')
+  funnyCollections.ts  # "bộ xàm xí": hằng số giới hạn + loadCollections (getAll điều ước, lọc status funny, không author)
   wishes.ts            # type Wish (+no, commentCount), SEED_WISHES (no 1..8), subscribeApproved() (onSnapshot, sort client)
   wishMeta.ts          # client+server: formatNo, formatWishTime (giờ VN), foldVi/searchTokens (bỏ dấu -> keywords), parseNoQuery, REPORT_REASONS, AUTO_HIDE_REPORTS
   wishServer.ts        # server-only: ensureNumbering (lần đầu đánh số TẤT CẢ ước cũ theo createdAt + keywords, rồi đặt meta/counters), counterRef, viewerFromRequest (verifyIdToken), publicWish
@@ -218,6 +222,10 @@ Chưa cấu hình Firebase: `getDb()` null → `subscribeSessions` trả về 1 
   flagged?: boolean,     // true = TỰ ẩn do đủ báo cáo (status về pending), chờ admin
   reviewedAt?: serverTimestamp, reviewedBy?: string }  // ghi khi admin đổi trạng thái
 
+// funnyCollections/{id}  ("bộ xàm xí", chỉ Admin SDK; rules mặc định chặn client)
+{ title, note, wishIds: string[2..6], createdAt, createdBy }
+// Tờ rời trạng thái 'funny' thì tự bị lọc khỏi bộ lúc đọc; bộ hết tờ thì ẩn khỏi trang công khai.
+
 // wishes/{id}/comments/{cid}
 { text: string(<=300), uid, author, photo?, hidden: boolean, reportCount: number, createdAt }
 // reports/{uid__wishId__commentId|wish}
@@ -255,6 +263,7 @@ Vercel: import `.env.local` khi tạo project.
 - **ESLint**: Next 16 bật rule React-Compiler (`purity`/`immutability`/`set-state-in-effect`) báo nhầm với code Three.js (Math.random trong useMemo, mutate buffer trong useFrame). Đã **tắt cho `components/three/**`** + vài file UI trong `eslint.config.mjs`. Đừng "sửa" các cảnh báo này bằng cách viết lại — chúng cố ý.
 - **Loader màu nước**: `WishTreeCanvas.onCreated` đợi 2 rAF rồi `setSceneReady(true)` → Loader mới loang mở. Nền giấy + chữ + con dấu vẽ **1 lần** vào canvas 2D (đợi `document.fonts.ready`, đo vị trí chữ HTML để vẽ đúng chỗ, rồi crossfade) → làm texture cho fragment shader (1 tam giác full màn hình, ~3.2s, xong thì `loseContext`). Lòng vết trong suốt đi **trễ** sau mép màu (2 ngưỡng `t` và `t-.2`) để luôn thấy dải màu loang. **KHÔNG bật `gl.BLEND`** (canvas `premultipliedAlpha:false`) — bật sẽ ra viền tối quanh vùng trong suốt.
 - **Firebase Auth – Authorized domains**: mọi tên miền chạy app (`cayuocnguyen.io.vn`, `www.` nếu có, domain `*.vercel.app`, `localhost`) PHẢI có trong Firebase Console → Authentication → Settings → Authorized domains; thiếu → popup Google đóng ngay, lỗi `auth/unauthorized-domain` (Composer toast báo riêng theo mã lỗi).
+- **Xem thử lấp lánh khi dev**: chưa có `.env.local` (không Firebase) thì chỉ có `SEED_WISHES`; ở `NODE_ENV !== 'production'` các tờ mẫu #1, #4, #7 được đặt `verified: true` để thấy hiệu ứng `Sparkles`. Prod luôn false.
 - **Trang cuộn được**: `html, body { overflow: hidden }` (cho Canvas 3D) → mọi trang nội dung dài (`/dieu-uoc`, `/ky-nang`, `/admin`, trang pháp lý) phải tự có khung `position: fixed; inset: 0; overflow-y: auto`, nếu không sẽ KHÔNG cuộn được.
 - **Canvas SSR**: phải `dynamic(..., { ssr:false })` từ client component (HomeClient). Không import trực tiếp ở server component.
 - **Chim Lạc**: `public/chim-lac.jpg` là ảnh ĐEN/nền TRẮNG; nền trắng được bỏ bằng `mix-blend-mode: multiply` (xem `.composer-head .lac`, `.lac-watermark` trong globals.css, dùng ở `LacBird.tsx`). Muốn đổi màu chim cần CSS filter. Lưu ý: ẢNH OG/favicon KHÔNG dùng file này (chim Lạc vẽ lại bằng SVG silhouette vì satori không hỗ trợ `mix-blend-mode` để bỏ nền trắng).

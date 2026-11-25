@@ -62,8 +62,9 @@ export default function WishCard() {
         )}
         <p className="text">{openWish ? `“${openWish.text}”` : ''}</p>
         <div className="meta">
+          {/* Có tên (người đăng nhập) -> thư pháp; không tên -> "Ẩn danh" chữ thường */}
           <span className={verified && openWish?.author ? 'spk-name' : undefined}>
-            {openWish?.author ? openWish.author : 'Một người gửi gió'}
+            {openWish?.author || 'Ẩn danh'}
           </span>
         </div>
         {openWish && !isSeed && (
