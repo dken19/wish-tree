@@ -11,6 +11,9 @@ export const metadata: Metadata = {
   description:
     'Cây Ước Nguyện là trang web miễn phí để viết điều ước, treo lên cây 3D và đọc điều ước của mọi người. Không cần đăng nhập để sử dụng.',
   alternates: { canonical: '/gioi-thieu' },
+  // og/twitter title = đúng tên app (Google so khớp tên app với home page ở cả meta)
+  openGraph: { title: 'Cây Ước Nguyện', siteName: 'Cây Ước Nguyện', url: '/gioi-thieu' },
+  twitter: { title: 'Cây Ước Nguyện' },
 }
 
 export default function AboutPage() {
