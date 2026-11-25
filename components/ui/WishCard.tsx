@@ -1,12 +1,22 @@
 'use client'
+import { useState } from 'react'
 import { THEMES } from '@/lib/themes'
 import { useScene } from '@/store/useScene'
+import { formatNo, formatWishTime } from '@/lib/wishMeta'
+import WishThread, { ReportButton } from './WishThread'
+import Icon from './Icon'
 
 // Thẻ đọc điều ước (mở khi click một tờ giấy).
 export default function WishCard() {
   const openWish = useScene((s) => s.openWish)
   const setOpenWish = useScene((s) => s.setOpenWish)
   const theme = openWish ? THEMES[openWish.theme] : null
+  // Mở bình luận theo TỪNG điều ước (đổi tờ giấy -> tự đóng lại)
+  const [threadFor, setThreadFor] = useState<string | null>(null)
+  const [count, setCount] = useState<{ id: string; n: number } | null>(null)
+  const showThread = openWish && threadFor === openWish.id
+  const n = openWish && count?.id === openWish.id ? count.n : (openWish?.commentCount ?? 0)
+  const isSeed = openWish?.id.startsWith('seed-')
 
   return (
     <div
@@ -15,13 +25,13 @@ export default function WishCard() {
         if (e.target === e.currentTarget) setOpenWish(null)
       }}
     >
-      <div className="card">
+      <div className={`card${showThread ? ' with-thread' : ''}`}>
         <button
           className="close"
           onClick={() => setOpenWish(null)}
           aria-label="Đóng"
         >
-          ✕
+          <Icon name="x" size={18} />
         </button>
         <div
           className="seal"
@@ -39,11 +49,36 @@ export default function WishCard() {
         >
           {theme?.label ?? 'Điều ước'}
         </span>
+        {openWish && (openWish.no || openWish.createdAt > 0) && (
+          <div className="wish-no">
+            {formatNo(openWish.no)}
+            {openWish.createdAt > 0 && <span>{formatWishTime(openWish.createdAt)}</span>}
+          </div>
+        )}
         <p className="text">{openWish ? `“${openWish.text}”` : ''}</p>
         <div className="meta">
-          <span>— {openWish?.author ? openWish.author : 'một người gửi gió'} —</span>
-          <span>🌙</span>
+          <span>{openWish?.author ? openWish.author : 'Một người gửi gió'}</span>
         </div>
+        {openWish && !isSeed && (
+          <div className="card-actions">
+            <button
+              className="wt-link"
+              onClick={() => setThreadFor(showThread ? null : openWish.id)}
+              aria-expanded={!!showThread}
+            >
+              <Icon name="comment" size={16} />
+              {n > 0 ? `${n} bình luận` : 'Bình luận'}
+            </button>
+            <ReportButton key={openWish.id} wishId={openWish.id} label="Báo cáo" />
+          </div>
+        )}
+        {showThread && (
+          <WishThread
+            key={openWish.id}
+            wishId={openWish.id}
+            onCount={(c) => setCount({ id: openWish.id, n: c })}
+          />
+        )}
       </div>
     </div>
   )

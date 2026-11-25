@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server'
 import { FieldValue } from 'firebase-admin/firestore'
 import { getAdminDb, isAdminConfigured } from '@/lib/firebase.admin'
 import { checkAdmin } from '@/lib/adminAuth'
+import { ensureNumbering } from '@/lib/wishServer'
 
 export const runtime = 'nodejs'
 
@@ -28,6 +29,7 @@ export async function GET(req: Request) {
   const page = Math.max(1, Number(url.searchParams.get('page')) || 1)
 
   const db = getAdminDb()!
+  await ensureNumbering(db)
   const col = db.collection('wishes')
   const base: FirebaseFirestore.Query = status === 'all' ? col : col.where('status', '==', status)
 
@@ -53,12 +55,16 @@ export async function GET(req: Request) {
       const rv = data.reviewedAt as { toMillis?: () => number } | undefined
       return {
         id: d.id,
+        no: typeof data.no === 'number' ? data.no : null,
         text: String(data.text ?? ''),
         theme: String(data.theme ?? ''),
         author: data.author ? String(data.author) : null,
         status: String(data.status ?? ''),
         // Có uid = người đăng nhập Google/Facebook -> được tự duyệt lúc gửi.
         loggedIn: Boolean(data.uid),
+        flagged: Boolean(data.flagged),
+        reportCount: typeof data.reportCount === 'number' ? data.reportCount : 0,
+        commentCount: typeof data.commentCount === 'number' ? data.commentCount : 0,
         reviewedBy: data.reviewedBy ? String(data.reviewedBy) : null,
         createdAt: ts?.toMillis ? ts.toMillis() : 0,
         reviewedAt: rv?.toMillis ? rv.toMillis() : 0,
@@ -106,6 +112,7 @@ export async function PATCH(req: Request) {
       .doc(id)
       .update({
         status: next[action],
+        flagged: false,
         reviewedAt: FieldValue.serverTimestamp(),
         reviewedBy: auth.email ?? 'secret',
       })

@@ -75,10 +75,10 @@ export default function FakePresence() {
         if (!first) {
           // toast cho người mới vào / vừa rời (sự kiện xảy ra cùng lúc mọi máy)
           for (const b of list)
-            if (!prevIds.has(b.clientId)) showToast(`${b.name} vào ôn cùng 🌱`)
+            if (!prevIds.has(b.clientId)) showToast(`${b.name} vào ôn cùng`)
           const nameById = new Map(PERSONAS.map((p) => [`bot-${p.id}`, p.name]))
           for (const id of prevIds)
-            if (!ids.has(id)) showToast(`${nameById.get(id) ?? 'Ai đó'} rời phòng 👋`)
+            if (!ids.has(id)) showToast(`${nameById.get(id) ?? 'Ai đó'} rời phòng`)
         }
         prevIds = ids
         first = false

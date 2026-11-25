@@ -139,7 +139,7 @@ export const SKILL_CATEGORIES: SkillCategory[] = [
         time: 'Đọc 3 phút',
         level: 'Dễ',
         intro: 'Quan trọng nhất — nhớ kỹ trước khi nấu.',
-        need: ['Sự cẩn thận 🙂'],
+        need: ['Sự cẩn thận'],
         steps: [
           'Khoá van bếp gas/tắt bếp ngay khi nấu xong.',
           'Dầu đang sôi mà bắt lửa: đậy vung/nắp kim loại cho tắt, TUYỆT ĐỐI không hắt nước.',

@@ -39,7 +39,8 @@ export default function HomeClient() {
           <h1>Cây Ước Nguyện</h1>
           <p>Thả một điều ước vào gió</p>
           <p className="brand-links">
-            <a href="/gioi-thieu">Giới thiệu</a> · <a href="/chinh-sach-bao-mat">Bảo mật</a> ·{' '}
+            <a href="/gioi-thieu">Giới thiệu</a>
+            <a href="/chinh-sach-bao-mat">Bảo mật</a>
             <a href="/dieu-khoan">Điều khoản</a>
           </p>
           <WishStats />
@@ -50,8 +51,8 @@ export default function HomeClient() {
 
       {!roomOpen && (
         <div className="ui hint">
-          ✨ Chạm <b>tờ giấy</b> để đọc · mở <b>cuộn bí kíp</b> góc dưới để viết điều ước, vào
-          phòng ôn bài hay học kỹ năng sống
+          Chạm <b>tờ giấy</b> để đọc. Mở <b>cuộn bí kíp</b> ở góc dưới để viết điều ước, vào phòng
+          ôn bài hay học kỹ năng sống.
         </div>
       )}
 

@@ -3,6 +3,7 @@ import { useEffect, useRef, useState } from 'react'
 import { useScene } from '@/store/useScene'
 import { storeName } from '@/lib/presence'
 import { containsProfanity } from '@/lib/profanity'
+import Icon from './Icon'
 
 type Phase = 'idle' | 'focus' | 'break'
 type Preset = { label: string; focus: number; brk: number }
@@ -101,7 +102,7 @@ export default function FocusHUD() {
         setLeft(mins * 60)
         // chỉ báo khi đang Ở TRONG phòng (đừng để popup lọt sang màn khác)
         if (useScene.getState().roomOpen)
-          showToast(next === 'focus' ? 'Hết giải lao — quay lại tập trung 🧘' : 'Hết phiên — nghỉ một chút ☕')
+          showToast(next === 'focus' ? 'Hết giải lao, quay lại tập trung nhé.' : 'Hết phiên. Nghỉ một chút đi.')
       }
       raf = requestAnimationFrame(tick)
     }
@@ -141,11 +142,16 @@ export default function FocusHUD() {
       {roomOpen && !open && (
         <div className="fh-mini">
           <button className="fh-mini-main" onClick={() => setOpen(true)} aria-label="Mở bảng ôn bài">
-            <span className="fh-mini-online">🟢 {online}</span>
-            <span className={`fh-mini-time ${phase}`}>
-              {phase === 'idle' ? '🧘 Phòng ôn bài' : `${mm}:${ss}`}
+            <span className="fh-mini-online">
+              <i className="fh-live" aria-hidden="true" />
+              {online}
             </span>
-            <span className="fh-mini-caret">▴</span>
+            <span className={`fh-mini-time ${phase}`}>
+              {phase === 'idle' ? 'Phòng ôn bài' : `${mm}:${ss}`}
+            </span>
+            <span className="fh-mini-caret">
+              <Icon name="up" size={16} />
+            </span>
           </button>
           <button className="fh-mini-leave" onClick={() => setRoomOpen(false)} aria-label="Rời phòng">
             Rời
@@ -155,10 +161,13 @@ export default function FocusHUD() {
 
       <div className={`focus-hud${roomOpen && open ? ' show' : ''}`}>
         <div className="fh-top">
-          <span className="fh-online">🟢 {online} đang ôn cùng bạn</span>
+          <span className="fh-online">
+            <i className="fh-live" aria-hidden="true" />
+            {online} người đang ôn cùng bạn
+          </span>
           <div className="fh-top-btns">
             <button className="fh-min" onClick={() => setOpen(false)} aria-label="Thu gọn" title="Thu gọn">
-              ▾
+              <Icon name="chev" size={18} />
             </button>
             <button className="fh-leave" onClick={() => setRoomOpen(false)}>
               Rời phòng
@@ -226,7 +235,7 @@ export default function FocusHUD() {
               const now = Date.now()
               if (now - profToastAt.current > 2000) {
                 profToastAt.current = now
-                showToast('Tên hiển thị có từ chưa phù hợp 🙏')
+                showToast('Tên hiển thị có từ chưa phù hợp.')
               }
               return
             }

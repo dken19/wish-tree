@@ -9,13 +9,6 @@ export const SKIES: Record<Condition, string> = {
   night: 'linear-gradient(180deg,#0c1330 0%,#1d2a52 55%,#3a3a63 100%)',
 }
 
-export const WX_ICON: Record<Condition, string> = {
-  clear: '☀️',
-  cloud: '☁️',
-  rain: '🌧️',
-  night: '🌙',
-}
-
 export const WX_VI: Record<Condition, string> = {
   clear: 'Nắng',
   cloud: 'Nhiều mây',
@@ -75,30 +68,15 @@ export const PRESETS: Record<Condition, LightPreset> = {
   },
 }
 
-// Map weather_code của Open-Meteo -> nhóm điều kiện (giữ cho tương thích cũ)
-export function codeToCond(code: number, isDay: boolean | number): Condition {
-  if (!isDay) return 'night'
-  if (code === 0 || code === 1) return 'clear'
-  if (code >= 51) return 'rain'
-  return 'cloud'
+// Thời tiết trên cây: NGÀY/ĐÊM theo giờ Việt Nam (skyPhase), nắng/mây/mưa RANDOM
+// (không gọi API thời tiết, không có nút chuyển). Mưa hiếm hơn để cảnh đa phần sáng sủa.
+export function randomDayWeather(r = Math.random()): Exclude<Condition, 'night'> {
+  if (r < 0.55) return 'clear'
+  if (r < 0.82) return 'cloud'
+  return 'rain'
 }
 
-// Điều kiện THỰC TẾ: ưu tiên lượng mưa đang rơi + độ mây, BỎ QUA weather_code
-// (mã 95 "giông" gây hiểu nhầm: trời 0mm mưa vẫn báo Mưa). Ban đêm -> 'night'.
-export function condFromCurrent(opts: {
-  precipitation: number
-  cloudCover: number
-  isDay: boolean | number
-}): Condition {
-  if (!opts.isDay) return 'night'
-  if (opts.precipitation >= 0.15) return 'rain' // chỉ Mưa khi thực sự có mưa
-  if (opts.cloudCover >= 65) return 'cloud'
-  return 'clear'
+/** Hệ số gió ngẫu nhiên 0.7–1.6 (mưa thì gió mạnh hơn). */
+export function randomWind(cond: Condition, r = Math.random()): number {
+  return (cond === 'rain' ? 1.1 : 0.7) + r * 0.5
 }
-
-// Quy đổi tốc độ gió (m/s ~ km/h từ Open-Meteo) -> hệ số gió cho hiệu ứng
-export function windFromSpeed(speed: number): number {
-  return 0.6 + (Math.min(speed || 5, 25) / 25) * 1.2
-}
-
-export const HANOI = { lat: 21.0245, lon: 105.8412 }

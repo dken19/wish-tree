@@ -100,10 +100,22 @@ export type ValidationResult = { ok: true } | { ok: false; reason: string }
 
 export function validateWish(text: string): ValidationResult {
   const t = text.trim()
-  if (t.length < MIN_WISH_LEN) return { ok: false, reason: 'Điều ước hơi ngắn 🌸' }
+  if (t.length < MIN_WISH_LEN) return { ok: false, reason: 'Điều ước hơi ngắn, viết thêm chút nhé.' }
   if (t.length > MAX_WISH_LEN)
     return { ok: false, reason: `Tối đa ${MAX_WISH_LEN} ký tự` }
   if (containsProfanity(t))
-    return { ok: false, reason: 'Điều ước chứa từ ngữ chưa phù hợp 🙏' }
+    return { ok: false, reason: 'Điều ước chứa từ ngữ chưa phù hợp.' }
+  return { ok: true }
+}
+
+export const MAX_COMMENT_LEN = 300
+
+export function validateComment(text: string): ValidationResult {
+  const t = text.trim()
+  if (t.length < 1) return { ok: false, reason: 'Bình luận đang trống' }
+  if (t.length > MAX_COMMENT_LEN)
+    return { ok: false, reason: `Tối đa ${MAX_COMMENT_LEN} ký tự` }
+  if (containsProfanity(t))
+    return { ok: false, reason: 'Bình luận chứa từ ngữ chưa phù hợp.' }
   return { ok: true }
 }

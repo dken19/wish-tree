@@ -1,14 +1,15 @@
 'use client'
 import { useEffect } from 'react'
 import { subscribeApproved } from '@/lib/wishes'
-import { condFromCurrent, windFromSpeed, type Condition } from '@/lib/weather'
+import { randomDayWeather, randomWind } from '@/lib/weather'
+import { phaseFromUrl, skyPhase } from '@/lib/skyPhase'
 import { windRef } from '@/lib/runtime'
 import { useScene } from '@/store/useScene'
 
-// Cầu nối dữ liệu (render rỗng): nạp điều ước realtime + thời tiết Hà Nội.
+// Cầu nối dữ liệu (render rỗng): nạp điều ước realtime + số điều ước + thời tiết (giờ VN + random).
 export default function DataBridge() {
   const setWishes = useScene((s) => s.setWishes)
-  const setAuto = useScene((s) => s.setAuto)
+  const setCond = useScene((s) => s.setCond)
   const setStats = useScene((s) => s.setStats)
 
   // Điều ước đã duyệt (realtime / seed)
@@ -42,34 +43,24 @@ export default function DataBridge() {
     }
   }, [setStats])
 
-  // Thời tiết Hà Nội (qua API route có cache), làm mới mỗi 10 phút
+  // Thời tiết: đêm theo giờ Việt Nam (skyPhase, ?sky= để xem thử), ban ngày nắng/mây/mưa random,
+  // đổi ngẫu nhiên mỗi 15 phút. Kiểm tra mốc giờ mỗi phút (chuyển đêm <-> ngày đúng giờ).
   useEffect(() => {
-    let alive = true
-    async function fetchWeather() {
-      try {
-        const r = await fetch('/api/weather')
-        if (!r.ok) throw new Error('weather fetch failed')
-        const c = await r.json()
-        if (!alive) return
-        const cond: Condition = condFromCurrent({
-          precipitation: c.precipitation ?? 0,
-          cloudCover: c.cloud_cover ?? 0,
-          isDay: c.is_day,
-        })
-        windRef.target = windFromSpeed(c.wind_speed_10m)
-        setAuto(cond, Math.round(c.temperature_2m))
-      } catch {
-        if (!alive) return
-        setAuto('clear', null)
+    let day = randomDayWeather()
+    let rolledAt = Date.now()
+    function apply() {
+      if (Date.now() - rolledAt > 15 * 60_000) {
+        day = randomDayWeather()
+        rolledAt = Date.now()
       }
+      const cond = (phaseFromUrl() ?? skyPhase()) === 'night' ? 'night' : day
+      windRef.target = randomWind(cond)
+      setCond(cond)
     }
-    fetchWeather()
-    const id = setInterval(fetchWeather, 10 * 60 * 1000)
-    return () => {
-      alive = false
-      clearInterval(id)
-    }
-  }, [setAuto])
+    apply()
+    const id = setInterval(apply, 60_000)
+    return () => clearInterval(id)
+  }, [setCond])
 
   return null
 }

@@ -4,6 +4,8 @@ import { getAdminDb, getAdminAuth, isAdminConfigured } from '@/lib/firebase.admi
 import { validateWish } from '@/lib/profanity'
 import { isThemeKey } from '@/lib/themes'
 import { ipFromHeaders, rateLimit } from '@/lib/ratelimit'
+import { counterRef, ensureNumbering } from '@/lib/wishServer'
+import { searchTokens } from '@/lib/wishMeta'
 
 export const runtime = 'nodejs'
 
@@ -30,7 +32,7 @@ export async function POST(req: Request) {
   const rl = rateLimit(`wish:${ip}`)
   if (!rl.ok)
     return NextResponse.json(
-      { error: 'Bạn gửi hơi nhanh, thử lại sau ít phút nhé 🙏' },
+      { error: 'Bạn gửi hơi nhanh, thử lại sau ít phút nhé.' },
       { status: 429 }
     )
 
@@ -59,14 +61,27 @@ export async function POST(req: Request) {
   const status = uid ? 'approved' : 'pending'
 
   const db = getAdminDb()!
-  const doc = await db.collection('wishes').add({
-    text: text.trim(),
-    theme,
-    ...(authorName ? { author: authorName } : {}),
-    ...(uid ? { uid } : {}),
-    status,
-    createdAt: FieldValue.serverTimestamp(),
+  await ensureNumbering(db)
+  // Cấp số thứ tự #N trong transaction với bộ đếm meta/counters -> không trùng số.
+  const ref = db.collection('wishes').doc()
+  const no = await db.runTransaction(async (t) => {
+    const c = await t.get(counterRef(db))
+    const n = ((c.data()?.wishNo as number | undefined) ?? 0) + 1
+    t.set(counterRef(db), { wishNo: n }, { merge: true })
+    t.set(ref, {
+      no: n,
+      text: text.trim(),
+      keywords: searchTokens(text),
+      theme,
+      ...(authorName ? { author: authorName } : {}),
+      ...(uid ? { uid } : {}),
+      status,
+      commentCount: 0,
+      reportCount: 0,
+      createdAt: FieldValue.serverTimestamp(),
+    })
+    return n
   })
 
-  return NextResponse.json({ ok: true, id: doc.id, status })
+  return NextResponse.json({ ok: true, id: ref.id, no, status })
 }

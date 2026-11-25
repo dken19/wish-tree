@@ -69,12 +69,13 @@ export default function Composer() {
       // Vị trí trong hàng chờ = số đang chờ (trước khi cộng) + 1
       const queuePos = stats ? stats.pending + 1 : null
       bumpStats(approved ? 'approved' : 'pending')
+      const tag = typeof data?.no === 'number' ? ` #${data.no}` : ''
       showToast(
         approved
-          ? 'Đã treo điều ước lên cây ✨'
+          ? `Đã treo điều ước${tag} lên cây.`
           : queuePos
-            ? `Đã gửi điều ước ✨ — đang chờ duyệt (thứ ${queuePos} trong hàng chờ), duyệt xong sẽ hiện trên cây`
-            : 'Đã gửi điều ước ✨ (chờ duyệt rồi sẽ hiện trên cây)'
+            ? `Đã gửi điều ước${tag}. Đang chờ duyệt, bạn đứng thứ ${queuePos} trong hàng; duyệt xong sẽ hiện trên cây.`
+            : `Đã gửi điều ước${tag}. Duyệt xong sẽ hiện trên cây.`
       )
     } catch {
       showToast('Mất kết nối, thử lại sau nhé')

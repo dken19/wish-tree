@@ -1,10 +1,11 @@
 'use client'
 import { useRouter } from 'next/navigation'
 import { useScene } from '@/store/useScene'
+import Icon, { type IconName } from './Icon'
 
 type Item = {
   key: string
-  icon: string
+  icon: IconName
   label: string
   hint: string
   run: (router: ReturnType<typeof useRouter>) => void
@@ -13,7 +14,7 @@ type Item = {
 const ITEMS: Item[] = [
   {
     key: 'tree',
-    icon: '🌳',
+    icon: 'tree',
     label: 'Cây ước nguyện',
     hint: 'Về cây',
     run: () => {
@@ -25,7 +26,7 @@ const ITEMS: Item[] = [
   },
   {
     key: 'write',
-    icon: '✍️',
+    icon: 'pen',
     label: 'Viết điều ước',
     hint: 'Gửi điều ước lên cây',
     run: () => {
@@ -36,7 +37,7 @@ const ITEMS: Item[] = [
   },
   {
     key: 'room',
-    icon: '🧘',
+    icon: 'book',
     label: 'Phòng ôn bài',
     hint: 'Học cùng nhau',
     run: () => {
@@ -47,18 +48,18 @@ const ITEMS: Item[] = [
   },
   {
     key: 'skills',
-    icon: '🌿',
+    icon: 'leaf',
     label: 'Kỹ năng sống',
-    hint: 'Nấu nướng · trồng trọt',
+    hint: 'Nấu ăn, trồng rau, chụp ảnh',
     run: (router) => {
       router.push('/ky-nang')
     },
   },
   {
     key: 'all',
-    icon: '📜',
+    icon: 'list',
     label: 'Tất cả ước nguyện',
-    hint: 'Xem & lọc theo chủ đề',
+    hint: 'Tìm theo số, chủ đề, ngày',
     run: (router) => {
       router.push('/dieu-uoc')
     },
@@ -104,7 +105,9 @@ export default function NavDock() {
               <b>{it.label}</b>
               <i>{it.hint}</i>
             </span>
-            <span className="nav-ic">{it.icon}</span>
+            <span className="nav-ic">
+              <Icon name={it.icon} size={22} />
+            </span>
           </button>
         ))}
       </div>
@@ -115,7 +118,7 @@ export default function NavDock() {
         aria-expanded={navOpen}
         onClick={() => setNavOpen(!navOpen)}
       >
-        <span className="nav-fab-ic">{navOpen ? '✕' : 'Bí'}</span>
+        <span className="nav-fab-ic">{navOpen ? <Icon name="x" size={22} /> : 'Bí'}</span>
       </button>
     </div>
   )

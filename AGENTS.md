@@ -1,16 +1,20 @@
 <!-- BEGIN:nextjs-agent-rules -->
-# This is NOT the Next.js you know
 
-This version has breaking changes — APIs, conventions, and file structure may all differ from your training data. Read the relevant guide in `node_modules/next/dist/docs/` before writing any code. Heed deprecation notices.
+## This is NOT the Next.js you know
+
+This version has breaking changes — APIs, conventions, and file structure may all differ from your training data. Read the relevant guide in `node_modules/next/dist/docs/` (resolved from this file's directory; in monorepos the `next` package may not be visible from the repo root) before writing any code. Heed deprecation notices.
+
+This block is written and re-added by `next dev` — verify at `node_modules/next/dist/server/lib/generate-agent-files.js`. Removing it from a diff only re-creates the uncommitted change; committing it with your work keeps the tree clean.
+
 <!-- END:nextjs-agent-rules -->
 
 # Cây Ước Nguyện — bản đồ dự án nhanh
 
-Trang chủ là **cây 3D treo điều ước (giấy đỏ)**, có gió + thời tiết Hà Nội, đồng cỏ/bướm/chuồn chuồn/sương, bàn thư pháp để viết điều ước, hoạ tiết chim Lạc. Người dùng gửi điều ước → lọc từ → **người đăng nhập Google hiện NGAY (auto-approve)** (nút Facebook tạm ẩn), người ẩn danh vào hàng chờ duyệt tay → hiện realtime trên cây. Đăng nhập qua Firebase Auth (`lib/auth.ts` + `AuthBridge` ghi `useScene.user`); server `/api/wishes` `verifyIdToken` mới đặt `approved` (KHÔNG tin client). Có **menu dock** (góc dưới-phải, `NavDock`) chuyển nhanh: Cây · Viết · Phòng ôn bài (đổi state, giữ 1 Canvas) · **Kỹ năng sống** (route `/ky-nang`, dữ liệu `lib/skills.ts`) — nấu nướng/trồng trọt/chụp ảnh/chăm sóc da, ảnh Wikimedia + nguồn Wikipedia · **Tất cả ước nguyện** (route `/dieu-uoc` — danh sách ước đã đăng, **phân trang ở server** `/api/wishes/list` + lọc theo chủ đề); cả hai route này KHÔNG mount Canvas.
+Trang chủ là **cây 3D treo điều ước (giấy đỏ)**, có gió + trời ngày/đêm theo giờ VN (nắng/mây/mưa random, không nút chuyển), đồng cỏ/bướm/chuồn chuồn/sương, bàn thư pháp để viết điều ước, hoạ tiết chim Lạc. Người dùng gửi điều ước → lọc từ → **người đăng nhập Google hiện NGAY (auto-approve)** (nút Facebook tạm ẩn), người ẩn danh vào hàng chờ duyệt tay → hiện realtime trên cây. Mỗi điều ước có **số #N** (cấp lúc gửi, `meta/counters`) + giờ gửi; `/dieu-uoc` tìm theo #số/từ khoá (`keywords` bỏ dấu)/ngày; **bình luận + báo cáo chỉ cho người đăng nhập** (`/api/wishes/[id]/comments`, `/api/reports`, đủ 3 báo cáo → tự ẩn, admin xử lý tab "Bị báo cáo"). Đăng nhập qua Firebase Auth (`lib/auth.ts` + `AuthBridge` ghi `useScene.user`); server `/api/wishes` `verifyIdToken` mới đặt `approved` (KHÔNG tin client). Có **menu dock** (góc dưới-phải, `NavDock`) chuyển nhanh: Cây · Viết · Phòng ôn bài (đổi state, giữ 1 Canvas) · **Kỹ năng sống** (route `/ky-nang`, dữ liệu `lib/skills.ts`) — nấu nướng/trồng trọt/chụp ảnh/chăm sóc da, ảnh Wikimedia + nguồn Wikipedia · **Tất cả ước nguyện** (route `/dieu-uoc` — danh sách ước đã đăng, **phân trang ở server** `/api/wishes/list` + lọc theo chủ đề); cả hai route này (và giới thiệu/pháp lý/admin) KHÔNG mount Canvas, dùng `PageShell` + `app/pages.css` (trời đèn trời 4 mốc giờ VN, điều ước dạng vé số #N). **Không dùng emoji làm icon** — dùng `components/ui/Icon.tsx` (định hướng thiết kế: `PRODUCT.md`, skill Impeccable).
 
 Còn có **thiền viện trên đỉnh núi xa** → bấm mở **phòng Rừng Trúc** (đổi cảnh trong CÙNG Canvas theo `roomOpen`): cùng ôn bài/làm việc, thấy nhau qua **avatar người thiền** (đồng hồ phiên hiện trên đầu), có **đồng hồ flip + Pomodoro**. Presence realtime ẩn danh (clientId + nickname ở localStorage, KHÔNG Auth) qua Firestore `sessions` — **đường ghi Firestore MỚI**: client heartbeat → `/api/presence` (Admin SDK), client đọc `onSnapshot` + lọc staleness; đồng hồ phiên tính ở client từ `joinedAt` (0 ghi/giây).
 
-**Stack:** Next.js 16 (App Router, Turbopack) · React 19 · React Three Fiber v9 + drei + three 0.184 · Zustand · Firebase (client đọc Firestore, Admin SDK ghi/duyệt) · next/font · Vercel Analytics (`<Analytics />` ở `app/layout.tsx`).
+**Stack:** Node.js **24 LTS** (`engines` trong package.json → Vercel dùng đúng bản; `.nvmrc`; CI `node-version: '24'`) · Next.js 16.4 (App Router, Turbopack) · React 19 · React Three Fiber v9 + drei + three 0.184 · Zustand · Firebase (client đọc Firestore, Admin SDK ghi/duyệt) · next/font · Vercel Analytics (`<Analytics />` ở `app/layout.tsx`).
 
 **Nguyên tắc cốt lõi: KHÔNG được lag trên mobile.** Gió cỏ chạy GPU (vertex shader), mọi thứ instanced, số lượng giảm theo `useIsMobile()`, có `AdaptiveDpr`.
 

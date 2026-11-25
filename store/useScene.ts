@@ -8,12 +8,9 @@ import type { AuthUser } from '@/lib/auth'
 export type WishStats = { approved: number; pending: number }
 
 type SceneState = {
-  // Thời tiết
-  autoCond: Condition
-  manual: Condition | null // null = tự động theo Hà Nội
-  temp: number | null
-  setAuto: (cond: Condition, temp: number | null) => void
-  setManual: (cond: Condition | null) => void
+  // Thời tiết: ngày/đêm theo giờ Việt Nam, nắng/mây/mưa random (DataBridge đặt)
+  cond: Condition
+  setCond: (cond: Condition) => void
 
   // Điều ước
   wishes: Wish[]
@@ -59,11 +56,8 @@ type SceneState = {
 }
 
 export const useScene = create<SceneState>((set) => ({
-  autoCond: 'clear',
-  manual: null,
-  temp: null,
-  setAuto: (cond, temp) => set({ autoCond: cond, temp }),
-  setManual: (cond) => set({ manual: cond }),
+  cond: 'clear',
+  setCond: (cond) => set({ cond }),
 
   wishes: [],
   setWishes: (w) => set({ wishes: w }),
@@ -100,10 +94,4 @@ export const useScene = create<SceneState>((set) => ({
   setLoaded: (v) => set({ loaded: v }),
 }))
 
-/** Điều kiện thời tiết hiệu lực (manual ghi đè auto). */
-export function effectiveCondition(s: SceneState): Condition {
-  return s.manual ?? s.autoCond
-}
-
-export const useCondition = () =>
-  useScene((s) => s.manual ?? s.autoCond)
+export const useCondition = () => useScene((s) => s.cond)

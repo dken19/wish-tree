@@ -14,7 +14,8 @@ Ngoài ra có **thiền viện** trên đỉnh núi xa: chạm → vào **phòng
 
 ## 2. Stack & phiên bản (KHÁC training data — đọc kỹ)
 
-- **Next.js 16** (App Router, **Turbopack**), **React 19**, TypeScript
+- **Node.js 24 LTS** — khai báo `"engines": { "node": "24.x" }` (Vercel đọc field này, ghi đè cài đặt Node trong dashboard) + `.nvmrc` (local `nvm use`) + CI. Node 20 đã bị Vercel ngừng (10/2026); nâng tiếp lên 26 thì sửa cả 3 chỗ.
+- **Next.js 16.4.6** (ghim chính xác; 16.2.x có lỗ hổng critical) (App Router, **Turbopack**), **React 19**, TypeScript
 - **@react-three/fiber v9** + **@react-three/drei v10** + **three 0.184**
   - three 0.184: dùng `THREE.SRGBColorSpace` (KHÔNG phải `sRGBEncoding`), `gl.outputColorSpace`.
 - **zustand v5** — state UI/scene
@@ -37,28 +38,32 @@ app/
   sitemap.ts           # sinh /sitemap.xml (/, /dieu-uoc, /ky-nang)
   # (public/llms.txt: mô tả site cho LLM/AI crawlers — ChatGPT/Claude/Perplexity)
   page.tsx             # server: chỉ render <HomeClient/>
-  globals.css          # toàn bộ CSS (port từ prototype) + style chim Lạc, khung viết
-  admin/page.tsx       # client: quản trị — đăng nhập Google (email admin), tab Chờ/Đã duyệt/Đã bỏ/Tất cả, phân trang, Duyệt/Bỏ/Đưa về chờ
+  globals.css          # CSS trang chủ (overlay trên Canvas: brand, huy hiệu, Composer, WishCard, NavDock, FocusHUD, chim Lạc)
+  pages.css            # CSS các trang nội dung KHÔNG Canvas (PageShell): trời 4 mốc + đèn trời, biến --pg-* (đêm tối), VÉ cuống|thân (.tk), nút/chip/tìm (.pg-*), bình luận (.wt-*, dùng chung WishCard), kỹ năng (.sk-*), văn bản (.pg-prose), admin (.adm-*)
+  admin/page.tsx       # client: quản trị trong PageShell — đăng nhập Google (email admin), chip Chờ/Đã duyệt/Đã bỏ/Tất cả + Bị báo cáo, mỗi điều ước là 1 VÉ (#số, giờ, dấu mộc trạng thái) có nút Duyệt/Bỏ/Đưa về chờ ngay trên vé, phân trang
+  admin/ReportsPanel.tsx # tab "Bị báo cáo": gộp báo cáo theo nội dung -> Gỡ/Ẩn hoặc Bỏ qua (hiện lại)
   ky-nang/
     page.tsx           # server: metadata + render <SkillsView/> (route /ky-nang, KHÔNG Canvas)
-    SkillsView.tsx     # client: 4 tab (Nấu/Trồng/Chụp ảnh/Chăm sóc da) + thẻ accordion có ẢNH minh hoạ + link NGUỒN (đọc lib/skills); ảnh hỏng tự ẩn (onError)
-  gioi-thieu/page.tsx  # Giới thiệu (tĩnh, không Canvas, không cần login) — là "Application home page" trên Google OAuth consent screen (Google bắt home page nêu tên app + mục đích + link privacy)
+    SkillsView.tsx     # client (PageShell): chip 4 nhóm + mỗi kỹ năng là 1 VÉ <details> (cuống = thời gian + độ khó, thân = tên + mô tả) mở ra ẢNH + các bước + NGUỒN (lib/skills); ảnh hỏng tự ẩn
+  gioi-thieu/page.tsx  # Giới thiệu (PageShell plainTitle — tiêu đề font thường cho người duyệt OAuth; tĩnh, không Canvas, không cần login) — là "Application home page" trên Google OAuth consent screen (Google bắt home page nêu tên app + mục đích + link privacy)
   chinh-sach-bao-mat/page.tsx # Chính sách bảo mật (tĩnh) — link Privacy policy của Google OAuth consent screen
   dieu-khoan/page.tsx  # Điều khoản sử dụng (tĩnh) — link Terms of service của consent screen
   dieu-uoc/
     page.tsx           # server: metadata + <Suspense><WishesView/></Suspense> (route /dieu-uoc, KHÔNG Canvas)
-    WishesView.tsx     # client: lọc theo chủ đề + phân trang SỐ (state qua URL ?theme=&page=) -> fetch /api/wishes/list
+    WishesView.tsx     # client (PageShell): số đang treo + chờ duyệt (/api/wishes/stats) ở đầu trang; mỗi điều ước là 1 VÉ (cuống #số bấm để lọc + giờ gửi + dấu "Hôm nay", thân lời ước); ô tìm (#số hoặc từ khoá) + ngày gửi + sắp xếp mới/cũ + chủ đề + phân trang SỐ (state qua URL ?q=&date=&sort=&theme=&page=) -> /api/wishes/list; thẻ có #số + giờ gửi + 💬 bình luận (WishThread) + ⚑ báo cáo; mount AuthBridge
   api/
-    weather/route.ts   # GET: proxy Open-Meteo (Hà Nội), cache 10'
-    wishes/route.ts    # POST: validate+lọc từ+rate-limit -> nếu có Bearer ID token hợp lệ thì approved (đăng ngay), không thì pending (Admin SDK)
+    wishes/route.ts    # POST: validate+lọc từ+rate-limit -> nếu có Bearer ID token hợp lệ thì approved (đăng ngay), không thì pending; cấp số #N (transaction meta/counters) + keywords; trả {id,no,status}
+    wishes/[id]/comments/route.ts # GET bình luận (ai cũng đọc, lọc hidden, `mine` nếu kèm token) / POST bình luận — CHỈ người đăng nhập (verifyIdToken), validateComment + rate-limit theo uid, tăng commentCount (transaction)
+    reports/route.ts   # POST báo cáo điều ước/bình luận — CHỈ người đăng nhập, 1 lần/tài khoản/nội dung, đủ AUTO_HIDE_REPORTS (3) -> tự ẩn
+    admin/reports/route.ts # GET báo cáo chưa xử lý (gộp theo nội dung) / PATCH hide|dismiss — checkAdmin
     wishes/stats/route.ts # GET: {approved, pending} bằng count() (Admin SDK) — cache CDN 30s + memo instance 30s; fallback SEED
-    wishes/list/route.ts # GET ?page=&theme=: liệt kê approved, phân trang SERVER (count + orderBy createdAt + offset/limit); fallback SEED khi chưa cấu hình
+    wishes/list/route.ts # GET ?page=&theme=&q=&date=&sort=: approved; q="#888" -> where no==; q chữ -> keywords array-contains + lọc bộ nhớ; còn lại count + orderBy createdAt + offset/limit (sort cũ = lấy đoạn từ cuối rồi đảo, KHỎI index ASC); fallback SEED
     admin/wishes/route.ts # GET ?status=&page= (list + counts) / PATCH approve|reject|pending — quyền qua lib/adminAuth
     presence/route.ts  # POST: heartbeat|leave phòng Rừng Trúc -> ghi `sessions` (Admin SDK)
 components/
   HomeClient.tsx       # 'use client'; dynamic import Canvas + lớp UI overlay
   WishTreeCanvas.tsx   # <Canvas> R3F: dpr cap; GATE cảnh cây (visible) vs <FocusRoom/> theo roomOpen
-  DataBridge.tsx       # render rỗng: subscribe điều ước + fetch thời tiết -> đẩy vào store
+  DataBridge.tsx       # render rỗng: subscribe điều ước + poll số điều ước + đặt thời tiết (đêm theo giờ VN, ngày random) -> store
   PresenceBridge.tsx   # render rỗng: CHỈ khi roomOpen — heartbeat + subscribe sessions + leave (sendBeacon)
   FakePresence.tsx     # render rỗng: CHỈ khi roomOpen — "bạn học ảo" TẤT ĐỊNH theo Date.now (đồng bộ mọi thiết bị, KHÔNG ghi Firestore) -> store.bots; toast vào/rời
   AuthBridge.tsx       # render rỗng: onAuthStateChanged (Firebase Auth) -> ghi user vào store
@@ -87,15 +92,18 @@ components/
     useIsMobile.ts     # hook phát hiện mobile (SSR-safe)
   ui/
     SkyBackdrop.tsx    # div #sky gradient theo điều kiện thời tiết
-    WeatherPanel.tsx   # huy hiệu Hà Nội + công tắc Nắng/Mây/Mưa/Đêm/Tự động
-    WishCard.tsx       # thẻ đọc điều ước (mở khi click giấy)
-    LegalPage.tsx      # khung trang pháp lý (dùng lại .wishes-page) + CONTACT_EMAIL/UPDATED_AT
+    WeatherPanel.tsx   # huy hiệu góc trên-phải: icon thời tiết + GIỜ VIỆT NAM (ghi qua ref) — KHÔNG còn nút chuyển; mobile chỉ icon + giờ
+    WishCard.tsx       # thẻ đọc điều ước (mở khi click giấy): #số + giờ gửi, nút Bình luận mở WishThread (thẻ cuộn được), Báo cáo
+    WishThread.tsx     # bình luận 1 điều ước (đọc: ai cũng được; viết: đăng nhập Google) + export ReportButton (chọn lý do -> /api/reports)
+    LegalPage.tsx      # khung trang pháp lý (PageShell + .pg-prose) + CONTACT_EMAIL/UPDATED_AT
+    PageShell.tsx      # khung chung trang KHÔNG Canvas: PageSky (4 lớp trời + sao + đèn trời .ld-lantern) + hero (về cây, tiêu đề thư pháp/plainTitle, lead, stats, giờ HN) + tờ nội dung; data-sky cập nhật mỗi phút qua ref
+    Icon.tsx           # icon nét SVG inline (currentColor) — THAY emoji làm icon ở mọi nơi
     Composer.tsx       # bảng viết: chọn theme + nhập text -> POST /api/wishes
-    NavDock.tsx        # MENU dock tròn góc dưới-phải: xòe 4 mục (Cây/Viết/Phòng ôn bài qua store; Kỹ năng sống -> router.push('/ky-nang')); ẩn khi roomOpen/composerOpen
+    NavDock.tsx        # MENU dock tròn góc dưới-phải (icon SVG): xòe 5 mục (Cây/Viết/Phòng ôn bài qua store; Kỹ năng sống -> router.push('/ky-nang')); ẩn khi roomOpen/composerOpen
     FocusHUD.tsx       # overlay phòng: MẶC ĐỊNH THU GỌN (thanh mini: online + đồng hồ Pomodoro + Rời) — bấm mở bảng đầy đủ (flip + Pomodoro + đổi tên + Rời); số online = sessions + bots; mobile RoomCamera nới FOV
     LacBird.tsx        # <img> chim Lạc (public/chim-lac.jpg) + mix-blend-mode
     Toast.tsx
-    WishStats.tsx      # huy hiệu dưới tiêu đề: "🏮 N điều ước trên cây · ⏳ M đang chờ duyệt" (store.stats), bấm -> /dieu-uoc
+    WishStats.tsx      # huy hiệu dưới tiêu đề: "N điều ước trên cây" + "M đang chờ duyệt" (luôn hiện, kể cả 0; icon SVG) từ store.stats, bấm -> /dieu-uoc
     Loader.tsx         # màn chờ: chữ 'Cây Ước Nguyện' trên giấy dó (canvas 2D) + ĐÈN TRỜI bay lên (CSS thuần, mảng LANTERNS; mobile 5 chiếc; tan dần khi mở) → shader WebGL thuần MÀU NƯỚC LOANG mở ra cây 3D khi useScene.sceneReady (≥1.5s, tối đa 9s); không WebGL/reduce-motion → mờ dần; chỉ hiện 1 lần mỗi phiên (loaded)
 lib/
   auth.ts              # client: watchAuth/signInGoogle/signInFacebook/signOutUser/getIdToken + type AuthUser (Firebase Auth)
@@ -108,19 +116,23 @@ lib/
   branch.ts            # makeBranch() HỆ cành khô phân nhánh cong gnarled (đệ quy, ống CatmullRom thuôn) + mergeBranches() -> 1 geometry
   rock.ts              # makeRock(seed) tảng đá LIỀN KHỐI kín (icosphere + nhiễu liên tục + kéo lệch trục -> watertight, không hở)
   textures.ts          # texture PBR sinh thủ tục (canvas): vỏ cây, chùm lá sồi, cỏ + normal map
-  weather.ts           # Condition, SKIES, WX_ICON/VI, PRESETS (đèn/fog), codeToCond, windFromSpeed, HANOI
+  weather.ts           # Condition, SKIES, WX_VI, PRESETS (đèn/fog), randomDayWeather (nắng 55%/mây 27%/mưa 18%), randomWind
+  skyPhase.ts          # mốc trời theo GIỜ VN (UTC+7): skyPhase dawn/day/dusk/night, vnClock, phaseFromUrl (?sky=), SKY_INIT_SCRIPT (inline ở layout, đặt <html data-sky> trước khi vẽ)
   windMaterial.ts      # makeWindMaterial(): MeshLambertMaterial + vertex shader gió GPU (.tick)
-  profanity.ts         # containsProfanity + validateWish (giữ dấu, khớp theo TỪ; ưu tiên KHÔNG chặn nhầm)
+  profanity.ts         # containsProfanity + validateWish + validateComment (≤300) (giữ dấu, khớp theo TỪ; ưu tiên KHÔNG chặn nhầm)
   ratelimit.ts         # rate-limit theo IP (in-memory)
   runtime.ts           # windRef {current,target} + pointer {moved,dragging} — chia sẻ KHÔNG re-render
-  wishes.ts            # type Wish, SEED_WISHES, subscribeApproved() (onSnapshot, sort client)
+  wishes.ts            # type Wish (+no, commentCount), SEED_WISHES (no 1..8), subscribeApproved() (onSnapshot, sort client)
+  wishMeta.ts          # client+server: formatNo, formatWishTime (giờ VN), foldVi/searchTokens (bỏ dấu -> keywords), parseNoQuery, REPORT_REASONS, AUTO_HIDE_REPORTS
+  wishServer.ts        # server-only: ensureNumbering (lần đầu đánh số TẤT CẢ ước cũ theo createdAt + keywords, rồi đặt meta/counters), counterRef, viewerFromRequest (verifyIdToken), publicWish
   firebase.client.ts   # init client SDK: getDb (đọc Firestore) + getAuthClient (Auth); null nếu thiếu env
   firebase.admin.ts    # init Admin SDK (server-only): getAdminDb + getAdminAuth (verifyIdToken)
   adminAuth.ts         # server-only: checkAdmin(req) — Bearer ID token + email_verified ∈ ADMIN_EMAILS, hoặc x-admin-secret
 store/
-  useScene.ts          # zustand: autoCond/manual/temp, wishes, stats (approved/pending), openWish, composerOpen, toast, loaded, roomOpen, sessions, nickname, navOpen, user
+  useScene.ts          # zustand: cond (thời tiết), wishes, stats (approved/pending), openWish, composerOpen, toast, loaded, roomOpen, sessions, nickname, navOpen, user
 scripts/seed.mjs       # seed vài điều ước 'approved' vào Firestore
 firestore.rules        # client read 'approved' (wishes) + read sessions; write = false (ghi qua Admin SDK)
+firebase.json          # trỏ firestore.rules + firestore.indexes.json cho `firebase deploy`
 firestore.indexes.json # composite index cho /api/wishes/list: (status,createdAt) + (status,theme,createdAt)
 .github/workflows/ci.yml # CI: lint + build mỗi push/PR vào master
 ```
@@ -143,14 +155,17 @@ firestore.indexes.json # composite index cho /api/wishes/list: (status,createdAt
 3. **Đếm (minh bạch hàng chờ)**: client KHÔNG đọc được `pending` (rules) và `store.wishes` bị giới hạn `MAX_RENDER` → số liệu lấy từ `GET /api/wishes/stats` (count aggregation, server). `DataBridge` poll 60s → `useScene.stats` → `WishStats` (dưới tiêu đề) + dòng "hiện có M điều ước đang chờ" trong `Composer` khi ẩn danh. Gửi xong `bumpStats()` cộng tạm (optimistic), toast ẩn danh báo **vị trí trong hàng chờ** (= pending + 1); lần poll sau tự sửa số.
    - Lọc từ + rate-limit GIỮ NGUYÊN cho cả hai (auto-approve chỉ bỏ qua hàng chờ tay).
 3. **Duyệt**: `/admin` đăng nhập Google → gửi `Authorization: Bearer <idToken>` → `checkAdmin` (verifyIdToken + email đã xác minh ∈ `ADMIN_EMAILS`; dự phòng header `x-admin-secret`) → `GET /api/admin/wishes?status=&page=` / `PATCH` → đặt `approved`/`rejected`/`pending` + `reviewedAt`/`reviewedBy`. Khi `approved`, client `onSnapshot` tự thêm tờ mới → cây cập nhật realtime.
-4. **Xem tất cả** (`/dieu-uoc`, `WishesView`): trang KHÔNG Canvas, gọi `GET /api/wishes/list?page=&theme=` (Admin SDK) → phân trang **ở server** (`count()` cho tổng số trang + `orderBy('createdAt','desc').offset().limit()`), lọc theo chủ đề. State đọc/ghi qua URL (`?theme=&page=`) để share link + nút back hoạt động.
+4. **Xem tất cả** (`/dieu-uoc`, `WishesView`): trang KHÔNG Canvas, gọi `GET /api/wishes/list?page=&theme=&q=&date=&sort=` (Admin SDK) → phân trang **ở server**. 3 chế độ: (a) `q` là `#888`/`888` → `where('no','==')`; (b) `q` là chữ → `searchTokens(q)`, `array-contains` từ DÀI nhất trên `keywords` (cap 500) rồi lọc tiếp mọi từ + chủ đề + ngày + sort trong bộ nhớ (khớp NGUYÊN TỪ, không dấu: "toan" = "Toán", nhưng "toa" không khớp "toán"); (c) còn lại: `where status [+theme] [+createdAt trong ngày theo giờ VN]` + `count()` + `orderBy('createdAt','desc').offset().limit()`; sort "cũ nhất" = lấy đoạn tương ứng tính từ cuối rồi đảo. State qua URL để share link + nút back.
+5. **Số thứ tự #N**: cấp lúc GỬI (cả ẩn danh/pending → bị bỏ thì danh sách công khai có "lỗ" số, chấp nhận) trong transaction với `meta/counters.wishNo`. Lần đầu chạy (chưa có counter) `ensureNumbering` đánh số mọi điều ước cũ 1..k theo `createdAt` (tất định → nhiều instance chạy song song vẫn ra cùng số) — gọi ở POST wishes, list, admin.
+6. **Bình luận**: subcollection `wishes/{id}/comments`. `WishThread` GET (kèm token nếu có để biết `mine`) / POST (bắt buộc đăng nhập). `commentCount` trên doc điều ước (đọc realtime qua onSnapshot cho WishCard).
+7. **Báo cáo**: `ReportButton` → `POST /api/reports` (bắt buộc đăng nhập; không báo nội dung của chính mình; mỗi tài khoản 1 lần/nội dung nhờ doc id `uid__wishId__commentId|wish`). `reportCount` tăng; đủ `AUTO_HIDE_REPORTS`=3 → điều ước về `pending` + `flagged` (rời cây ngay), bình luận `hidden` (+ giảm commentCount). Admin tab "⚑ Bị báo cáo": **Gỡ/Ẩn** (wish→rejected / comment hidden) hoặc **Bỏ qua** (flagged→approved lại, unhide); cả hai đánh dấu `reports.resolved`.
 
 **Đăng nhập (Google/Facebook):** `AuthBridge` (`onAuthStateChanged`) → `useScene.user`. `Composer` hiện nút đăng nhập Google/đăng xuất (nút Facebook **tạm ẩn** vì provider Facebook chưa bật trên Firebase — `signInFacebook` vẫn giữ trong `lib/auth.ts`); khi gửi, đính `getIdToken()` vào header. Client KHÔNG bao giờ tự ghi Firestore — server `verifyIdToken` mới là nơi quyết định `approved`.
 
 Chưa cấu hình Firebase: `getDb()`/`getAuthClient()` trả null → dùng `SEED_WISHES`, Composer ẩn nút đăng nhập; `/api/wishes` trả 503 gọn; `/api/wishes/list` phân trang SEED trong JS.
 
 ### Thời tiết
-`DataBridge` `fetch('/api/weather')` (proxy Open-Meteo, cache 10') → `codeToCond` + `windFromSpeed` → `useScene.setAuto(cond,temp)` và **`windRef.target`** (lib/runtime). `WeatherPanel` cho ghi đè manual. `useCondition()` = `manual ?? autoCond`. `SkyBackdrop`/`SceneEnv` đọc điều kiện đổi nền trời, đèn, fog, bật/tắt mưa.
+KHÔNG gọi API thời tiết, KHÔNG có nút chuyển. `DataBridge` mỗi phút: `skyPhase()` (giờ VN, `?sky=` ghi đè để xem thử) = night → `'night'`, còn lại dùng `randomDayWeather()` (random lúc vào trang, đổi lại sau 15') → `useScene.setCond(cond)` + **`windRef.target = randomWind(cond)`** (lib/runtime). `useCondition()` = `cond`. `WeatherPanel` chỉ hiện icon + giờ VN. `SkyBackdrop`/`SceneEnv` đọc điều kiện đổi nền trời, đèn, fog, bật/tắt mưa.
 
 ### Gió (mỗi frame, KHÔNG re-render)
 `SceneEnv` mỗi frame ease `windRef.current → windRef.target`. Các thành phần đọc `windRef.current`:
@@ -179,11 +194,23 @@ Chưa cấu hình Firebase: `getDb()` null → `subscribeSessions` trả về 1 
 ## 6. Mô hình dữ liệu Firestore (`wishes`)
 
 ```ts
-{ text: string(<=160), theme: ThemeKey, author?: string,
+{ no: number,            // số thứ tự #N (cấp lúc gửi, xem meta/counters)
+  text: string(<=160), theme: ThemeKey, author?: string,
+  keywords: string[],    // searchTokens(text): từ bỏ dấu, cho tìm kiếm array-contains
   uid?: string,  // có khi gửi bởi người đăng nhập Google/Facebook (-> auto-approve)
   status: 'pending'|'approved'|'rejected', createdAt: serverTimestamp,
+  commentCount: number, reportCount: number,
+  flagged?: boolean,     // true = TỰ ẩn do đủ báo cáo (status về pending), chờ admin
   reviewedAt?: serverTimestamp, reviewedBy?: string }  // ghi khi admin đổi trạng thái
+
+// wishes/{id}/comments/{cid}
+{ text: string(<=300), uid, author, photo?, hidden: boolean, reportCount: number, createdAt }
+// reports/{uid__wishId__commentId|wish}
+{ type: 'wish'|'comment', wishId, commentId: string|null, uid, reporter, reason, resolved, resolution?, resolvedBy?, createdAt }
+// meta/counters
+{ wishNo: number }  // số lớn nhất đã cấp
 ```
+`comments`, `reports`, `meta` KHÔNG có rule → client không đọc/ghi được (mọi thứ qua API + Admin SDK).
 Rules (`firestore.rules`): client `read` chỉ khi `status=='approved'`; `write:false` (mọi ghi qua Admin SDK). Query realtime của cây **không orderBy** (tránh composite index) — sort theo `createdAt` ở client. **Ngoại lệ:** trang `/dieu-uoc` phân trang ở server (`/api/wishes/list`) DÙNG `orderBy('createdAt')` + `where` → cần composite index, khai báo ở `firestore.indexes.json` (xem Gotchas).
 
 ### Firestore `sessions` (presence phòng Rừng Trúc)
@@ -233,9 +260,15 @@ Vercel: import `.env.local` khi tạo project.
 - **`/dieu-uoc` cần composite index (ngoại lệ có chủ đích)**: cây dùng query không-orderBy để né index, nhưng phân trang số ở server BẮT BUỘC `orderBy('createdAt')` + `where('status')` [+ `where('theme')`] → 2 composite index trong `firestore.indexes.json`. Tạo bằng `firebase deploy --only firestore:indexes` HOẶC bấm link Console mà Firestore tự gợi ý ở lần query đầu (báo lỗi `FAILED_PRECONDITION`). Thiếu index → `/api/wishes/list` lỗi.
 - **`offset()` của Firestore tính phí cả doc bị skip**: phân trang `/api/wishes/list` dùng `offset((page-1)*PAGE_SIZE)`; trang càng sâu càng tốn đọc. Chấp nhận ở quy mô này; nếu dữ liệu lớn hẳn, đổi sang cursor `startAfter`.
 - **`/dieu-uoc` dùng `useSearchParams` → phải bọc `<Suspense>`** (Next App Router yêu cầu) — đã bọc trong `app/dieu-uoc/page.tsx`. Trang này KHÔNG mount Canvas (giống `/ky-nang`) để nhẹ pin. `WishesView.tsx` được thêm vào danh sách tắt `set-state-in-effect` trong `eslint.config.mjs` (đặt `loading` đồng bộ khi đổi `page`/`theme` — pattern fetch giống `app/admin/page.tsx`).
+- **Bình luận/báo cáo/số thứ tự KHÔNG cần index mới**: `no ==` (đơn), `status == + keywords array-contains` (index merging), ngày = range trên `createdAt` dùng lại index (status[,theme],createdAt), báo cáo admin chỉ `orderBy createdAt` rồi lọc `resolved` trong bộ nhớ, resolve dùng 2 điều kiện `==`. Giữ như vậy khi sửa — thêm `orderBy` khác field sẽ đòi composite index.
+- **`set-state-in-effect`**: gọi một hàm `load()` (useCallback có setState) trong `useEffect` cũng bị chặn → `WishThread`/`ReportsPanel` fetch thẳng trong effect, setState chỉ trong `.then`, tải lại bằng state `nonce`.
 - **App GIỜ CÓ dùng Firebase Auth**: phải thêm Authorized domains trong Firebase Console (localhost + domain Vercel) nếu không `signInWithPopup` báo `auth/unauthorized-domain`. (Ghi chú cũ "không dùng Auth" đã hết hiệu lực.)
 
 - **Google OAuth verification**: consent screen khai home page = `/gioi-thieu` (KHÔNG dùng `/`: trang chủ là Canvas 3D + loader, HTML chứa chữ "Đăng nhập… Google" của Composer → bot Google kết luận "home page behind login" + "không nêu mục đích"). App name trên consent screen phải khớp đúng "Cây Ước Nguyện". Trang chủ có link Giới thiệu · Bảo mật · Điều khoản dưới tiêu đề (`.brand-links`).
+
+- **Trang nội dung KHÔNG Canvas dùng `PageShell` + `app/pages.css`** (trời đèn trời theo giờ VN, vé cuống|thân). Màu qua biến `--pg-*` trên `.pg`; đêm (`<html data-sky="night">`) đổi cả bộ biến. `WishThread` dùng chung với `WishCard` trên cây nên mọi `var(--pg-*)` trong `.wt-*` đều có fallback màu trang chủ.
+- **Không dùng emoji làm icon/trang trí** (thiết kế theo skill Impeccable, chống "AI slop"): dùng `components/ui/Icon.tsx`. Không chuỗi "A · B · C", không chữ IN HOA giãn chữ. Định hướng thiết kế ở `PRODUCT.md` + `.impeccable/`.
+- **`<html data-sky>` đặt bởi script inline** (`SKY_INIT_SCRIPT` trong `<head>`, `suppressHydrationWarning` trên `<html>`) để trời đúng mốc ngay khung hình đầu, không nháy.
 
 ## 8b. Nhật ký lỗi đã sửa (ghi NGAY sau mỗi lần sửa)
 

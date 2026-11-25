@@ -2,6 +2,8 @@ import type { Metadata, Viewport } from "next";
 import { Playfair_Display, Be_Vietnam_Pro, Dancing_Script } from "next/font/google";
 import { Analytics } from "@vercel/analytics/next";
 import "./globals.css";
+import "./pages.css";
+import { SKY_INIT_SCRIPT } from "@/lib/skyPhase";
 
 const playfair = Playfair_Display({
   variable: "--font-playfair",
@@ -119,7 +121,12 @@ export default function RootLayout({
     <html
       lang="vi"
       className={`${beVietnam.variable} ${playfair.variable} ${calli.variable}`}
+      // data-sky do SKY_INIT_SCRIPT đặt trước khi hydrate (giờ Việt Nam) -> khác SSR là chủ đích
+      suppressHydrationWarning
     >
+      <head>
+        <script dangerouslySetInnerHTML={{ __html: SKY_INIT_SCRIPT }} />
+      </head>
       <body>
         {/* Structured data cho Google + AI crawlers */}
         <script

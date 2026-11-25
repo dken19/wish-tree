@@ -1,5 +1,6 @@
 'use client'
 import { useScene } from '@/store/useScene'
+import Icon from './Icon'
 
 const fmt = (n: number) => n.toLocaleString('vi-VN')
 
@@ -10,14 +11,14 @@ export default function WishStats() {
   if (!stats) return null
   return (
     <a className="wish-stats" href="/dieu-uoc" title="Xem tất cả điều ước">
-      <span>
-        🏮 <b>{fmt(stats.approved)}</b> điều ước trên cây
+      <span className="ws-item">
+        <Icon name="lantern" size={14} />
+        <b>{fmt(stats.approved)}</b> điều ước trên cây
       </span>
-      {stats.pending > 0 && (
-        <span className="ws-pending">
-          ⏳ <b>{fmt(stats.pending)}</b> đang chờ duyệt
-        </span>
-      )}
+      <span className="ws-pending">
+        <Icon name="hourglass" size={14} />
+        <b>{fmt(stats.pending)}</b> đang chờ duyệt
+      </span>
     </a>
   )
 }

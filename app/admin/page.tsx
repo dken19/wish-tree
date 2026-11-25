@@ -1,21 +1,27 @@
 'use client'
 import { useCallback, useEffect, useState } from 'react'
-import Link from 'next/link'
+import PageShell from '@/components/ui/PageShell'
+import Icon from '@/components/ui/Icon'
 import { onAuthStateChanged, type User } from 'firebase/auth'
 import { THEMES, isThemeKey } from '@/lib/themes'
 import { getAuthClient } from '@/lib/firebase.client'
 import { signInGoogle, signOutUser } from '@/lib/auth'
+import ReportsPanel from './ReportsPanel'
 
 type Status = 'pending' | 'approved' | 'rejected' | 'all'
 type Action = 'approve' | 'reject' | 'pending'
 
 type Item = {
   id: string
+  no: number | null
   text: string
   theme: string
   author: string | null
   status: string
   loggedIn: boolean
+  flagged: boolean
+  reportCount: number
+  commentCount: number
   reviewedBy: string | null
   createdAt: number
   reviewedAt: number
@@ -55,20 +61,12 @@ const fmt = (ms: number) =>
       })
     : '—'
 
-const btn = (bg: string, fg = '#fff', border = 'none') => ({
-  padding: '7px 14px',
-  borderRadius: 8,
-  border,
-  background: bg,
-  color: fg,
-  cursor: 'pointer',
-  fontSize: 14,
-})
 
 export default function AdminPage() {
   const [user, setUser] = useState<User | null>(null)
   const [authReady, setAuthReady] = useState(false)
   const [tab, setTab] = useState<Status>('pending')
+  const [showReports, setShowReports] = useState(false)
   const [page, setPage] = useState(1)
   const [data, setData] = useState<Resp | null>(null)
   const [loading, setLoading] = useState(false)
@@ -102,7 +100,7 @@ export default function AdminPage() {
   )
 
   const load = useCallback(async () => {
-    if (!user) return
+    if (!user || showReports) return
     setLoading(true)
     setError('')
     try {
@@ -119,7 +117,7 @@ export default function AdminPage() {
     } finally {
       setLoading(false)
     }
-  }, [user, call, tab, page])
+  }, [user, call, tab, page, showReports])
 
   useEffect(() => {
     load()
@@ -144,50 +142,26 @@ export default function AdminPage() {
     }
   }
 
-  // html/body bị overflow:hidden (cho Canvas 3D) → trang admin tự làm khung cuộn riêng
+  // Dùng chung khung trang nội dung (PageShell: trời đèn trời theo giờ VN, khung cuộn riêng)
   const shell = (children: React.ReactNode) => (
-    <div
-      style={{
-        position: 'fixed',
-        inset: 0,
-        overflowY: 'auto',
-        WebkitOverflowScrolling: 'touch',
-        background: '#fbf7f1',
-      }}
-    >
-      <main
-        style={{
-          maxWidth: 760,
-          margin: '0 auto',
-          padding: '32px 20px 60px',
-          fontFamily: 'system-ui, sans-serif',
-          color: '#3a2f2a',
-        }}
-      >
-        <Link href="/" style={{ color: '#9a8472', fontSize: 14, textDecoration: 'none' }}>
-          ← Về cây ước nguyện
-        </Link>
-        <h1 style={{ fontSize: 24, margin: '12px 0 4px' }}>Quản trị điều ước</h1>
-        {children}
-      </main>
-    </div>
+    <PageShell title="Quản trị điều ước" plainTitle>
+      {children}
+    </PageShell>
   )
 
-  if (!authReady) return shell(<p style={{ color: '#9a8472' }}>Đang kiểm tra đăng nhập…</p>)
+  if (!authReady) return shell(<p className="pg-status">Đang kiểm tra đăng nhập…</p>)
 
   if (!user)
     return shell(
       <>
-        <p style={{ color: '#9a8472', marginBottom: 20 }}>
-          Đăng nhập bằng tài khoản Google quản trị để vào.
-        </p>
+        <p className="adm-note">Đăng nhập bằng tài khoản Google quản trị để vào.</p>
         <button
+          className="pg-btn primary"
           onClick={() => signInGoogle().catch((e) => setError(String(e?.message ?? e)))}
-          style={btn('#c01730')}
         >
           Đăng nhập với Google
         </button>
-        {error && <p style={{ color: '#c01730' }}>{error}</p>}
+        {error && <p className="pg-status err">{error}</p>}
       </>
     )
 
@@ -196,149 +170,126 @@ export default function AdminPage() {
 
   return shell(
     <>
-      <div
-        style={{
-          display: 'flex',
-          justifyContent: 'space-between',
-          alignItems: 'center',
-          gap: 12,
-          margin: '4px 0 20px',
-          color: '#9a8472',
-          fontSize: 14,
-          flexWrap: 'wrap',
-        }}
-      >
+      <div className="adm-user">
         <span>
-          Đang đăng nhập: <b style={{ color: '#3a2f2a' }}>{user.email}</b>
+          Đang đăng nhập: <b>{user.email}</b>
         </span>
-        <button onClick={() => signOutUser()} style={btn('#fff', '#7a6557', '1px solid #d8ccbd')}>
+        <button className="pg-btn ghost" onClick={() => signOutUser()}>
+          <Icon name="logout" size={16} />
           Đăng xuất
         </button>
       </div>
 
-      <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginBottom: 16 }}>
-        {TABS.map((t) => {
-          const on = t.key === tab
-          return (
-            <button
-              key={t.key}
-              onClick={() => {
-                setTab(t.key)
-                setPage(1)
-              }}
-              style={{
-                ...btn(on ? '#c01730' : '#fbf4ea', on ? '#fff' : '#3a2f2a', '1px solid #e7ddcf'),
-                borderRadius: 999,
-                fontWeight: on ? 600 : 400,
-              }}
-            >
-              {t.label}
-              {counts ? ` (${counts[t.key]})` : ''}
-            </button>
-          )
-        })}
-        <button onClick={load} disabled={loading} style={btn('#fff', '#7a6557', '1px solid #d8ccbd')}>
-          {loading ? 'Đang tải…' : '↻ Tải lại'}
+      <div className="pg-chips adm-tabs" role="group" aria-label="Lọc theo trạng thái">
+        {TABS.map((t) => (
+          <button
+            key={t.key}
+            className="pg-chip"
+            aria-pressed={!showReports && t.key === tab}
+            onClick={() => {
+              setShowReports(false)
+              setTab(t.key)
+              setPage(1)
+            }}
+          >
+            {t.label}
+            {counts && <span className="adm-n">{counts[t.key].toLocaleString('vi-VN')}</span>}
+          </button>
+        ))}
+        <button className="pg-chip" aria-pressed={showReports} onClick={() => setShowReports(true)}>
+          <Icon name="flag" size={15} />
+          Bị báo cáo
+        </button>
+        <button className="pg-chip" onClick={load} disabled={loading}>
+          <Icon name="refresh" size={15} />
+          {loading ? 'Đang tải…' : 'Tải lại'}
         </button>
       </div>
 
-      {error && <p style={{ color: '#c01730' }}>{error}</p>}
-      {!error && !loading && data && data.items.length === 0 && (
-        <p style={{ color: '#9a8472' }}>Không có điều ước nào ở mục này.</p>
+      {showReports && <ReportsPanel call={call} />}
+      {!showReports && error && <p className="pg-status err">{error}</p>}
+      {!showReports && !error && !loading && data && data.items.length === 0 && (
+        <p className="pg-status">Không có điều ước nào ở mục này.</p>
       )}
 
-      <ul style={{ listStyle: 'none', padding: 0, display: 'grid', gap: 12 }}>
-        {data?.items.map((it) => {
-          const st = STATUS_LABEL[it.status]
-          return (
-            <li
-              key={it.id}
-              style={{
-                border: '1px solid #e7ddcf',
-                borderRadius: 14,
-                padding: 16,
-                background: '#fbf4ea',
-                opacity: busy === it.id ? 0.5 : 1,
-              }}
-            >
-              <div
-                style={{
-                  display: 'flex',
-                  flexWrap: 'wrap',
-                  gap: 8,
-                  alignItems: 'center',
-                  fontSize: 12,
-                  marginBottom: 6,
-                }}
+      {!showReports && (
+        <ol className="wl">
+          {data?.items.map((it) => {
+            const st = STATUS_LABEL[it.status]
+            const tk = isThemeKey(it.theme) ? it.theme : null
+            return (
+              <li
+                key={it.id}
+                className="tk"
+                style={
+                  {
+                    '--tk-c': tk ? THEMES[tk].color : undefined,
+                    opacity: busy === it.id ? 0.5 : 1,
+                  } as React.CSSProperties
+                }
               >
-                <b style={{ color: isThemeKey(it.theme) ? THEMES[it.theme].color : '#9a8472' }}>
-                  {isThemeKey(it.theme) ? THEMES[it.theme].label : it.theme}
-                </b>
-                {st && (
-                  <span
-                    style={{
-                      color: '#fff',
-                      background: st.color,
-                      borderRadius: 999,
-                      padding: '1px 8px',
-                    }}
-                  >
-                    {st.text}
-                  </span>
-                )}
-                {it.loggedIn && <span style={{ color: '#3f6f9d' }}>đăng nhập · tự duyệt</span>}
-              </div>
-              <p style={{ margin: '0 0 8px', lineHeight: 1.5, whiteSpace: 'pre-wrap' }}>{it.text}</p>
-              <div style={{ fontSize: 12, color: '#9a8472', marginBottom: 12 }}>
-                {it.author ? `${it.author} · ` : 'Ẩn danh · '}
-                gửi {fmt(it.createdAt)}
-                {it.reviewedAt ? ` · xử lý ${fmt(it.reviewedAt)}` : ''}
-                {it.reviewedBy && it.reviewedBy !== 'secret' ? ` bởi ${it.reviewedBy}` : ''}
-              </div>
-              <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
-                {it.status !== 'approved' && (
-                  <button disabled={!!busy} onClick={() => act(it.id, 'approve')} style={btn('#3f9d6b')}>
-                    Duyệt
-                  </button>
-                )}
-                {it.status !== 'rejected' && (
-                  <button
-                    disabled={!!busy}
-                    onClick={() => act(it.id, 'reject')}
-                    style={btn('#fff', '#7a6557', '1px solid #d8ccbd')}
-                  >
-                    {it.status === 'approved' ? 'Gỡ khỏi cây' : 'Bỏ'}
-                  </button>
-                )}
-                {it.status !== 'pending' && (
-                  <button
-                    disabled={!!busy}
-                    onClick={() => act(it.id, 'pending')}
-                    style={btn('#fff', '#7a6557', '1px solid #d8ccbd')}
-                  >
-                    Đưa về chờ duyệt
-                  </button>
-                )}
-              </div>
-            </li>
-          )
-        })}
-      </ul>
+                <div className="tk-stub">
+                  {it.no ? <span className="tk-no">#{it.no}</span> : null}
+                  <span className="tk-date">{fmt(it.createdAt)}</span>
+                  {st && <span className="tk-stamp">{st.text}</span>}
+                </div>
+                <div className="tk-body">
+                  <p className="tk-text">{it.text}</p>
+                  <div className="tk-meta">
+                    <span className="tk-theme">
+                      <i className="pg-dot" style={{ background: tk ? THEMES[tk].color : undefined }} />
+                      {tk ? THEMES[tk].label : it.theme}
+                    </span>
+                    <span>{it.author ?? 'Ẩn danh'}</span>
+                    {it.loggedIn && <span>Đăng nhập, tự duyệt</span>}
+                    {it.flagged && <span className="adm-warn">Tự ẩn do bị báo cáo</span>}
+                    {it.reportCount > 0 && !it.flagged && (
+                      <span className="adm-warn">{it.reportCount} báo cáo</span>
+                    )}
+                    {it.commentCount > 0 && <span>{it.commentCount} bình luận</span>}
+                    {it.reviewedAt ? (
+                      <span>
+                        Xử lý {fmt(it.reviewedAt)}
+                        {it.reviewedBy && it.reviewedBy !== 'secret' ? ` bởi ${it.reviewedBy}` : ''}
+                      </span>
+                    ) : null}
+                  </div>
+                  <div className="adm-acts">
+                    {it.status !== 'approved' && (
+                      <button className="pg-btn primary" disabled={!!busy} onClick={() => act(it.id, 'approve')}>
+                        <Icon name="check" size={16} />
+                        Duyệt
+                      </button>
+                    )}
+                    {it.status !== 'rejected' && (
+                      <button className="pg-btn ghost" disabled={!!busy} onClick={() => act(it.id, 'reject')}>
+                        {it.status === 'approved' ? 'Gỡ khỏi cây' : 'Bỏ'}
+                      </button>
+                    )}
+                    {it.status !== 'pending' && (
+                      <button className="pg-btn ghost" disabled={!!busy} onClick={() => act(it.id, 'pending')}>
+                        Đưa về chờ duyệt
+                      </button>
+                    )}
+                  </div>
+                </div>
+              </li>
+            )
+          })}
+        </ol>
+      )}
 
-      {totalPages > 1 && (
-        <nav style={{ display: 'flex', gap: 8, alignItems: 'center', justifyContent: 'center', marginTop: 20 }}>
-          <button disabled={page <= 1} onClick={() => setPage(page - 1)} style={btn('#fff', '#3a2f2a', '1px solid #d8ccbd')}>
-            ‹ Trước
+      {!showReports && totalPages > 1 && (
+        <nav className="pg-pager" aria-label="Phân trang">
+          <button className="pg-btn ghost" disabled={page <= 1} onClick={() => setPage(page - 1)}>
+            <Icon name="back" size={16} />
+            Trước
           </button>
-          <span style={{ fontSize: 14, color: '#9a8472' }}>
-            Trang {page}/{totalPages} · {data?.total} điều ước
+          <span className="adm-note">
+            Trang {page}/{totalPages}, {data?.total} điều ước
           </span>
-          <button
-            disabled={page >= totalPages}
-            onClick={() => setPage(page + 1)}
-            style={btn('#fff', '#3a2f2a', '1px solid #d8ccbd')}
-          >
-            Sau ›
+          <button className="pg-btn ghost" disabled={page >= totalPages} onClick={() => setPage(page + 1)}>
+            Sau
           </button>
         </nav>
       )}
