@@ -14,6 +14,8 @@ export default function Composer() {
   const setOpen = useScene((s) => s.setComposerOpen)
   const showToast = useScene((s) => s.showToast)
   const user = useScene((s) => s.user)
+  const stats = useScene((s) => s.stats)
+  const bumpStats = useScene((s) => s.bumpStats)
 
   const [theme, setTheme] = useState<ThemeKey>('thi')
   const [text, setText] = useState('')
@@ -22,8 +24,20 @@ export default function Composer() {
   async function login() {
     try {
       await signInGoogle()
-    } catch {
-      showToast('Đăng nhập chưa thành công, thử lại nhé')
+    } catch (e) {
+      const code = (e as { code?: string })?.code ?? ''
+      console.warn('[auth] signInGoogle failed:', code || e)
+      // người dùng tự đóng popup → không làm phiền
+      if (code === 'auth/popup-closed-by-user' || code === 'auth/cancelled-popup-request') return
+      showToast(
+        code === 'auth/popup-blocked'
+          ? 'Trình duyệt chặn cửa sổ đăng nhập — cho phép popup rồi thử lại nhé'
+          : code === 'auth/unauthorized-domain'
+            ? 'Tên miền này chưa được bật đăng nhập Google, mình đang sửa nhé'
+            : code === 'auth/network-request-failed'
+              ? 'Mạng chập chờn, thử lại nhé'
+              : 'Đăng nhập chưa thành công, thử lại nhé',
+      )
     }
   }
 
@@ -51,10 +65,16 @@ export default function Composer() {
       }
       setOpen(false)
       setText('')
+      const approved = data?.status === 'approved'
+      // Vị trí trong hàng chờ = số đang chờ (trước khi cộng) + 1
+      const queuePos = stats ? stats.pending + 1 : null
+      bumpStats(approved ? 'approved' : 'pending')
       showToast(
-        data?.status === 'approved'
+        approved
           ? 'Đã treo điều ước lên cây ✨'
-          : 'Đã gửi điều ước ✨ (chờ duyệt rồi sẽ hiện trên cây)'
+          : queuePos
+            ? `Đã gửi điều ước ✨ — đang chờ duyệt (thứ ${queuePos} trong hàng chờ), duyệt xong sẽ hiện trên cây`
+            : 'Đã gửi điều ước ✨ (chờ duyệt rồi sẽ hiện trên cây)'
       )
     } catch {
       showToast('Mất kết nối, thử lại sau nhé')
@@ -92,6 +112,13 @@ export default function Composer() {
                 Google
               </button>
             </div>
+            {stats && (
+              <span className="auth-queue">
+                {stats.pending > 0
+                  ? `Gửi ẩn danh: điều ước vào hàng chờ duyệt (hiện có ${stats.pending} điều ước đang chờ).`
+                  : 'Gửi ẩn danh: điều ước sẽ được duyệt trước khi hiện trên cây.'}
+              </span>
+            )}
             <span className="auth-legal">
               Đăng nhập là bạn đồng ý với <a href="/dieu-khoan">Điều khoản</a> &{' '}
               <a href="/chinh-sach-bao-mat">Chính sách bảo mật</a>.

@@ -9,12 +9,38 @@ import { useScene } from '@/store/useScene'
 export default function DataBridge() {
   const setWishes = useScene((s) => s.setWishes)
   const setAuto = useScene((s) => s.setAuto)
+  const setStats = useScene((s) => s.setStats)
 
   // Điều ước đã duyệt (realtime / seed)
   useEffect(() => {
     const unsub = subscribeApproved((w) => setWishes(w))
     return () => unsub()
   }, [setWishes])
+
+  // Số điều ước trên cây + đang chờ duyệt: poll 60s, chỉ khi tab đang hiện (đỡ pin + lượt đọc)
+  useEffect(() => {
+    let alive = true
+    async function fetchStats() {
+      if (document.visibilityState !== 'visible') return
+      try {
+        const r = await fetch('/api/wishes/stats')
+        if (!r.ok) return
+        const j = await r.json()
+        if (alive && typeof j.approved === 'number' && typeof j.pending === 'number')
+          setStats({ approved: j.approved, pending: j.pending })
+      } catch {
+        /* giữ số cũ */
+      }
+    }
+    fetchStats()
+    const id = setInterval(fetchStats, 60 * 1000)
+    document.addEventListener('visibilitychange', fetchStats)
+    return () => {
+      alive = false
+      clearInterval(id)
+      document.removeEventListener('visibilitychange', fetchStats)
+    }
+  }, [setStats])
 
   // Thời tiết Hà Nội (qua API route có cache), làm mới mỗi 10 phút
   useEffect(() => {

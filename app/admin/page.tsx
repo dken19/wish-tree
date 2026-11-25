@@ -144,22 +144,33 @@ export default function AdminPage() {
     }
   }
 
+  // html/body bị overflow:hidden (cho Canvas 3D) → trang admin tự làm khung cuộn riêng
   const shell = (children: React.ReactNode) => (
-    <main
+    <div
       style={{
-        maxWidth: 760,
-        margin: '0 auto',
-        padding: '32px 20px 60px',
-        fontFamily: 'system-ui, sans-serif',
-        color: '#3a2f2a',
+        position: 'fixed',
+        inset: 0,
+        overflowY: 'auto',
+        WebkitOverflowScrolling: 'touch',
+        background: '#fbf7f1',
       }}
     >
-      <Link href="/" style={{ color: '#9a8472', fontSize: 14, textDecoration: 'none' }}>
-        ← Về cây ước nguyện
-      </Link>
-      <h1 style={{ fontSize: 24, margin: '12px 0 4px' }}>Quản trị điều ước</h1>
-      {children}
-    </main>
+      <main
+        style={{
+          maxWidth: 760,
+          margin: '0 auto',
+          padding: '32px 20px 60px',
+          fontFamily: 'system-ui, sans-serif',
+          color: '#3a2f2a',
+        }}
+      >
+        <Link href="/" style={{ color: '#9a8472', fontSize: 14, textDecoration: 'none' }}>
+          ← Về cây ước nguyện
+        </Link>
+        <h1 style={{ fontSize: 24, margin: '12px 0 4px' }}>Quản trị điều ước</h1>
+        {children}
+      </main>
+    </div>
   )
 
   if (!authReady) return shell(<p style={{ color: '#9a8472' }}>Đang kiểm tra đăng nhập…</p>)

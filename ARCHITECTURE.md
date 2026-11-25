@@ -51,6 +51,7 @@ app/
   api/
     weather/route.ts   # GET: proxy Open-Meteo (Hà Nội), cache 10'
     wishes/route.ts    # POST: validate+lọc từ+rate-limit -> nếu có Bearer ID token hợp lệ thì approved (đăng ngay), không thì pending (Admin SDK)
+    wishes/stats/route.ts # GET: {approved, pending} bằng count() (Admin SDK) — cache CDN 30s + memo instance 30s; fallback SEED
     wishes/list/route.ts # GET ?page=&theme=: liệt kê approved, phân trang SERVER (count + orderBy createdAt + offset/limit); fallback SEED khi chưa cấu hình
     admin/wishes/route.ts # GET ?status=&page= (list + counts) / PATCH approve|reject|pending — quyền qua lib/adminAuth
     presence/route.ts  # POST: heartbeat|leave phòng Rừng Trúc -> ghi `sessions` (Admin SDK)
@@ -94,6 +95,7 @@ components/
     FocusHUD.tsx       # overlay phòng: MẶC ĐỊNH THU GỌN (thanh mini: online + đồng hồ Pomodoro + Rời) — bấm mở bảng đầy đủ (flip + Pomodoro + đổi tên + Rời); số online = sessions + bots; mobile RoomCamera nới FOV
     LacBird.tsx        # <img> chim Lạc (public/chim-lac.jpg) + mix-blend-mode
     Toast.tsx
+    WishStats.tsx      # huy hiệu dưới tiêu đề: "🏮 N điều ước trên cây · ⏳ M đang chờ duyệt" (store.stats), bấm -> /dieu-uoc
     Loader.tsx         # màn chờ: chữ 'Cây Ước Nguyện' trên giấy dó (canvas 2D) + ĐÈN TRỜI bay lên (CSS thuần, mảng LANTERNS; mobile 5 chiếc; tan dần khi mở) → shader WebGL thuần MÀU NƯỚC LOANG mở ra cây 3D khi useScene.sceneReady (≥1.5s, tối đa 9s); không WebGL/reduce-motion → mờ dần; chỉ hiện 1 lần mỗi phiên (loaded)
 lib/
   auth.ts              # client: watchAuth/signInGoogle/signInFacebook/signOutUser/getIdToken + type AuthUser (Firebase Auth)
@@ -116,7 +118,7 @@ lib/
   firebase.admin.ts    # init Admin SDK (server-only): getAdminDb + getAdminAuth (verifyIdToken)
   adminAuth.ts         # server-only: checkAdmin(req) — Bearer ID token + email_verified ∈ ADMIN_EMAILS, hoặc x-admin-secret
 store/
-  useScene.ts          # zustand: autoCond/manual/temp, wishes, openWish, composerOpen, toast, loaded, roomOpen, sessions, nickname, navOpen, user
+  useScene.ts          # zustand: autoCond/manual/temp, wishes, stats (approved/pending), openWish, composerOpen, toast, loaded, roomOpen, sessions, nickname, navOpen, user
 scripts/seed.mjs       # seed vài điều ước 'approved' vào Firestore
 firestore.rules        # client read 'approved' (wishes) + read sessions; write = false (ghi qua Admin SDK)
 firestore.indexes.json # composite index cho /api/wishes/list: (status,createdAt) + (status,theme,createdAt)
@@ -138,6 +140,7 @@ firestore.indexes.json # composite index cho /api/wishes/list: (status,createdAt
 2. **Ghi**: `Composer` validate client (`validateWish`) → `POST /api/wishes` → server: kiểm theme, `validateWish` (lọc từ), `rateLimit` theo IP. Sau đó đọc header `Authorization: Bearer <ID token>`:
    - **Có token hợp lệ** (đăng nhập Google/Facebook) → `getAdminAuth().verifyIdToken` → ghi doc `status:'approved'` + `uid` + `author=tên` → **hiện ngay** trên cây, KHỎI chờ duyệt.
    - **Không/ token lỗi** (ẩn danh) → ghi `status:'pending'` như cũ.
+3. **Đếm (minh bạch hàng chờ)**: client KHÔNG đọc được `pending` (rules) và `store.wishes` bị giới hạn `MAX_RENDER` → số liệu lấy từ `GET /api/wishes/stats` (count aggregation, server). `DataBridge` poll 60s → `useScene.stats` → `WishStats` (dưới tiêu đề) + dòng "hiện có M điều ước đang chờ" trong `Composer` khi ẩn danh. Gửi xong `bumpStats()` cộng tạm (optimistic), toast ẩn danh báo **vị trí trong hàng chờ** (= pending + 1); lần poll sau tự sửa số.
    - Lọc từ + rate-limit GIỮ NGUYÊN cho cả hai (auto-approve chỉ bỏ qua hàng chờ tay).
 3. **Duyệt**: `/admin` đăng nhập Google → gửi `Authorization: Bearer <idToken>` → `checkAdmin` (verifyIdToken + email đã xác minh ∈ `ADMIN_EMAILS`; dự phòng header `x-admin-secret`) → `GET /api/admin/wishes?status=&page=` / `PATCH` → đặt `approved`/`rejected`/`pending` + `reviewedAt`/`reviewedBy`. Khi `approved`, client `onSnapshot` tự thêm tờ mới → cây cập nhật realtime.
 4. **Xem tất cả** (`/dieu-uoc`, `WishesView`): trang KHÔNG Canvas, gọi `GET /api/wishes/list?page=&theme=` (Admin SDK) → phân trang **ở server** (`count()` cho tổng số trang + `orderBy('createdAt','desc').offset().limit()`), lọc theo chủ đề. State đọc/ghi qua URL (`?theme=&page=`) để share link + nút back hoạt động.
@@ -209,6 +212,8 @@ Vercel: import `.env.local` khi tạo project.
 
 - **ESLint**: Next 16 bật rule React-Compiler (`purity`/`immutability`/`set-state-in-effect`) báo nhầm với code Three.js (Math.random trong useMemo, mutate buffer trong useFrame). Đã **tắt cho `components/three/**`** + vài file UI trong `eslint.config.mjs`. Đừng "sửa" các cảnh báo này bằng cách viết lại — chúng cố ý.
 - **Loader màu nước**: `WishTreeCanvas.onCreated` đợi 2 rAF rồi `setSceneReady(true)` → Loader mới loang mở. Nền giấy + chữ + con dấu vẽ **1 lần** vào canvas 2D (đợi `document.fonts.ready`, đo vị trí chữ HTML để vẽ đúng chỗ, rồi crossfade) → làm texture cho fragment shader (1 tam giác full màn hình, ~3.2s, xong thì `loseContext`). Lòng vết trong suốt đi **trễ** sau mép màu (2 ngưỡng `t` và `t-.2`) để luôn thấy dải màu loang. **KHÔNG bật `gl.BLEND`** (canvas `premultipliedAlpha:false`) — bật sẽ ra viền tối quanh vùng trong suốt.
+- **Firebase Auth – Authorized domains**: mọi tên miền chạy app (`cayuocnguyen.io.vn`, `www.` nếu có, domain `*.vercel.app`, `localhost`) PHẢI có trong Firebase Console → Authentication → Settings → Authorized domains; thiếu → popup Google đóng ngay, lỗi `auth/unauthorized-domain` (Composer toast báo riêng theo mã lỗi).
+- **Trang cuộn được**: `html, body { overflow: hidden }` (cho Canvas 3D) → mọi trang nội dung dài (`/dieu-uoc`, `/ky-nang`, `/admin`, trang pháp lý) phải tự có khung `position: fixed; inset: 0; overflow-y: auto`, nếu không sẽ KHÔNG cuộn được.
 - **Canvas SSR**: phải `dynamic(..., { ssr:false })` từ client component (HomeClient). Không import trực tiếp ở server component.
 - **Chim Lạc**: `public/chim-lac.jpg` là ảnh ĐEN/nền TRẮNG; nền trắng được bỏ bằng `mix-blend-mode: multiply` (xem `.composer-head .lac`, `.lac-watermark` trong globals.css, dùng ở `LacBird.tsx`). Muốn đổi màu chim cần CSS filter. Lưu ý: ẢNH OG/favicon KHÔNG dùng file này (chim Lạc vẽ lại bằng SVG silhouette vì satori không hỗ trợ `mix-blend-mode` để bỏ nền trắng).
 - **Ảnh OG + icon sinh động (next/og)**: `app/opengraph-image.tsx` vẽ bằng satori — chỉ hỗ trợ flexbox + inline-style + `<svg>` cơ bản (KHÔNG `mix-blend-mode`, gradient text, filter…). Chữ Việt có dấu cần **nhúng font TTF** đọc bằng `readFile(join(process.cwd(),'app/_fonts/...'))` — font mặc định Geist thiếu dấu. Đổi tiêu đề/khẩu hiệu thì sửa trực tiếp trong file; test bằng `curl localhost:3000/opengraph-image -o og.png`. `twitter-image.tsx` chỉ re-export. **Logo**: gốc `public/logo.png` (512×512, cũng là logo trên Google OAuth consent screen — bản 120×120); `app/icon.png` + `app/apple-icon.png` là bản thu nhỏ (xuất bằng `sharp`). Đổi logo → xuất lại cả 3 file. OG nhúng logo dạng data URL (`readFile` → base64) vì satori không đọc đường dẫn tương đối.

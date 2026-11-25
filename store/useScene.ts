@@ -5,6 +5,8 @@ import type { Wish } from '@/lib/wishes'
 import type { Session } from '@/lib/presence'
 import type { AuthUser } from '@/lib/auth'
 
+export type WishStats = { approved: number; pending: number }
+
 type SceneState = {
   // Thời tiết
   autoCond: Condition
@@ -18,6 +20,11 @@ type SceneState = {
   setWishes: (w: Wish[]) => void
   openWish: Wish | null
   setOpenWish: (w: Wish | null) => void
+  /** Số điều ước trên cây (approved) + đang chờ duyệt (pending) — từ /api/wishes/stats. null = chưa tải. */
+  stats: WishStats | null
+  setStats: (s: WishStats | null) => void
+  /** Cộng tạm (optimistic) ngay sau khi gửi, trước lần poll kế tiếp. */
+  bumpStats: (status: 'approved' | 'pending') => void
 
   // Phòng Rừng Trúc (thiền viện)
   roomOpen: boolean
@@ -62,6 +69,10 @@ export const useScene = create<SceneState>((set) => ({
   setWishes: (w) => set({ wishes: w }),
   openWish: null,
   setOpenWish: (w) => set({ openWish: w }),
+  stats: null,
+  setStats: (st) => set({ stats: st }),
+  bumpStats: (status) =>
+    set((s) => (s.stats ? { stats: { ...s.stats, [status]: s.stats[status] + 1 } } : {})),
 
   roomOpen: false,
   setRoomOpen: (v) => set({ roomOpen: v }),

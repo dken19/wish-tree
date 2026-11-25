@@ -13,6 +13,7 @@ import FocusHUD from './ui/FocusHUD'
 import NavDock from './ui/NavDock'
 import Toast from './ui/Toast'
 import Loader from './ui/Loader'
+import WishStats from './ui/WishStats'
 
 // Canvas chỉ render ở client (Three.js cần window)
 const WishTreeCanvas = dynamic(() => import('./WishTreeCanvas'), {
@@ -41,6 +42,7 @@ export default function HomeClient() {
             <a href="/gioi-thieu">Giới thiệu</a> · <a href="/chinh-sach-bao-mat">Bảo mật</a> ·{' '}
             <a href="/dieu-khoan">Điều khoản</a>
           </p>
+          <WishStats />
         </div>
       )}
 

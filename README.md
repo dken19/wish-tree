@@ -10,6 +10,7 @@ Xây bằng **Next.js (App Router) + React Three Fiber + Firebase Firestore**.
 - Cây 3D low-poly, giấy/hoa dùng `InstancedMesh` (nhẹ trên mobile).
 - Click tờ giấy → đọc điều ước (raycast theo `instanceId`).
 - Viết điều ước → lọc từ tục + rate-limit. **Đăng nhập Google → điều ước hiện NGAY trên cây** (khỏi chờ duyệt); gửi ẩn danh → vào hàng chờ **duyệt** rồi mới hiện.
+- Dưới tiêu đề có huy hiệu **số điều ước trên cây + số đang chờ duyệt** (cập nhật mỗi phút, `/api/wishes/stats`); gửi ẩn danh sẽ được báo vị trí trong hàng chờ.
 - **Tất cả ước nguyện** (`/dieu-uoc`): xem mọi điều ước đã đăng, **lọc theo chủ đề** và **phân trang** (phân trang xử lý ở server).
 - Thời tiết Hà Nội qua Open-Meteo (đổi trời/ánh sáng/mưa/đêm); gió theo tốc độ gió thật.
 - Điều khiển camera orbit + pinch tự viết; tự xoay nhẹ khi rảnh.

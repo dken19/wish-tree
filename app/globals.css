@@ -1704,3 +1704,38 @@ canvas {
   font-size: 13px;
   color: #7a6557;
 }
+
+/* ---------- Huy hiệu số điều ước (dưới tiêu đề trang chủ) ---------- */
+.brand .wish-stats {
+  display: inline-flex;
+  flex-wrap: wrap;
+  gap: 4px 10px;
+  margin-top: 8px;
+  padding: 5px 12px;
+  border-radius: 999px;
+  background: rgba(58, 47, 42, 0.45);
+  backdrop-filter: blur(6px);
+  color: #fff;
+  font-size: 12px;
+  font-weight: 300;
+  text-decoration: none;
+  pointer-events: auto;
+}
+.brand .wish-stats b {
+  color: #ffd9a8;
+  font-weight: 600;
+}
+.brand .wish-stats .ws-pending {
+  opacity: 0.9;
+}
+@media (max-width: 640px) {
+  .brand .wish-stats {
+    font-size: 11px;
+    padding: 4px 10px;
+  }
+}
+.auth-queue {
+  flex-basis: 100%;
+  font-size: 11.5px;
+  color: #8a5a3c;
+}
