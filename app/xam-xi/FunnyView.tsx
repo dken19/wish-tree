@@ -51,14 +51,14 @@ function Ticket({ w, compact }: { w: Item; compact?: boolean }) {
             {w.group.note}
           </p>
         ) : null}
-        {!compact && (
-          <div className="tk-meta">
-            <span className="tk-theme">
-              <i className="pg-dot" style={{ background: tk ? THEMES[tk].color : undefined }} />
-              {tk ? THEMES[tk].label : w.theme}
-            </span>
-          </div>
-        )}
+        <div className="tk-meta">
+          <span className="tk-theme">
+            <i className="pg-dot" style={{ background: tk ? THEMES[tk].color : undefined }} />
+            {tk ? THEMES[tk].label : w.theme}
+          </span>
+          {/* tên người viết luôn được giấu ở Góc xàm xí */}
+          <span className="fx-anon">Ẩn danh</span>
+        </div>
       </div>
     </li>
   )
