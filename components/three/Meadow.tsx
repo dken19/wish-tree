@@ -5,7 +5,8 @@ import * as THREE from 'three'
 import { windRef } from '@/lib/runtime'
 import { makeWindMaterial } from '@/lib/windMaterial'
 import { mulberry32 } from '@/lib/tree'
-import { groundHeight, slopeQuaternion } from '@/lib/terrain'
+import { groundHeight, rEdgeAt, slopeQuaternion } from '@/lib/terrain'
+import { peakCenter } from '@/lib/peaks'
 import { useIsMobile } from './useIsMobile'
 
 const GREENS = [0x8bbf6a, 0x9ccd78, 0x7baf5c, 0xa9d489, 0x6fa552, 0xb6dd8e, 0x84bb60]
@@ -55,42 +56,113 @@ function yellowFlower(): THREE.CanvasTexture {
   return new THREE.CanvasTexture(c)
 }
 
+/**
+ * Khóm cỏ: 5 lá THON (rộng gốc -> nhọn ngọn), cong ra ngoài, xoè quanh gốc.
+ * Vertex color: gốc tối -> ngọn sáng (nhân với màu instance). Pháp tuyến hướng LÊN cho cả lá
+ * -> sáng mềm, không lá nào đen kịt khi quay lưng ánh sáng (mẹo dựng cỏ phổ biến).
+ */
+function makeTuft(BLADES = 5, SEG = 4): THREE.BufferGeometry {
+  const pos: number[] = []
+  const col: number[] = []
+  const idx: number[] = []
+  for (let b = 0; b < BLADES; b++) {
+    const yaw = (b / BLADES) * Math.PI * 2 + (b % 2) * 0.4
+    const lean = 0.25 + (b % 3) * 0.12 // độ ngả ra ngoài
+    const h = 0.26 + ((b * 37) % 10) / 100
+    const w = 0.03 + (b % 2) * 0.008
+    const cy = Math.cos(yaw)
+    const sy = Math.sin(yaw)
+    const base = pos.length / 3
+    for (let i = 0; i <= SEG; i++) {
+      const t = i / SEG
+      const half = w * (1 - t) * 0.5 + 0.002
+      const out = lean * h * t * t // cong dần ra ngoài
+      const y = h * t
+      // tâm lá dịch theo hướng yaw, bề ngang vuông góc với yaw
+      const cx = out * cy
+      const cz = out * sy
+      pos.push(cx - sy * half, y, cz + cy * half, cx + sy * half, y, cz - cy * half)
+      const k = 0.42 + 0.58 * t
+      col.push(k, k, k, k, k, k)
+      if (i < SEG) {
+        const a = base + i * 2
+        idx.push(a, a + 1, a + 2, a + 1, a + 3, a + 2)
+      }
+    }
+  }
+  const g = new THREE.BufferGeometry()
+  g.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3))
+  g.setAttribute('color', new THREE.Float32BufferAttribute(col, 3))
+  const n = new Float32Array(pos.length)
+  for (let i = 1; i < n.length; i += 3) n[i] = 1
+  g.setAttribute('normal', new THREE.BufferAttribute(n, 3))
+  g.setIndex(idx)
+  return g
+}
+
 export default function Meadow() {
   const isMobile = useIsMobile()
-  const GRASS = isMobile ? 560 : 1600
+  // cỏ phủ KÍN đồi, 2 lớp: GẦN (đỉnh phẳng, khóm 4 lá) + XA (sườn trên tới ~26m, khóm 3 lá to, rẻ hơn)
+  const GRASS = isMobile ? 3200 : 9000
+  const GRASS_FAR = isMobile ? 1800 : 5200
   const REED = isMobile ? 30 : 80
   const YELLOW = isMobile ? 34 : 90
 
   // ---------- Cỏ thường (instanced, gió GPU) ----------
   const grassRef = useRef<THREE.InstancedMesh>(null)
-  const grassGeo = useMemo(() => {
-    // cỏ thấp để cây cổ thụ nổi bật; lá hơi rộng cho thảm dày, đầy đặn
-    const g = new THREE.PlaneGeometry(0.075, 0.3, 1, 4)
-    g.translate(0, 0.15, 0)
-    return g
+  const grassGeo = useMemo(() => makeTuft(4, 3), [])
+  const farRef = useRef<THREE.InstancedMesh>(null)
+  const farGeo = useMemo(() => makeTuft(3, 2), [])
+  const grassMat = useMemo(() => {
+    const m = makeWindMaterial({ amp: 0.14, swayZ: 0.09, speed: 1.6 })
+    m.vertexColors = true // gốc tối -> ngọn sáng
+    return m
   }, [])
-  const grassMat = useMemo(
-    () => makeWindMaterial({ amp: 0.14, swayZ: 0.09, speed: 1.6 }),
-    []
-  )
-  const grassData = useMemo(() => {
-    const arr: { x: number; z: number; yaw: number; h: number; color: number }[] =
-      []
-    const rng = mulberry32(0x6a55 + GRASS) // seed cố định -> thảm cỏ KHÔNG đổi
-    for (let i = 0; i < GRASS; i++) {
-      const a = rng() * Math.PI * 2
-      // dày ở giữa, thưa dần ra rìa đỉnh phẳng (sqrt -> phân bố đều theo diện tích)
-      const r = 0.9 + Math.sqrt(rng()) * 7.1
-      arr.push({
-        x: Math.cos(a) * r,
-        z: Math.sin(a) * r,
-        yaw: rng() * Math.PI,
-        h: 0.6 + rng() * 0.95,
-        color: GREENS[(rng() * GREENS.length) | 0],
-      })
+  const [grassData, farData] = useMemo(() => {
+    type Tuft = { x: number; z: number; yaw: number; h: number; w: number; color: number }
+    const peak = peakCenter(0, 2)
+    const pl = Math.hypot(peak.x, peak.z) || 1
+    const dx = peak.x / pl
+    const dz = peak.z / pl
+    // chỗ KHÔNG mọc cỏ: gốc cây, vòng phiến đá r≈5, dải đá về đền, bàn thư pháp
+    const blocked = (x: number, z: number, r: number) => {
+      if (r < 1.0) return true
+      if (Math.abs(r - 5) < 0.3) return true
+      const along = x * dx + z * dz
+      const lat = Math.abs(-x * dz + z * dx)
+      if (along > 4.3 && lat < 1.05) return true
+      if (Math.hypot(x - 2.4, z - 1.7) < 0.85) return true
+      return false
     }
-    return arr
-  }, [GRASS])
+    const make = (n: number, seed: number, rMin: number, rMax: (a: number) => number, scale: number) => {
+      const rng = mulberry32(seed) // seed cố định -> thảm cỏ KHÔNG đổi
+      const arr: Tuft[] = []
+      let guard = 0
+      while (arr.length < n && guard++ < n * 3) {
+        const a = rng() * Math.PI * 2
+        const hi = rMax(a)
+        // phân bố đều theo DIỆN TÍCH trong vành [rMin, hi]
+        const r = Math.sqrt(rMin * rMin + rng() * (hi * hi - rMin * rMin))
+        const x = Math.cos(a) * r
+        const z = Math.sin(a) * r
+        if (blocked(x, z, r)) continue
+        arr.push({
+          x,
+          z,
+          yaw: rng() * Math.PI * 2,
+          h: (0.7 + rng() * 0.8) * scale,
+          w: scale * (0.9 + rng() * 0.3),
+          color: GREENS[(rng() * GREENS.length) | 0],
+        })
+      }
+      return arr
+    }
+    const near = make(GRASS, 0x6a55 + GRASS, 0.9, (a) => rEdgeAt(a) + 1.5, 1)
+    const far = make(GRASS_FAR, 0x7b66 + GRASS_FAR, 0, (a) => rEdgeAt(a) + 17, 1.5).filter(
+      (t) => Math.hypot(t.x, t.z) > rEdgeAt(Math.atan2(t.z, t.x)) + 0.8
+    )
+    return [near, far]
+  }, [GRASS, GRASS_FAR])
 
   // ---------- Cỏ lau (thân + bông trắng, cùng transform, gió GPU) ----------
   const stalkRef = useRef<THREE.InstancedMesh>(null)
@@ -158,22 +230,26 @@ export default function Meadow() {
     const col = new THREE.Color()
     const yawQ = new THREE.Quaternion()
     const yAxis = new THREE.Vector3(0, 1, 0)
-    const grass = grassRef.current
-    if (grass) {
-      grassData.forEach((b, i) => {
+    const fill = (mesh: THREE.InstancedMesh | null, list: typeof grassData) => {
+      if (!mesh) return
+      list.forEach((b, i) => {
         // bám đúng cao độ đất + nghiêng theo sườn (0.6) rồi mới xoay quanh trục thân
         dummy.position.set(b.x, groundHeight(b.x, b.z), b.z)
         dummy.quaternion
           .copy(slopeQuaternion(b.x, b.z, 0.6))
           .multiply(yawQ.setFromAxisAngle(yAxis, b.yaw))
-        dummy.scale.set(1, b.h, 1)
+        dummy.scale.set(b.w, b.h, b.w)
         dummy.updateMatrix()
-        grass.setMatrixAt(i, dummy.matrix)
-        grass.setColorAt(i, col.set(b.color))
+        mesh.setMatrixAt(i, dummy.matrix)
+        mesh.setColorAt(i, col.set(b.color))
       })
-      grass.instanceMatrix.needsUpdate = true
-      if (grass.instanceColor) grass.instanceColor.needsUpdate = true
+      mesh.count = list.length
+      mesh.instanceMatrix.needsUpdate = true
+      if (mesh.instanceColor) mesh.instanceColor.needsUpdate = true
+      mesh.computeBoundingSphere()
     }
+    fill(grassRef.current, grassData)
+    fill(farRef.current, farData)
     const stalk = stalkRef.current
     const plume = plumeRef.current
     reedData.forEach((b, i) => {
@@ -188,7 +264,7 @@ export default function Meadow() {
     })
     if (stalk) stalk.instanceMatrix.needsUpdate = true
     if (plume) plume.instanceMatrix.needsUpdate = true
-  }, [grassData, reedData])
+  }, [grassData, farData, reedData])
 
   // ----- cập nhật gió GPU: chỉ vài uniform mỗi frame -----
   useFrame((state) => {
@@ -207,6 +283,7 @@ export default function Meadow() {
   return (
     <group>
       <instancedMesh ref={grassRef} args={[grassGeo, grassMat, GRASS]} />
+      <instancedMesh ref={farRef} args={[farGeo, grassMat, GRASS_FAR]} />
       <instancedMesh ref={stalkRef} args={[stalkGeo, stalkMat, REED]} />
       <instancedMesh ref={plumeRef} args={[plumeGeo, plumeMat, REED]} />
       <points ref={flowerRef}>

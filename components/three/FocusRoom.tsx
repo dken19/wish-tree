@@ -10,6 +10,7 @@ import { useScene } from '@/store/useScene'
 import { player, walkTo } from '@/lib/runtime'
 import PlayerController from './Player'
 import Pond from './Pond'
+import { ScannedRocks } from './SceneAssets'
 import { POND } from '@/lib/roomMap'
 
 const TAU = Math.PI * 2
@@ -282,7 +283,18 @@ function Pebbles() {
     })
     mesh.instanceMatrix.needsUpdate = true
   }
-  return <instancedMesh ref={ref} args={[geo, mat, Math.max(1, data.length)]} castShadow receiveShadow />
+  // đá scan Poly Haven khi tải xong; lúc đang tải hiện sỏi cầu cũ
+  const spots = useMemo(
+    () => data.map((p, i) => ({ x: p.x, y: -p.s * 0.12, z: p.z, s: p.s * 2.1, yaw: i * 2.4, tilt: ((i % 5) - 2) * 0.06 })),
+    [data]
+  )
+  return (
+    <Suspense
+      fallback={<instancedMesh ref={ref} args={[geo, mat, Math.max(1, data.length)]} castShadow receiveShadow />}
+    >
+      <ScannedRocks spots={spots} tint={0xcfccc2} />
+    </Suspense>
+  )
 }
 
 // Tia nắng xuyên ngọn trúc: vài cột sáng additive nhạt rọi xuống.

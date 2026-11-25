@@ -1,8 +1,9 @@
 'use client'
-import { useMemo } from 'react'
+import { Suspense, useMemo } from 'react'
 import * as THREE from 'three'
 import { ALL_BRANCHES } from '@/lib/tree'
 import { makeBark } from '@/lib/textures'
+import { BarkTexture } from './SceneAssets'
 
 // Thân + cành cổ thụ: ống LIỀN MẠCH thuôn dần dọc đường GẤP KHÚC (CatmullRom qua
 // nhiều điểm). Bề mặt thêm nhiễu dọc + nhiễu quanh chu vi -> vỏ cây sần sùi, u
@@ -94,18 +95,27 @@ export default function Tree() {
   }, [])
 
   const bark = useMemo(() => makeBark(), [])
+  // vỏ procedural trước; BarkTexture thay bằng vỏ thật Poly Haven khi tải xong
+  const mat = useMemo(
+    () =>
+      new THREE.MeshStandardMaterial({
+        map: bark.map,
+        normalMap: bark.normal,
+        normalScale: new THREE.Vector2(1.1, 1.1),
+        color: 0x8a6a48,
+        roughness: 0.92,
+        metalness: 0,
+      }),
+    [bark]
+  )
 
   return (
-    <mesh geometry={geometry} castShadow receiveShadow>
-      <meshStandardMaterial
-        map={bark.map}
-        normalMap={bark.normal}
-        normalScale={new THREE.Vector2(1.1, 1.1)}
-        color={0x8a6a48}
-        roughness={0.92}
-        metalness={0}
-      />
-    </mesh>
+    <>
+      <mesh geometry={geometry} material={mat} castShadow receiveShadow />
+      <Suspense fallback={null}>
+        <BarkTexture material={mat} />
+      </Suspense>
+    </>
   )
 }
 

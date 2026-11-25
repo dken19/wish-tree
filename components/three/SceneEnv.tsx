@@ -25,11 +25,12 @@ function sunFromClock(date: Date, cond: Condition): { el: number; az: number; da
   if (cond === 'night') {
     el = -12
     az = 285
-  } else if (el < 8) {
-    el = 8 // chế độ ngày (Nắng/Mây/Mưa) luôn đủ sáng kể cả khi đồng hồ là đêm
-    az = 175
+  } else if (el < 14) {
+    el = 14 // chế độ ngày (Nắng/Mây/Mưa) luôn đủ sáng kể cả sáng sớm/chiều muộn
+    az = Math.min(Math.max(az, 110), 250)
   }
-  const daylight = THREE.MathUtils.clamp((el + 2) / 30, 0.08, 1)
+  // ban ngày không để tối dưới 0,6 (chiều muộn vẫn rõ cây cỏ); đêm giữ tối
+  const daylight = THREE.MathUtils.clamp((el + 2) / 30, cond === 'night' ? 0.08 : 0.6, 1)
   return { el, az, daylight }
 }
 

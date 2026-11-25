@@ -11,6 +11,7 @@ import Foliage from './three/Foliage'
 import Dew from './three/Dew'
 import Critters from './three/Critters'
 import CalligraphyDesk from './three/CalligraphyDesk'
+import TreeLantern from './three/TreeLantern'
 import DecorPapers from './three/DecorPapers'
 import WishPapers from './three/WishPapers'
 import Rain from './three/Rain'
@@ -74,6 +75,7 @@ export default function WishTreeCanvas() {
         <DecorPapers />
         <WishPapers />
         <CalligraphyDesk />
+        <TreeLantern />
         <Rain />
         <Dew />
         <Critters />

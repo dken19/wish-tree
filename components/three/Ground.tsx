@@ -1,10 +1,12 @@
 'use client'
-import { useMemo } from 'react'
+import { Suspense, useMemo } from 'react'
 import * as THREE from 'three'
 import { makeGrass } from '@/lib/textures'
 import { terrainHeight, groundHeight, GROUND_SIZE, GROUND_SEG } from '@/lib/terrain'
 import { makeRock } from '@/lib/rock'
 import { mulberry32 } from '@/lib/tree'
+import { peakCenter } from '@/lib/peaks'
+import { GroundTexture, ScannedRocks, type RockSpot } from './SceneAssets'
 
 // ĐỈNH NÚI: đỉnh phẳng (nơi cây/cỏ/bàn), rìa GỒ GHỀ không tròn đều, sườn đổ dốc
 // xuống thung lũng sâu có sống núi/khe. Sườn có vệt màu đậm-nhạt + rải đá tảng.
@@ -76,18 +78,53 @@ export default function Ground() {
     return arr
   }, [])
 
+  // material giữ trong memo để GroundTexture (Poly Haven) gắn texture thật vào khi tải xong
+  const groundMat = useMemo(
+    () =>
+      new THREE.MeshStandardMaterial({
+        map: grass.map,
+        normalMap: grass.normal,
+        normalScale: new THREE.Vector2(0.7, 0.7),
+        vertexColors: true,
+        roughness: 1,
+        metalness: 0,
+      }),
+    [grass]
+  )
+
+  // đá scan: tảng lớn trên sườn xa (như cũ) + vài viên nhỏ quanh rìa đồng cỏ, né lối đá về đền
+  const spots = useMemo<RockSpot[]>(() => {
+    const far = rocks.map((r) => ({
+      x: r.pos[0],
+      z: r.pos[2],
+      y: groundHeight(r.pos[0], r.pos[2]) - r.s * 0.18,
+      s: r.s * 1.7,
+      yaw: r.rot[1],
+      tilt: r.rot[0] * 0.5,
+    }))
+    const rng = mulberry32(0x50c4)
+    const peak = peakCenter(0, 2)
+    const pathAng = Math.atan2(peak.z, peak.x)
+    const near: RockSpot[] = []
+    for (let i = 0; i < 40 && near.length < 12; i++) {
+      const a = rng() * Math.PI * 2
+      const d = Math.abs(((a - pathAng + Math.PI * 3) % (Math.PI * 2)) - Math.PI)
+      const r = 7.6 + rng() * 2.6
+      if (d < 0.45) continue
+      const x = Math.cos(a) * r
+      const z = Math.sin(a) * r
+      const sz = 0.25 + rng() * 0.45
+      near.push({ x, z, y: groundHeight(x, z) - sz * 0.15, s: sz, yaw: rng() * 6.28, tilt: (rng() - 0.5) * 0.3 })
+    }
+    return [...far, ...near]
+  }, [rocks])
+
   return (
     <group>
-      <mesh geometry={geo} receiveShadow>
-        <meshStandardMaterial
-          map={grass.map}
-          normalMap={grass.normal}
-          normalScale={new THREE.Vector2(0.7, 0.7)}
-          vertexColors
-          roughness={1}
-          metalness={0}
-        />
-      </mesh>
+      <mesh geometry={geo} material={groundMat} receiveShadow />
+      <Suspense fallback={null}>
+        <GroundTexture material={groundMat} />
+      </Suspense>
 
       {/* gò đất nhỏ ngay chân cây */}
       <mesh position-y={groundHeight(0, 0) - 0.12} receiveShadow>
@@ -95,7 +132,9 @@ export default function Ground() {
         <meshStandardMaterial color={0x7d6b46} roughness={1} metalness={0} />
       </mesh>
 
-      <Rocks data={rocks} />
+      <Suspense fallback={<Rocks data={rocks} />}>
+        <ScannedRocks spots={spots} tint={0xd8d2c4} />
+      </Suspense>
     </group>
   )
 }
