@@ -1011,11 +1011,8 @@
   line-height: 1.3;
   color: var(--pg-ink);
 }
-.fc-set header p {
-  margin: 0;
-  font-size: 15px;
-  line-height: 1.5;
-  color: var(--pg-ink2);
+.fc-set header .fx-note {
+  margin-top: 8px;
 }
 .fc-count {
   font-size: 12px;

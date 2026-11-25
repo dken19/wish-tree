@@ -15,11 +15,14 @@ export default function FunnyCollectionsPanel({
   picked,
   onUnpick,
   onClear,
+  onCreated,
 }: {
   call: (input: string, init?: RequestInit) => Promise<Response>
   picked: Pick[]
   onUnpick: (id: string) => void
   onClear: () => void
+  /** tạo bộ xong: tải lại danh sách (tờ chưa xàm xí đã được chuyển sang) */
+  onCreated: () => void
 }) {
   const [items, setItems] = useState<Coll[] | null>(null)
   const [title, setTitle] = useState('')
@@ -70,7 +73,7 @@ export default function FunnyCollectionsPanel({
     }
   }
 
-  const ready = picked.length >= MIN && picked.length <= MAX && title.trim().length > 0
+  const ready = picked.length >= MIN && picked.length <= MAX && title.trim().length > 0 && note.trim().length > 0
 
   return (
     <section className="fc-admin" aria-label="Bộ xàm xí">
@@ -78,7 +81,8 @@ export default function FunnyCollectionsPanel({
         <h2>Gộp thành bộ</h2>
         {picked.length === 0 ? (
           <p className="adm-note">
-            Tích ô “Chọn vào bộ” ở các tờ liên quan nhau bên dưới ({MIN}–{MAX} tờ, đẹp nhất là 3).
+            Tích ô “Chọn vào bộ” ở các tờ liên quan nhau ({MIN}–{MAX} tờ, đẹp nhất là 3), chọn được ở mọi tab và qua
+            nhiều trang. Cả bộ dùng chung một lí do; tờ chưa ở mục Xàm xí sẽ được chuyển sang khi tạo bộ.
           </p>
         ) : (
           <form
@@ -90,6 +94,7 @@ export default function FunnyCollectionsPanel({
                 setTitle('')
                 setNote('')
                 onClear()
+                onCreated()
               }
             }}
           >
@@ -114,12 +119,13 @@ export default function FunnyCollectionsPanel({
               placeholder="VD: Hội muốn giàu mà không muốn dậy sớm"
               onChange={(e) => setTitle(e.target.value)}
             />
-            <label htmlFor="fc-note">Lời phê chung (không bắt buộc)</label>
+            <label htmlFor="fc-note">Lí do không duyệt chung cho cả bộ</label>
             <textarea
               id="fc-note"
               rows={2}
               maxLength={300}
               value={note}
+              required
               placeholder="VD: Ba bạn này nên lập nhóm, cùng nhau ước cho tiết kiệm nến."
               onChange={(e) => setNote(e.target.value)}
             />
@@ -153,7 +159,12 @@ export default function FunnyCollectionsPanel({
                   className="pg-btn ghost"
                   disabled={busy}
                   onClick={() => {
-                    if (confirm(`Xoá bộ "${c.title}"? Các điều ước vẫn ở mục Xàm xí.`)) send('DELETE', { id: c.id })
+                    if (
+                      confirm(
+                        `Xoá bộ "${c.title}"? Các tờ vẫn ở mục Xàm xí; tờ không có lí do riêng sẽ giữ lí do chung của bộ.`
+                      )
+                    )
+                      send('DELETE', { id: c.id }).then((ok) => ok && onCreated())
                   }}
                 >
                   Xoá bộ

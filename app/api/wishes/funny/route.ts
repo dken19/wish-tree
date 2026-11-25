@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server'
 import { getAdminDb, isAdminConfigured } from '@/lib/firebase.admin'
 import { millis } from '@/lib/wishServer'
+import { groupNotes } from '@/lib/funnyCollections'
 
 export const runtime = 'nodejs'
 
@@ -24,14 +25,21 @@ export async function GET(req: Request) {
         .get(),
     ])
     const total = count.data().count
+    const groups = await groupNotes(
+      getAdminDb()!,
+      snap.docs.map((d) => String(d.get('funnyGroup') ?? ''))
+    )
     const items = snap.docs.map((d) => {
       const data = d.data()
+      const g = data.funnyGroup ? groups.get(String(data.funnyGroup)) : undefined
       return {
         id: d.id,
         no: typeof data.no === 'number' ? data.no : null,
         text: String(data.text ?? ''),
         theme: String(data.theme ?? ''),
         note: String(data.funnyNote ?? ''),
+        // thuộc bộ: tên bộ + lí do chung (hiện khi tờ không có lí do riêng)
+        group: g ? { title: g.title, note: g.note } : null,
         createdAt: millis(data.createdAt),
       }
     })

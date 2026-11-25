@@ -7,7 +7,16 @@ import { formatNo, formatWishTime } from '@/lib/wishMeta'
 import PageShell from '@/components/ui/PageShell'
 import Icon from '@/components/ui/Icon'
 
-type Item = { id: string; no: number | null; text: string; theme: string; note: string; createdAt: number }
+type Item = {
+  id: string
+  no: number | null
+  text: string
+  theme: string
+  /** lí do riêng (rỗng nếu tờ dùng lí do chung của bộ) */
+  note: string
+  createdAt: number
+  group?: { title: string; note: string } | null
+}
 type Resp = { items: Item[]; page: number; total: number; totalPages: number }
 type Coll = { id: string; title: string; note: string; wishes: Item[] }
 
@@ -25,7 +34,7 @@ function Ticket({ w, compact }: { w: Item; compact?: boolean }) {
       </div>
       <div className="tk-body">
         <p className="tk-text">{w.text}</p>
-        {w.note && (
+        {w.note ? (
           <p className="fx-note">
             <span className="fx-note-k">
               <Icon name="smile" size={15} />
@@ -33,7 +42,15 @@ function Ticket({ w, compact }: { w: Item; compact?: boolean }) {
             </span>
             {w.note}
           </p>
-        )}
+        ) : !compact && w.group?.note ? (
+          <p className="fx-note">
+            <span className="fx-note-k">
+              <Icon name="smile" size={15} />
+              Lí do chung của bộ “{w.group.title}”
+            </span>
+            {w.group.note}
+          </p>
+        ) : null}
         {!compact && (
           <div className="tk-meta">
             <span className="tk-theme">
@@ -75,7 +92,15 @@ function Collections() {
           <header>
             <span className="fc-count">Bộ {c.wishes.length} tờ</span>
             <h2 id={`fc-${c.id}`}>{c.title}</h2>
-            {c.note && <p>{c.note}</p>}
+            {c.note && (
+              <p className="fx-note">
+                <span className="fx-note-k">
+                  <Icon name="smile" size={15} />
+                  Lí do không duyệt chung
+                </span>
+                {c.note}
+              </p>
+            )}
           </header>
           <ol className="wl">
             {c.wishes.map((w) => (
@@ -127,7 +152,7 @@ export default function FunnyView() {
       title="Góc xàm xí"
       stats={
         <p className="fx-lead">
-          Những điều ước không được treo lên cây, nhưng đọc thì vui. Mỗi tờ có kèm lời phê của người giữ cây.
+          Những điều ước không được treo lên cây, nhưng đọc thì vui. Mỗi tờ (hoặc cả bộ) có kèm lời phê của người giữ cây.
           Tên người viết được giấu đi.
         </p>
       }

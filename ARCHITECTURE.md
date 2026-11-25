@@ -61,8 +61,8 @@ app/
     wishes/stats/route.ts # GET: {approved, pending} bằng count() (Admin SDK) — cache CDN 30s + memo instance 30s; fallback SEED
     wishes/list/route.ts # GET ?page=&theme=&q=&date=&sort=: approved; q="#888" -> where no==; q chữ -> keywords array-contains + lọc bộ nhớ; còn lại count + orderBy createdAt + offset/limit (sort cũ = lấy đoạn từ cuối rồi đảo, KHỎI index ASC); fallback SEED
     wishes/funny/collections/route.ts # GET: các "bộ xàm xí" (lib/funnyCollections, ẩn bộ rỗng), cache CDN 60s
-    admin/funny-collections/route.ts # GET/POST {title,note,wishIds 2–6 tờ đang 'funny'}/DELETE {id} — checkAdmin
-    wishes/funny/route.ts # GET ?page=: status=='funny' (index status+createdAt sẵn có) -> {no,text,theme,note,createdAt}, KHÔNG author; cache CDN 60s
+    admin/funny-collections/route.ts # GET / POST {title, note = LÍ DO CHUNG bắt buộc, wishIds 2–6 tờ ở MỌI trạng thái -> batch: tạo bộ + tờ thành 'funny' + funnyGroup} / DELETE {id} (tờ không có lí do riêng nhận lí do chung làm funnyNote rồi rời bộ) — checkAdmin
+    wishes/funny/route.ts # GET ?page=: status=='funny' (index status+createdAt sẵn có) -> {no,text,theme,note,group:{title,note}|null,createdAt}, KHÔNG author; cache CDN 60s
     (app/admin/FunnyCollectionsPanel.tsx: tab Xàm xí — gộp các tờ đã tích "Chọn vào bộ" thành bộ + danh sách bộ)
     admin/wishes/route.ts # GET ?status=&page= (list + counts, có tab funny) / PATCH approve|reject|pending|funny (funny bắt buộc `note` ≤300 ký tự -> funnyNote; đổi sang trạng thái khác thì xoá funnyNote) — quyền qua lib/adminAuth
     presence/route.ts  # POST: heartbeat|leave phòng Rừng Trúc -> ghi `sessions` (Admin SDK)
@@ -217,14 +217,16 @@ Chưa cấu hình Firebase: `getDb()` null → `subscribeSessions` trả về 1 
   keywords: string[],    // searchTokens(text): từ bỏ dấu, cho tìm kiếm array-contains
   uid?: string,  // có khi gửi bởi người đăng nhập Google/Facebook (-> auto-approve)
   status: 'pending'|'approved'|'rejected'|'funny', createdAt: serverTimestamp,
-  funnyNote?: string,    // chỉ khi status 'funny': lí do không duyệt (admin ghi), hiện công khai ở /xam-xi
+  funnyNote?: string,    // chỉ khi status 'funny': lí do không duyệt RIÊNG (admin ghi), hiện công khai ở /xam-xi
+  funnyGroup?: string,   // id "bộ xàm xí" (funnyCollections) -> không có funnyNote thì dùng lí do chung của bộ
   commentCount: number, reportCount: number,
   flagged?: boolean,     // true = TỰ ẩn do đủ báo cáo (status về pending), chờ admin
   reviewedAt?: serverTimestamp, reviewedBy?: string }  // ghi khi admin đổi trạng thái
 
 // funnyCollections/{id}  ("bộ xàm xí", chỉ Admin SDK; rules mặc định chặn client)
-{ title, note, wishIds: string[2..6], createdAt, createdBy }
-// Tờ rời trạng thái 'funny' thì tự bị lọc khỏi bộ lúc đọc; bộ hết tờ thì ẩn khỏi trang công khai.
+{ title, note /* lí do chung */, wishIds: string[2..6], createdAt, createdBy }
+// Tờ trong bộ có wishes.funnyGroup = id bộ; funnyNote (lí do riêng) KHÔNG bắt buộc — thiếu thì hiện lí do chung.
+// Tờ rời trạng thái 'funny' (PATCH khác) -> xoá funnyGroup + funnyNote, tự bị lọc khỏi bộ lúc đọc; bộ hết tờ thì ẩn.
 
 // wishes/{id}/comments/{cid}
 { text: string(<=300), uid, author, photo?, hidden: boolean, reportCount: number, createdAt }

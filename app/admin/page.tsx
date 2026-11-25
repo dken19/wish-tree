@@ -25,6 +25,7 @@ type Item = {
   commentCount: number
   reviewedBy: string | null
   funnyNote: string
+  funnyGroup: string | null
   createdAt: number
   reviewedAt: number
 }
@@ -219,12 +220,13 @@ export default function AdminPage() {
       </div>
 
       {showReports && <ReportsPanel call={call} />}
-      {!showReports && tab === 'funny' && user && (
+      {!showReports && (tab === 'funny' || picked.length > 0) && user && (
         <FunnyCollectionsPanel
           call={call}
           picked={picked}
           onUnpick={(id) => setPicked((p) => p.filter((x) => x.id !== id))}
           onClear={() => setPicked([])}
+          onCreated={load}
         />
       )}
       {!showReports && error && <p className="pg-status err">{error}</p>}
@@ -273,6 +275,9 @@ export default function AdminPage() {
                       <b>Lí do không duyệt:</b> {it.funnyNote}
                     </p>
                   )}
+                  {it.status === 'funny' && !it.funnyNote && it.funnyGroup && noteFor !== it.id && (
+                    <p className="adm-funny">Dùng lí do chung của bộ (bấm “Sửa lí do” nếu muốn ghi lí do riêng).</p>
+                  )}
                   <div className="tk-meta">
                     {it.reviewedAt ? (
                       <span>
@@ -298,7 +303,7 @@ export default function AdminPage() {
                         Đưa về chờ duyệt
                       </button>
                     )}
-                    {it.status === 'funny' && (
+                    {!it.funnyGroup && (
                       <label className="fc-pick">
                         <input
                           type="checkbox"
@@ -318,7 +323,7 @@ export default function AdminPage() {
                         }}
                       >
                         <Icon name="smile" size={16} />
-                        {it.status === 'funny' ? 'Sửa lí do' : 'Xàm xí…'}
+                        {it.status === 'funny' ? (it.funnyNote ? 'Sửa lí do' : 'Ghi lí do riêng') : 'Xàm xí…'}
                       </button>
                     )}
                   </div>

@@ -69,6 +69,8 @@ export async function GET(req: Request) {
         commentCount: typeof data.commentCount === 'number' ? data.commentCount : 0,
         reviewedBy: data.reviewedBy ? String(data.reviewedBy) : null,
         funnyNote: data.funnyNote ? String(data.funnyNote) : '',
+        // thuộc 1 "bộ xàm xí" -> dùng lí do chung của bộ khi không có lí do riêng
+        funnyGroup: data.funnyGroup ? String(data.funnyGroup) : null,
         createdAt: ts?.toMillis ? ts.toMillis() : 0,
         reviewedAt: rv?.toMillis ? rv.toMillis() : 0,
       }
@@ -129,6 +131,8 @@ export async function PATCH(req: Request) {
         reviewedAt: FieldValue.serverTimestamp(),
         reviewedBy: auth.email ?? 'secret',
         funnyNote: action === 'funny' ? funnyNote : FieldValue.delete(),
+        // rời trạng thái xàm xí -> rời bộ luôn (đánh dấu lại 'funny' thì giữ bộ)
+        ...(action === 'funny' ? {} : { funnyGroup: FieldValue.delete() }),
       })
   } catch {
     return deny(404, 'Không tìm thấy điều ước')
