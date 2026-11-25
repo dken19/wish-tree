@@ -41,6 +41,10 @@ export default function WishTreeCanvas() {
       onCreated={({ gl }) => {
         gl.outputColorSpace = THREE.SRGBColorSpace
         gl.shadowMap.type = THREE.PCFSoftShadowMap
+        // đợi 2 khung hình (shader đã compile, cảnh đã vẽ) rồi mới báo sẵn sàng → tranh loader tách ra
+        requestAnimationFrame(() =>
+          requestAnimationFrame(() => useScene.getState().setSceneReady(true)),
+        )
       }}
     >
       <AdaptiveDpr pixelated={false} />

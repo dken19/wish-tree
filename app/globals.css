@@ -481,44 +481,209 @@ canvas {
   transform: translate(-50%, 0);
 }
 
-/* màn hình tải */
+/* màn hình tải: chữ trên giấy dó → màu nước loang mở ra cây 3D (xem components/ui/Loader.tsx) */
 #loader {
   position: fixed;
   inset: 0;
   z-index: 50;
-  background: #bcd6ef;
-  display: grid;
-  place-items: center;
-  transition: opacity 0.8s;
-  color: #fff;
+  background: #f4ecdc; /* = màu giấy trong canvas, hiện trước khi hydrate */
+  overflow: hidden;
 }
-#loader .l-inner {
+#loader.reveal,
+#loader.fade {
+  pointer-events: none;
+}
+#loader.reveal {
+  background: transparent;
+}
+#loader.fade {
+  opacity: 0;
+  transition: opacity 0.9s ease;
+}
+.ld-paper,
+.ld-gl {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+}
+.ld-paper {
+  opacity: 0;
+  transition: opacity 0.6s ease;
+}
+#loader.painted .ld-paper {
+  opacity: 1;
+}
+#loader.reveal .ld-paper {
+  visibility: hidden; /* shader WebGL đã lấy làm texture và vẽ thay */
+  transition: none;
+}
+.ld-text {
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 42%;
+  transform: translateY(-50%);
   text-align: center;
+  padding: 0 16px;
+  color: #2b2320;
+  transition: opacity 0.6s ease;
 }
-#loader .lamp {
-  font-size: 46px;
-  animation: sway 2.4s ease-in-out infinite;
-  display: inline-block;
-  transform-origin: top center;
+#loader.painted .ld-text {
+  opacity: 0; /* canvas đã vẽ chữ ở đúng vị trí này */
 }
-@keyframes sway {
+.ld-title {
+  font-family: var(--font-calli), "Dancing Script", cursive;
+  font-weight: 700;
+  font-size: clamp(48px, 11vw, 120px);
+  line-height: 1.15;
+  color: #2b2320;
+}
+.ld-sub {
+  font-family: var(--font-bvp), system-ui, sans-serif;
+  font-size: clamp(12px, 1.6vw, 15px);
+  letter-spacing: 0.3em;
+  text-transform: uppercase;
+  color: #7a6557;
+  margin-top: 10px;
+}
+.ld-dots {
+  position: absolute;
+  left: 50%;
+  bottom: max(48px, calc(env(safe-area-inset-bottom) + 28px));
+  transform: translateX(-50%);
+  display: flex;
+  gap: 9px;
+  transition: opacity 0.4s ease;
+}
+.ld-dots i {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: #b22228;
+  opacity: 0.25;
+  animation: ld-dot 1.4s ease-in-out infinite;
+}
+.ld-dots i:nth-child(2) {
+  animation-delay: 0.2s;
+}
+.ld-dots i:nth-child(3) {
+  animation-delay: 0.4s;
+}
+@keyframes ld-dot {
   0%,
   100% {
-    transform: rotate(-9deg);
+    opacity: 0.2;
+    transform: scale(0.8);
   }
   50% {
-    transform: rotate(9deg);
+    opacity: 0.85;
+    transform: scale(1.1);
   }
 }
-#loader p {
-  font-family: var(--font-calli), "Dancing Script", cursive;
-  font-size: 24px;
-  margin-top: 14px;
-  text-shadow: 0 2px 10px rgba(60, 40, 30, 0.3);
-}
-#loader.hide {
-  opacity: 0;
+/* đèn trời bay lên — sau chữ thì nằm trên canvas giấy (chữ đã vẽ vào canvas) nên giữ mờ/nhỏ ở giữa */
+.ld-sky {
+  position: absolute;
+  inset: 0;
   pointer-events: none;
+  transition: opacity 2.6s ease;
+}
+#loader.reveal .ld-sky,
+#loader.fade .ld-sky {
+  opacity: 0; /* tan dần vào bầu trời cảnh 3D lúc màu nước loang */
+}
+.ld-lantern {
+  position: absolute;
+  left: var(--x);
+  top: 0;
+  opacity: calc(0.35 + var(--s) * 0.5);
+  filter: blur(calc((1.2 - var(--s)) * 1.6px));
+  animation: ld-rise var(--d) linear var(--delay) infinite;
+  will-change: transform;
+}
+.ld-lantern i {
+  display: block;
+  position: relative;
+  width: calc(26px * var(--s));
+  height: calc(34px * var(--s));
+  border-radius: 46% 46% 24% 24% / 38% 38% 20% 20%;
+  background:
+    linear-gradient(90deg, rgba(150, 50, 20, 0.18), transparent 22%, transparent 78%, rgba(150, 50, 20, 0.18)),
+    linear-gradient(180deg, #ffd98a 0%, #f7a447 50%, #dc5a2e 100%);
+  box-shadow:
+    0 0 calc(16px * var(--s)) rgba(255, 176, 80, 0.8),
+    0 0 calc(46px * var(--s)) calc(6px * var(--s)) rgba(255, 140, 50, 0.32);
+  animation:
+    ld-sway calc(var(--d) / 3.2) ease-in-out var(--delay) infinite alternate,
+    ld-flicker 2.3s ease-in-out var(--delay) infinite;
+  transform-origin: 50% 0;
+}
+/* ngọn lửa ở miệng đèn */
+.ld-lantern i::after {
+  content: "";
+  position: absolute;
+  left: 22%;
+  right: 22%;
+  bottom: 6%;
+  height: 34%;
+  border-radius: 50%;
+  background: radial-gradient(ellipse at 50% 70%, #fffbe6 0%, #ffe28a 40%, rgba(255, 200, 90, 0) 75%);
+}
+/* vành miệng đèn */
+.ld-lantern i::before {
+  content: "";
+  position: absolute;
+  left: 14%;
+  right: 14%;
+  bottom: -1px;
+  height: calc(3px * var(--s));
+  border-radius: 2px;
+  background: rgba(120, 45, 20, 0.55);
+}
+@keyframes ld-rise {
+  from {
+    transform: translateY(108vh);
+  }
+  to {
+    transform: translateY(-18vh);
+  }
+}
+@keyframes ld-sway {
+  from {
+    transform: translateX(calc(-14px * var(--s))) rotate(-4deg);
+  }
+  to {
+    transform: translateX(calc(14px * var(--s))) rotate(4deg);
+  }
+}
+@keyframes ld-flicker {
+  0%,
+  100% {
+    filter: brightness(1);
+  }
+  40% {
+    filter: brightness(1.12);
+  }
+  55% {
+    filter: brightness(0.94);
+  }
+  75% {
+    filter: brightness(1.08);
+  }
+}
+@media (max-width: 760px) {
+  .ld-lantern:nth-child(n + 6) {
+    display: none;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .ld-sky {
+    display: none;
+  }
+}
+#loader.reveal .ld-dots,
+#loader.fade .ld-dots {
+  opacity: 0;
 }
 
 /* ---------- Phòng Rừng Trúc (thiền viện) HUD ---------- */

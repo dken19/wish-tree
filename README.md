@@ -6,6 +6,7 @@ Xây bằng **Next.js (App Router) + React Three Fiber + Firebase Firestore**.
 
 ## Tính năng
 
+- **Màn chờ**: chữ "Cây Ước Nguyện" thư pháp trên nền giấy dó, **đèn trời** lững lờ bay lên; tải xong thì **màu nước loang** (shader WebGL) mở dần ra cây 3D.
 - Cây 3D low-poly, giấy/hoa dùng `InstancedMesh` (nhẹ trên mobile).
 - Click tờ giấy → đọc điều ước (raycast theo `instanceId`).
 - Viết điều ước → lọc từ tục + rate-limit. **Đăng nhập Google → điều ước hiện NGAY trên cây** (khỏi chờ duyệt); gửi ẩn danh → vào hàng chờ **duyệt** rồi mới hiện.

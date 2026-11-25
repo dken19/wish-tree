@@ -93,7 +93,8 @@ components/
     NavDock.tsx        # MENU dock tròn góc dưới-phải: xòe 4 mục (Cây/Viết/Phòng ôn bài qua store; Kỹ năng sống -> router.push('/ky-nang')); ẩn khi roomOpen/composerOpen
     FocusHUD.tsx       # overlay phòng: MẶC ĐỊNH THU GỌN (thanh mini: online + đồng hồ Pomodoro + Rời) — bấm mở bảng đầy đủ (flip + Pomodoro + đổi tên + Rời); số online = sessions + bots; mobile RoomCamera nới FOV
     LacBird.tsx        # <img> chim Lạc (public/chim-lac.jpg) + mix-blend-mode
-    Toast.tsx, Loader.tsx
+    Toast.tsx
+    Loader.tsx         # màn chờ: chữ 'Cây Ước Nguyện' trên giấy dó (canvas 2D) + ĐÈN TRỜI bay lên (CSS thuần, mảng LANTERNS; mobile 5 chiếc; tan dần khi mở) → shader WebGL thuần MÀU NƯỚC LOANG mở ra cây 3D khi useScene.sceneReady (≥1.5s, tối đa 9s); không WebGL/reduce-motion → mờ dần; chỉ hiện 1 lần mỗi phiên (loaded)
 lib/
   auth.ts              # client: watchAuth/signInGoogle/signInFacebook/signOutUser/getIdToken + type AuthUser (Firebase Auth)
   themes.ts            # THEMES (8 chủ đề) + ThemeKey + isThemeKey
@@ -207,6 +208,7 @@ Vercel: import `.env.local` khi tạo project.
 ## 8. Gotchas (đọc trước khi sửa)
 
 - **ESLint**: Next 16 bật rule React-Compiler (`purity`/`immutability`/`set-state-in-effect`) báo nhầm với code Three.js (Math.random trong useMemo, mutate buffer trong useFrame). Đã **tắt cho `components/three/**`** + vài file UI trong `eslint.config.mjs`. Đừng "sửa" các cảnh báo này bằng cách viết lại — chúng cố ý.
+- **Loader màu nước**: `WishTreeCanvas.onCreated` đợi 2 rAF rồi `setSceneReady(true)` → Loader mới loang mở. Nền giấy + chữ + con dấu vẽ **1 lần** vào canvas 2D (đợi `document.fonts.ready`, đo vị trí chữ HTML để vẽ đúng chỗ, rồi crossfade) → làm texture cho fragment shader (1 tam giác full màn hình, ~3.2s, xong thì `loseContext`). Lòng vết trong suốt đi **trễ** sau mép màu (2 ngưỡng `t` và `t-.2`) để luôn thấy dải màu loang. **KHÔNG bật `gl.BLEND`** (canvas `premultipliedAlpha:false`) — bật sẽ ra viền tối quanh vùng trong suốt.
 - **Canvas SSR**: phải `dynamic(..., { ssr:false })` từ client component (HomeClient). Không import trực tiếp ở server component.
 - **Chim Lạc**: `public/chim-lac.jpg` là ảnh ĐEN/nền TRẮNG; nền trắng được bỏ bằng `mix-blend-mode: multiply` (xem `.composer-head .lac`, `.lac-watermark` trong globals.css, dùng ở `LacBird.tsx`). Muốn đổi màu chim cần CSS filter. Lưu ý: ẢNH OG/favicon KHÔNG dùng file này (chim Lạc vẽ lại bằng SVG silhouette vì satori không hỗ trợ `mix-blend-mode` để bỏ nền trắng).
 - **Ảnh OG + icon sinh động (next/og)**: `app/opengraph-image.tsx` vẽ bằng satori — chỉ hỗ trợ flexbox + inline-style + `<svg>` cơ bản (KHÔNG `mix-blend-mode`, gradient text, filter…). Chữ Việt có dấu cần **nhúng font TTF** đọc bằng `readFile(join(process.cwd(),'app/_fonts/...'))` — font mặc định Geist thiếu dấu. Đổi tiêu đề/khẩu hiệu thì sửa trực tiếp trong file; test bằng `curl localhost:3000/opengraph-image -o og.png`. `twitter-image.tsx` chỉ re-export. **Logo**: gốc `public/logo.png` (512×512, cũng là logo trên Google OAuth consent screen — bản 120×120); `app/icon.png` + `app/apple-icon.png` là bản thu nhỏ (xuất bằng `sharp`). Đổi logo → xuất lại cả 3 file. OG nhúng logo dạng data URL (`readFile` → base64) vì satori không đọc đường dẫn tương đối.

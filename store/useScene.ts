@@ -43,6 +43,10 @@ type SceneState = {
   toast: string | null
   toastId: number
   showToast: (msg: string) => void
+  /** Canvas 3D đã dựng + vẽ khung hình đầu (WishTreeCanvas.onCreated). */
+  sceneReady: boolean
+  setSceneReady: (v: boolean) => void
+  /** Màn hình tải (tranh) đã mở xong. */
   loaded: boolean
   setLoaded: (v: boolean) => void
 }
@@ -79,6 +83,8 @@ export const useScene = create<SceneState>((set) => ({
   toast: null,
   toastId: 0,
   showToast: (msg) => set((s) => ({ toast: msg, toastId: s.toastId + 1 })),
+  sceneReady: false,
+  setSceneReady: (v) => set({ sceneReady: v }),
   loaded: false,
   setLoaded: (v) => set({ loaded: v }),
 }))
