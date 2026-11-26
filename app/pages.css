@@ -1578,3 +1578,204 @@
   justify-self: start;
   margin-top: 0;
 }
+
+/* ---------- Cảm xúc (tim / cỏ bốn lá / sao) — components/ui/Reactions, dùng cả trang chủ + trang nội dung ---------- */
+.rx {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+.rx-btn {
+  --rx-c: #e0475b;
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  min-height: 34px;
+  padding: 0 11px 0 9px;
+  border-radius: 999px;
+  border: 1.5px solid color-mix(in srgb, currentColor 22%, transparent);
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  font-size: 13px;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  cursor: pointer;
+  transition: background-color 0.15s, border-color 0.15s, color 0.15s, transform 0.15s;
+}
+.rx-btn:hover:not(:disabled) {
+  border-color: var(--rx-c);
+  color: var(--rx-c);
+}
+.rx-btn.on {
+  color: var(--rx-c);
+  border-color: var(--rx-c);
+  background: color-mix(in srgb, var(--rx-c) 12%, transparent);
+}
+/* nét SVG -> tô đầy khi đã thả (CSS thắng thuộc tính fill="none") */
+.rx-btn.on .pg-ic {
+  fill: currentColor;
+  fill-opacity: 0.9;
+}
+.rx-btn:active {
+  transform: scale(0.94);
+}
+.rx-btn.pop .pg-ic {
+  animation: rx-pop 0.5s cubic-bezier(0.3, 1.6, 0.5, 1);
+}
+@keyframes rx-pop {
+  35% {
+    transform: scale(1.45) rotate(-8deg);
+  }
+}
+.rx-btn:disabled {
+  cursor: progress;
+}
+.rx-compact .rx-btn {
+  min-height: 30px;
+  padding: 0 9px 0 7px;
+}
+.rx-compact .rx-n:empty {
+  display: none;
+}
+@media (prefers-reduced-motion: reduce) {
+  .rx-btn.pop .pg-ic {
+    animation: none;
+  }
+}
+.card .rx {
+  margin-top: 14px;
+}
+.tk-rx {
+  margin-top: 10px;
+}
+.wd-rx {
+  display: flex;
+  justify-content: center;
+  margin: 34px auto 0;
+  color: var(--wd-on-bg);
+}
+.wd-rx .rx-btn {
+  min-height: 40px;
+  padding: 0 14px 0 11px;
+  background: color-mix(in srgb, var(--wd-on-bg) 10%, transparent);
+  border-color: color-mix(in srgb, var(--wd-on-bg) 40%, transparent);
+  backdrop-filter: blur(6px);
+}
+.wd-rx .rx-btn.on,
+.wd-rx .rx-btn:hover:not(:disabled) {
+  color: var(--wd-paper);
+  background: var(--rx-c);
+  border-color: var(--rx-c);
+}
+.wd-plain .wd-rx {
+  color: var(--pg-ink);
+}
+.wd-plain .wd-rx .rx-btn {
+  background: var(--pg-bg);
+  border-color: var(--pg-line);
+}
+.wd-plain .wd-rx .rx-btn.on,
+.wd-plain .wd-rx .rx-btn:hover:not(:disabled) {
+  color: #fff;
+}
+/* /tai-khoan: số cảm xúc nhận được (chỉ đọc) */
+.acc-rx {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+}
+.acc-rx span {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  font-weight: 600;
+}
+
+/* ---------- /admin tab Người dùng (app/admin/UsersPanel) ---------- */
+.adm-ulist {
+  list-style: none;
+  margin: 12px 0 0;
+  padding: 0;
+  display: grid;
+  gap: 10px;
+}
+.adm-u {
+  padding: 14px 16px;
+  border-radius: 10px;
+  background: var(--pg-paper);
+}
+.adm-u.is-banned {
+  background: color-mix(in srgb, var(--pg-act) 8%, var(--pg-paper));
+}
+.adm-u-head {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+.adm-u-head img,
+.adm-u-ph {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  object-fit: cover;
+  flex: none;
+}
+.adm-u-ph {
+  display: grid;
+  place-items: center;
+  background: var(--pg-paper-2);
+  color: var(--pg-muted);
+}
+.adm-u-id {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+.adm-u-id b {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+  color: var(--pg-ink);
+}
+.adm-u-id span {
+  font-size: 13px;
+  color: var(--pg-ink2);
+  overflow-wrap: anywhere;
+}
+.adm-badge {
+  font-size: 11px;
+  font-weight: 700;
+  padding: 1px 7px;
+  border-radius: 4px;
+  border: 1.5px solid var(--pg-stamp);
+  color: var(--pg-stamp);
+}
+.adm-badge.ban {
+  border-color: var(--pg-act);
+  color: var(--pg-act);
+}
+.adm-danger {
+  color: var(--pg-act);
+  border-color: color-mix(in srgb, var(--pg-act) 50%, transparent);
+}
+.adm-uwishes {
+  margin: 12px 0 0;
+  padding: 10px 0 0 18px;
+  border-top: 1px dashed var(--pg-line);
+  display: grid;
+  gap: 6px;
+  font-size: 14px;
+  color: var(--pg-ink);
+}
+.adm-uw-st {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--pg-muted);
+}
+/* tên người viết trên trang chi tiết: luôn màu nhấn của skin (đè màu .spk-name ban đêm vốn dành cho thẻ tối) */
+.wd-fancy .wd-author.spk-name {
+  color: var(--wd-accent);
+  -webkit-text-fill-color: var(--wd-accent);
+}

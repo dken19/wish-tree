@@ -7,6 +7,7 @@ import { formatNo, formatWishTime } from '@/lib/wishMeta'
 import WishThread, { ReportButton } from './WishThread'
 import Icon from './Icon'
 import Sparkles from './Sparkles'
+import Reactions, { useMyReactions } from './Reactions'
 
 // Thẻ đọc điều ước (mở khi click một tờ giấy).
 export default function WishCard() {
@@ -20,6 +21,7 @@ export default function WishCard() {
   const n = openWish && count?.id === openWish.id ? count.n : (openWish?.commentCount ?? 0)
   const isSeed = openWish?.id.startsWith('seed-')
   const verified = !!openWish?.verified
+  const [myRx, setMyRx] = useMyReactions(openWish ? [openWish.id] : [])
 
   return (
     <div
@@ -61,6 +63,14 @@ export default function WishCard() {
             {openWish?.author || 'Ẩn danh'}
           </span>
         </div>
+        {openWish && (
+          <Reactions
+            wishId={openWish.id}
+            counts={openWish.reactions}
+            mine={myRx[openWish.id]}
+            onMine={(m) => setMyRx((x) => ({ ...x, [openWish.id]: m }))}
+          />
+        )}
         {openWish && (openWish.no || !isSeed) && (
           <div className="card-actions">
             {openWish.no ? (

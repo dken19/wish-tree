@@ -8,6 +8,7 @@ import { getAuthClient } from '@/lib/firebase.client'
 import { signInGoogle, signOutUser } from '@/lib/auth'
 import ReportsPanel from './ReportsPanel'
 import FunnyCollectionsPanel from './FunnyCollectionsPanel'
+import UsersPanel from './UsersPanel'
 
 type Status = 'pending' | 'approved' | 'rejected' | 'funny' | 'all'
 type Action = 'approve' | 'reject' | 'pending' | 'funny'
@@ -72,6 +73,9 @@ export default function AdminPage() {
   const [authReady, setAuthReady] = useState(false)
   const [tab, setTab] = useState<Status>('pending')
   const [showReports, setShowReports] = useState(false)
+  const [showUsers, setShowUsers] = useState(false)
+  // đang xem bảng phụ (báo cáo / người dùng) thay cho danh sách điều ước
+  const side = showReports || showUsers
   const [page, setPage] = useState(1)
   const [data, setData] = useState<Resp | null>(null)
   const [loading, setLoading] = useState(false)
@@ -112,7 +116,7 @@ export default function AdminPage() {
   )
 
   const load = useCallback(async () => {
-    if (!user || showReports) return
+    if (!user || side) return
     setLoading(true)
     setError('')
     try {
@@ -129,7 +133,7 @@ export default function AdminPage() {
     } finally {
       setLoading(false)
     }
-  }, [user, call, tab, page, showReports])
+  }, [user, call, tab, page, side])
 
   useEffect(() => {
     load()
@@ -198,9 +202,10 @@ export default function AdminPage() {
           <button
             key={t.key}
             className="pg-chip"
-            aria-pressed={!showReports && t.key === tab}
+            aria-pressed={!side && t.key === tab}
             onClick={() => {
               setShowReports(false)
+              setShowUsers(false)
               setTab(t.key)
               setPage(1)
             }}
@@ -209,9 +214,27 @@ export default function AdminPage() {
             {counts && <span className="adm-n">{counts[t.key].toLocaleString('vi-VN')}</span>}
           </button>
         ))}
-        <button className="pg-chip" aria-pressed={showReports} onClick={() => setShowReports(true)}>
+        <button
+          className="pg-chip"
+          aria-pressed={showReports}
+          onClick={() => {
+            setShowUsers(false)
+            setShowReports(true)
+          }}
+        >
           <Icon name="flag" size={15} />
           Bị báo cáo
+        </button>
+        <button
+          className="pg-chip"
+          aria-pressed={showUsers}
+          onClick={() => {
+            setShowReports(false)
+            setShowUsers(true)
+          }}
+        >
+          <Icon name="users" size={15} />
+          Người dùng
         </button>
         <button className="pg-chip" onClick={load} disabled={loading}>
           <Icon name="refresh" size={15} />
@@ -220,7 +243,8 @@ export default function AdminPage() {
       </div>
 
       {showReports && <ReportsPanel call={call} />}
-      {!showReports && (tab === 'funny' || picked.length > 0) && user && (
+      {showUsers && <UsersPanel call={call} />}
+      {!side && (tab === 'funny' || picked.length > 0) && user && (
         <FunnyCollectionsPanel
           call={call}
           picked={picked}
@@ -229,12 +253,12 @@ export default function AdminPage() {
           onCreated={load}
         />
       )}
-      {!showReports && error && <p className="pg-status err">{error}</p>}
-      {!showReports && !error && !loading && data && data.items.length === 0 && (
+      {!side && error && <p className="pg-status err">{error}</p>}
+      {!side && !error && !loading && data && data.items.length === 0 && (
         <p className="pg-status">Không có điều ước nào ở mục này.</p>
       )}
 
-      {!showReports && (
+      {!side && (
         <ol className="wl">
           {data?.items.map((it) => {
             const st = STATUS_LABEL[it.status]
@@ -364,7 +388,7 @@ export default function AdminPage() {
         </ol>
       )}
 
-      {!showReports && totalPages > 1 && (
+      {!side && totalPages > 1 && (
         <nav className="pg-pager" aria-label="Phân trang">
           <button className="pg-btn ghost" disabled={page <= 1} onClick={() => setPage(page - 1)}>
             <Icon name="back" size={16} />

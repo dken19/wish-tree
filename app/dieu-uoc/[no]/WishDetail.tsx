@@ -6,6 +6,7 @@ import { PageSky } from '@/components/ui/PageShell'
 import Icon from '@/components/ui/Icon'
 import Sparkles from '@/components/ui/Sparkles'
 import WishThread, { ReportButton } from '@/components/ui/WishThread'
+import Reactions, { useMyReactions } from '@/components/ui/Reactions'
 import { useScene } from '@/store/useScene'
 import { getIdToken } from '@/lib/auth'
 import { isFirebaseConfigured } from '@/lib/firebase.client'
@@ -52,6 +53,7 @@ export default function WishDetail({ wish }: { wish: PublicWish }) {
   const [canShare, setCanShare] = useState(false)
   const [comments, setComments] = useState(wish.commentCount)
   const [threadOpen, setThreadOpen] = useState(true)
+  const [myRx, setMyRx] = useMyReactions([wish.id])
 
   useEffect(() => {
     // navigator.share chỉ có ở client (chủ yếu mobile) -> quyết định sau khi mount
@@ -192,6 +194,15 @@ export default function WishDetail({ wish }: { wish: PublicWish }) {
             </span>
           )}
         </article>
+
+        <div className="wd-rx">
+          <Reactions
+            wishId={wish.id}
+            counts={wish.reactions}
+            mine={myRx[wish.id]}
+            onMine={(m) => setMyRx((x) => ({ ...x, [wish.id]: m }))}
+          />
+        </div>
 
         <div className="wd-share" role="group" aria-label="Chia sẻ điều ước">
           <button className="wd-btn primary" onClick={copy} aria-live="polite">

@@ -9,6 +9,8 @@ import WishThread, { ReportButton } from "@/components/ui/WishThread";
 import PageShell from "@/components/ui/PageShell";
 import Icon from "@/components/ui/Icon";
 import Sparkles from "@/components/ui/Sparkles";
+import Reactions, { useMyReactions } from "@/components/ui/Reactions";
+import type { ReactionCounts } from "@/lib/reactions";
 
 type Item = {
   id: string;
@@ -20,6 +22,7 @@ type Item = {
   commentCount: number;
   verified?: boolean;
   achieved?: boolean;
+  reactions?: ReactionCounts;
 };
 
 type Filters = {
@@ -147,6 +150,7 @@ export default function WishesView() {
   }, []);
 
   const totalPages = data?.totalPages ?? 1;
+  const [myRx, setMyRx] = useMyReactions(data?.items.map((w) => w.id) ?? []);
 
   return (
     <PageShell
@@ -331,6 +335,15 @@ export default function WishesView() {
                       >
                         {w.author || "Ẩn danh"}
                       </span>
+                    </div>
+                    <div className="tk-rx">
+                      <Reactions
+                        compact
+                        wishId={w.id}
+                        counts={w.reactions}
+                        mine={myRx[w.id]}
+                        onMine={(m) => setMyRx((x) => ({ ...x, [w.id]: m }))}
+                      />
                     </div>
                     {!isSeed && (
                       <div className="tk-actions">

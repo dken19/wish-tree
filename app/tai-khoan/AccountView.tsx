@@ -6,6 +6,7 @@ import Icon from '@/components/ui/Icon'
 import { THEMES, isThemeKey } from '@/lib/themes'
 import { isFirebaseConfigured } from '@/lib/firebase.client'
 import { SEED_WISHES } from '@/lib/wishes'
+import { REACTIONS, type ReactionCounts } from '@/lib/reactions'
 import { getIdToken, signInGoogle, signOutUser, watchAuth, type AuthUser } from '@/lib/auth'
 import { PROGRESS_LABEL, formatNo, splitWishTime, type WishProgress } from '@/lib/wishMeta'
 
@@ -20,6 +21,7 @@ type Item = {
   achievedAt: number
   commentCount: number
   createdAt: number
+  reactions?: ReactionCounts
 }
 
 type Filter = 'all' | WishProgress
@@ -59,6 +61,7 @@ const demoItems = (): Item[] =>
     progress: w.achieved ? 'achieved' : 'trying',
     achievedAt: w.achieved ? DEMO_T0 - 86400_000 : 0,
     commentCount: i === 0 ? 2 : 0,
+    reactions: i === 0 ? { heart: 5, clover: 2 } : i === 3 ? { star: 3 } : {},
     createdAt: DEMO_T0 - i * 26 * 3600_000,
   }))
 const DEMO_USER: AuthUser = { uid: 'demo', name: 'Người thử nghiệm', photo: null }
@@ -273,6 +276,16 @@ export default function AccountView() {
                         {tk ? THEMES[tk].label : w.theme}
                       </span>
                       <span className={`acc-review s-${w.flagged ? 'flagged' : w.status}`}>{reviewLabel(w)}</span>
+                      {REACTIONS.some((r) => (w.reactions?.[r.key] ?? 0) > 0) && (
+                        <span className="acc-rx" aria-label="Cảm xúc nhận được">
+                          {REACTIONS.filter((r) => (w.reactions?.[r.key] ?? 0) > 0).map((r) => (
+                            <span key={r.key} style={{ color: r.color }} title={r.label}>
+                              <Icon name={r.key} size={14} />
+                              {w.reactions?.[r.key]}
+                            </span>
+                          ))}
+                        </span>
+                      )}
                       {done && w.achievedAt > 0 && (
                         <span>Đạt được ngày {splitWishTime(w.achievedAt)[0]}</span>
                       )}

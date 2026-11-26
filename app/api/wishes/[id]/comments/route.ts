@@ -45,7 +45,7 @@ export async function POST(req: Request, ctx: { params: Promise<{ id: string }> 
   const { id } = await ctx.params
   if (!isAdminConfigured) return deny(503, 'Máy chủ chưa cấu hình lưu trữ (Firebase Admin)')
 
-  const viewer = await viewerFromRequest(req)
+  const viewer = await viewerFromRequest(req, true)
   if (!viewer) return deny(401, 'Đăng nhập để bình luận nhé')
 
   const body = (await req.json().catch(() => ({}))) as { text?: unknown }

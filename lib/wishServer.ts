@@ -5,6 +5,7 @@ import { getAdminAuth } from './firebase.admin'
 import { searchTokens } from './wishMeta'
 import { isAdminEmail } from './adminAuth'
 import { isWishSkin } from './wishSkins'
+import { readCounts } from './reactions'
 
 /** Doc đếm: { wishNo: số điều ước lớn nhất đã cấp }. */
 export const counterRef = (db: Firestore) => db.doc('meta/counters')
@@ -54,13 +55,17 @@ export async function ensureNumbering(db: Firestore): Promise<void> {
 /** admin = email đã xác minh nằm trong ADMIN_EMAILS (server tự quyết, không tin client). */
 export type Viewer = { uid: string; name: string; photo: string | null; admin: boolean }
 
-/** Đọc `Authorization: Bearer <Firebase ID token>`; null nếu không có / không hợp lệ. */
-export async function viewerFromRequest(req: Request): Promise<Viewer | null> {
+/**
+ * Đọc `Authorization: Bearer <Firebase ID token>`; null nếu không có / không hợp lệ.
+ * `strict` (dùng ở MỌI đường GHI): kiểm tra thêm tài khoản bị admin khoá (disabled) / thu hồi phiên
+ * -> verifyIdToken(token, true) tốn thêm 1 lượt gọi Auth nên đường đọc không bật.
+ */
+export async function viewerFromRequest(req: Request, strict = false): Promise<Viewer | null> {
   const bearer = req.headers.get('authorization')
   const token = bearer?.startsWith('Bearer ') ? bearer.slice(7) : null
   if (!token) return null
   try {
-    const d = await getAdminAuth()!.verifyIdToken(token)
+    const d = await getAdminAuth()!.verifyIdToken(token, strict)
     return {
       uid: d.uid,
       name: String(d.name || 'Người dùng').slice(0, 40),
@@ -88,6 +93,8 @@ export function publicWish(d: DocumentSnapshot) {
     // người viết tự đánh dấu "Đã đạt được" ở /tai-khoan
     achieved: data.progress === 'achieved',
     // giao diện trang chi tiết do chủ nhân chọn — chỉ ước của người đăng nhập mới có
+    // số cảm xúc (tim / cỏ bốn lá / sao) — chỉ số đếm, không lộ ai thả
+    reactions: readCounts(data.reactions),
     skin: typeof data.uid === 'string' && data.uid && isWishSkin(data.skin) ? data.skin : null,
   }
 }

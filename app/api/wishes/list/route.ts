@@ -81,6 +81,7 @@ export async function GET(req: Request) {
       verified: !!w.verified,
       achieved: !!w.achieved,
       skin: null,
+      reactions: {},
     }))
     if (no) return NextResponse.json(pageOf(seeds.filter((w) => w.no === no), 1))
     return NextResponse.json(pageOf(filterInMemory(seeds, { theme, range, words, sort }), page))

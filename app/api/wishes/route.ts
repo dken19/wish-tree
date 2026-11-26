@@ -51,11 +51,15 @@ export async function POST(req: Request) {
   const token = bearer?.startsWith('Bearer ') ? bearer.slice(7) : null
   if (token) {
     try {
-      const decoded = await getAdminAuth()!.verifyIdToken(token)
+      // checkRevoked=true: tài khoản bị admin khoá (disabled) / thu hồi phiên -> ném lỗi
+      const decoded = await getAdminAuth()!.verifyIdToken(token, true)
       uid = decoded.uid
       if (decoded.name) authorName = String(decoded.name).slice(0, 40)
-    } catch {
-      uid = null // token không hợp lệ -> coi như ẩn danh
+    } catch (e) {
+      const code = (e as { code?: string })?.code
+      if (code === 'auth/user-disabled')
+        return NextResponse.json({ error: 'Tài khoản của bạn đã bị tạm khoá. Liên hệ người giữ cây nếu có nhầm lẫn.' }, { status: 403 })
+      uid = null // token không hợp lệ / hết hạn -> coi như ẩn danh
     }
   }
   const status = uid ? 'approved' : 'pending'

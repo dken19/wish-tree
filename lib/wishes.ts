@@ -8,6 +8,7 @@ import {
 } from 'firebase/firestore'
 import { getDb } from './firebase.client'
 import type { ThemeKey } from './themes'
+import { readCounts, type ReactionCounts } from './reactions'
 
 export type WishStatus = 'pending' | 'approved' | 'rejected' | 'funny'
 
@@ -20,6 +21,7 @@ export type Wish = {
   no?: number // số thứ tự #N (cấp lúc gửi, xem lib/wishServer)
   commentCount?: number
   verified?: boolean // người đăng nhập gửi (có uid) -> thẻ lấp lánh
+  reactions?: ReactionCounts // số tim / cỏ bốn lá / sao (lib/reactions)
   achieved?: boolean // người viết tự đánh dấu "Đã đạt được" (/tai-khoan)
 }
 
@@ -90,6 +92,7 @@ export function subscribeApproved(cb: (wishes: Wish[]) => void): () => void {
             commentCount: typeof data.commentCount === 'number' ? data.commentCount : 0,
             verified: typeof data.uid === 'string' && data.uid.length > 0,
             achieved: data.progress === 'achieved',
+            reactions: readCounts(data.reactions),
           }
         })
         .sort((a, b) => b.createdAt - a.createdAt)

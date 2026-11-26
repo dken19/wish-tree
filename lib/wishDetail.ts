@@ -32,6 +32,7 @@ export const getWishByNo = cache(async (no: number): Promise<PublicWish | null> 
       verified: !!w.verified,
       achieved: !!w.achieved,
       skin: null,
+      reactions: {},
     }
   }
   const snap = await getAdminDb()!.collection('wishes').where('no', '==', no).limit(3).get()

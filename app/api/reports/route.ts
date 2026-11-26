@@ -18,7 +18,7 @@ function deny(status: number, error: string) {
 // khác nhau -> tự ẩn (điều ước về `pending` + flagged; bình luận hidden) chờ admin ở tab "Bị báo cáo".
 export async function POST(req: Request) {
   if (!isAdminConfigured) return deny(503, 'Máy chủ chưa cấu hình lưu trữ (Firebase Admin)')
-  const viewer = await viewerFromRequest(req)
+  const viewer = await viewerFromRequest(req, true)
   if (!viewer) return deny(401, 'Đăng nhập để báo cáo nhé')
 
   const body = (await req.json().catch(() => ({}))) as {

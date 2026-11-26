@@ -5,6 +5,7 @@ import { rateLimit } from '@/lib/ratelimit'
 import { isProgress } from '@/lib/wishMeta'
 import { millis, viewerFromRequest } from '@/lib/wishServer'
 import { isWishSkin } from '@/lib/wishSkins'
+import { readCounts } from '@/lib/reactions'
 import { revalidateWishPage } from '@/lib/wishDetail'
 import type { DocumentSnapshot } from 'firebase-admin/firestore'
 
@@ -30,6 +31,7 @@ function ownItem(d: DocumentSnapshot) {
     progress: isProgress(x.progress) ? x.progress : 'trying',
     achievedAt: millis(x.achievedAt),
     skin: isWishSkin(x.skin) ? x.skin : null,
+    reactions: readCounts(x.reactions),
     commentCount: typeof x.commentCount === 'number' ? x.commentCount : 0,
     createdAt: millis(x.createdAt),
   }
@@ -61,7 +63,7 @@ export async function GET(req: Request) {
 // progress = tiến độ tự đánh dấu; skin = giao diện trang chi tiết /dieu-uoc/[no].
 export async function PATCH(req: Request) {
   if (!isAdminConfigured) return deny(503, 'Máy chủ chưa cấu hình lưu trữ (Firebase Admin)')
-  const viewer = await viewerFromRequest(req)
+  const viewer = await viewerFromRequest(req, true)
   if (!viewer) return deny(401, 'Đăng nhập để cập nhật điều ước nhé')
 
   const body = (await req.json().catch(() => ({}))) as { id?: unknown; progress?: unknown; skin?: unknown }
