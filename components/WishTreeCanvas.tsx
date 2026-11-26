@@ -40,7 +40,7 @@ export default function WishTreeCanvas() {
         toneMapping: THREE.ACESFilmicToneMapping,
         toneMappingExposure: 1.0,
       }}
-      camera={{ fov: 46, near: 0.1, far: 320, position: [0, 2.6, 9.2] }}
+      camera={{ fov: 46, near: 0.1, far: 450, position: [0, 4.4, 14] }}
       onCreated={({ gl }) => {
         gl.outputColorSpace = THREE.SRGBColorSpace
         gl.shadowMap.type = THREE.PCFSoftShadowMap

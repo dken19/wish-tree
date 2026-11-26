@@ -91,9 +91,11 @@ components/
     Ground.tsx         # nền (đỉnh núi, texture đất Poly Haven qua GroundTexture; fallback cỏ canvas) + gò + đá SCAN (tảng lớn sườn xa + viên nhỏ rìa đồng cỏ né lối về đền; fallback makeRock)
     SceneWarmup.tsx    # báo store.sceneReady (cho màn chờ mực loang mở) CHỈ khi: mọi ảnh/model cảnh cây đã tải (suspend, cùng cache) + gl.compileAsync xong + đã vẽ 2 khung; trong <Suspense fallback={null}>
     SceneAssets.tsx    # asset Poly Haven CC0 trong public/scene/ (nạp NỀN, Suspense): GroundTexture (leafy_grass, trộn 2 tỉ lệ trong shader chống lộ ô lặp), BarkTexture (bark_brown_02 cho Tree), ScannedRocks (rock_07/rock_09 instanced, chuẩn hoá cỡ 1 m đáy y=0) — dùng cả ở phòng Rừng Trúc
-    Scenery.tsx        # cảnh nền: núi đá vôi xa BO TRÒN đỉnh (makePeak dome) + RỪNG THÔNG xa (5 tầng mép lởm chởm, mỗi cây 1 sắc xanh instanceColor, 1 draw call, theo terrainHeight, r16-60) + xóm nhà xa
-    Clouds.tsx         # biển mây quanh đỉnh núi (theme đỉnh núi) — tĩnh/nhẹ
-    StonePath.tsx      # VÒNG phiến đá trắng (ÍT, tách xa, lộ cỏ) quanh gốc cây + DẢI đá LIỀN MẠCH chạy về hướng đền (peakCenter, xuống thung lũng, mờ dần); đá RoundedBox bo góc + texture canvas nứt/sứt/lốm đốm; bám groundHeight + nghiêng slopeQuaternion nhẹ, instanced
+    Scenery.tsx        # cảnh quanh đỉnh: THÔNG NHỎ rải xuống sườn (r 24–60, cỡ thật cố định — luật gần xa, ngoài quỹ đạo camera, mọc cụm theo noise, né lối đá về đền + xóm) + xóm 3 nhà + Monastery + <FarLands>
+    FarLands.tsx       # CẢNH XA LIỀN MẠCH, DỰNG DẦN sau khi cảnh hiện (4 vành gần→xa, mỗi khung ~6ms, vành xong thì "hiện ra từ sương" uReveal; rồi rừng, rồi làng — KHÔNG chặn màn chờ): lưới địa hình CỰC (r 56→340) theo farHeight, pháp tuyến sai phân trên lưới (+1 hàng đệm -> nối vành không lộ đường) + RỪNG ~7000 cây (mobile 2200, r ≤ ~170, instanced, tán XÙ XÌ ghép 4 cụm lá icosa + 7 chùm nhỏ bát diện lú ra mép, đỉnh bị đẩy ra/vào mạnh, 3 dáng tròn/thon/xoè = 3 InstancedMesh, bóng trong tán nướng vào màu đỉnh, ~144 tam giác/cây, cỡ THẬT như nhau mọi khoảng cách — luật gần xa, đừng phóng to cây xa) + BẢN LÀNG (nhà instanced, cửa sổ sáng về đêm) trên cao nguyên có RUỘNG BẬC THANG. Chung farLight (sáng tối theo uSunDir: mặt hướng nắng ấm, mặt khuất ánh trời lạnh) + farAir (phối cảnh khí quyển + SƯƠNG THUNG LŨNG theo độ cao, mép noise, chỉ từ 70–150m trở ra); fog:false
+    Clouds.tsx         # CumulusClouds: atlas canvas 2x2 (nhiều búp nhỏ dẹt ngang, đường bao gồ ghề + sợi mây lơ thơ), mép bị noise "gặm" trong shader (không tròn vo), billboard INSTANCED 1 draw call, R=sáng/A=phủ -> pha uCloudShade→uCloudLit, trôi vòng quanh đỉnh. (Biển mây mặt phẳng ĐÃ BỎ — sương thung lũng vẽ trong shader FarLands)
+    SkyDome.tsx        # VÒM TRỜI tự vẽ (thay drei Sky): gradient uTop→uHorizon + quầng/đĩa mặt trời (uSunDir) + trăng & sao lấp lánh khi đêm (Points); gl_Position.z=w -> luôn ở sau cùng
+    StonePath.tsx      # VÒNG phiến đá trắng (ÍT, tách xa, lộ cỏ) quanh gốc cây + LỐI ĐÁ BƯỚC (từng phiến tách rời, hở cỏ ~0,6–0,8m, so le trái/phải, seed cố định) chạy về hướng đền (peakCenter, xuống thung lũng, mờ dần); đá RoundedBox bo góc + texture canvas nứt/sứt/lốm đốm; bám groundHeight + nghiêng slopeQuaternion nhẹ, instanced
     Meadow.tsx         # cỏ PHỦ KÍN ĐỒI 2 lớp: gần (đỉnh phẳng, khóm 4 lá, 9000/mobile 3200) + xa (sườn trên tới rEdge+17, khóm 3 lá to, 5200/1800); né gốc/vòng đá/dải đá về đền/bàn thư pháp. Khóm = lá thon cong (makeTuft, gốc tối->ngọn sáng vertex color, pháp tuyến hướng lên) instanced, gió GPU + cỏ lau viền rìa (thân+bông) + hoa vàng (points)
     Foliage.tsx        # tán lá: card "cành lá" (ảnh lá thật Poly Haven island_tree_02 ghép thành chùm trên cành, atlas 2 biến thể public/scene/leaves.webp, chọn qua attribute aVar; fallback card canvas) MỌC TỎA từ đầu cành (gốc card ở trong), PHÁP TUYẾN HÌNH CẦU từ tâm tán (không lật mặt sau) -> tán sáng mềm như một khối; + HỆ CÀNH khô phân nhánh (lib/branch, gộp 1 mesh); 70 card/đầu cành (mobile 40), đung đưa theo gió
     Blossoms.tsx       # hoa trên tán = point sprite mềm (texture canvas), bob theo gió
@@ -101,7 +103,7 @@ components/
     WishPapers.tsx     # điều ước đã duyệt (InstancedMesh) — CLICK đọc; dây nối cành
     CalligraphyDesk.tsx# bàn thư pháp 3D; onClick -> mở composer; có hào quang
     TreeLantern.tsx    # ĐÈN ĐÁ đứng kiểu sân chùa (bệ, trụ, hộp đèn giấy dó, mái cong; ~1,6m) cạnh gốc cây = nguồn sáng THỨ 2 (pointLight ấm, KHÔNG đổ bóng, distance 10): mạnh về đêm (9), mưa/mây vừa, nắng chỉ hắt nhẹ; lập loè nhẹ
-    Monastery.tsx      # ĐỀN 3 tầng cầu kỳ trên đỉnh núi xa (peakCenter, quay về tâm): bệ đá+bậc, cột son, mái đầu đao, cửa/đèn lồng PHÁT SÁNG + cột sáng/hào quang/hạt sáng nhấp nháy mời bấm -> setRoomOpen(true)
+    Monastery.tsx      # ĐỀN 3 tầng cầu kỳ trên đỉnh núi xa (peakCenter, quay về tâm): bệ đá+bậc, cột son, mái đầu đao, cửa/đèn lồng PHÁT SÁNG + hạt sáng nhẹ (KHÔNG còn cột sáng/hào quang); sprite vô hình cỡ cố định làm vùng chạm từ xa -> setRoomOpen(true)
     FocusRoom.tsx      # PHÒNG RỪNG TRÚC: RoomCamera NGƯỜI DÙNG tự xoay/zoom (orbit thủ công, KHÔNG auto, mobile nới FOV) + fog/đèn riêng + ghìm exposure≤0.9 (đỡ loá) + nền (RoomFloor, fallback sỏi canvas) + sỏi 3D (đổ bóng) + TIA NẮNG xuyên ngọn (cone additive, dịu) + sương + Backdrop (cylinder phông NÚI ĐỒI nhiều lớp, MeshBasic fog/tonemap=off — thay nền trắng); gate active
     Player.tsx         # PlayerController: nhân vật của mình ĐI LẠI (WASD/mũi tên theo hướng camera, hoặc CHẠM ĐẤT -> walkTo), va chạm tròn + lách vật cản (lib/roomMap), đứng yên tại ghế -> ngồi thiền; tới bàn thờ -> setShrineOpen; cập nhật store.nearShrine. Trạng thái ở `player` (lib/runtime, KHÔNG re-render). RoomCamera bám theo nhân vật, tap ngắn (<350ms, <8px) = đi tới + vòng sáng TapMarker
     Shrine.tsx         # BÀN THỜ đá (tượng ngồi trên toà sen, hào quang, bàn hương + 3 nén nhang, 2 đèn đá) ở SHRINE_POS; khói nhang phụt theo bowNonce, chùm hạt vàng khi được chúc phúc; bấm tượng -> walkTo('shrine')
@@ -113,8 +115,8 @@ components/
     Rain.tsx           # mưa (LineSegments), hiện khi điều kiện = rain
     Dew.tsx            # giọt sương lấp lánh trôi (Points, JS)
     Critters.tsx       # bướm + chuồn chuồn (texture cánh canvas), vỗ cánh, bay vòng
-    CameraRig.tsx      # orbit + pinch tự viết; tự xoay khi idle; cập nhật pointer.moved
-    SceneEnv.tsx       # ánh sáng + fog theo điều kiện; "tick" gió mỗi frame
+    CameraRig.tsx      # orbit + pinch tự viết; nhìn NGANG tầm cây (phi 1.36–1.56, mặc định 1.47 — KHÔNG nhìn từ trên xuống), bán kính 14 (mobile 17), zoom 8–19; tự xoay khi idle; cập nhật pointer.moved
+    SceneEnv.tsx       # ánh sáng + fog theo điều kiện + <SkyDome>; mỗi frame: stepSky (bảng màu trời chuyển mượt), fog.color = uHorizon, "tick" gió
     useIsMobile.ts     # hook phát hiện mobile (SSR-safe)
   ui/
     SkyBackdrop.tsx    # div #sky gradient theo điều kiện thời tiết
@@ -141,14 +143,16 @@ lib/
   auth.ts              # client: watchAuth/signInGoogle/signInFacebook/signOutUser/getIdToken + type AuthUser (Firebase Auth)
   themes.ts            # THEMES (8 chủ đề) + ThemeKey + isThemeKey
   skills.ts            # SKILL_CATEGORIES (4 nhóm: Nấu/Trồng/Chụp ảnh/Chăm sóc da) cho /ky-nang — mỗi kỹ năng có img (Wikimedia Commons, đã verify 200) + source (Wikipedia, ad-free). Thuần dữ liệu
-  peaks.ts             # RINGS/VALLEY_FLOOR + peakCenter(ri,i): vị trí đỉnh núi xa (Scenery dựng mesh, Monastery đặt thiền viện)
+  peaks.ts             # RINGS[0] + peakCenter(0,2) = vị trí/cao độ thiền viện (farHeight dựng ngọn núi đỉnh phẳng đúng chỗ này; StonePath/Meadow/Ground né lối) + CLOUD_SEA_Y (-26) + VALLEY_FLOOR
+  farTerrain.ts        # farHeight(x,z): sườn đỉnh (terrainHeight(x,-z)) + khối núi ridged-noise (|q| mềm -> sống tròn) + tháp đá vôi (jittered grid, chân elip xoay, vai tròn) gộp smax -> dãy LIỀN; ngọn thiền viện đỉnh phẳng; hành lang nhìn về đền không có tháp; HAMLETS (cao nguyên bản làng) + terraceMask; farSlope; vnoise/fbm dùng chung
   presence.ts          # type Session, subscribeSessions (onSnapshot, lọc staleness), heartbeat/leave, clientId+nickname (localStorage)
   tree.ts              # BRANCHES/TIPS (hình học cây), THEME_ZONE, PRNG tất định, anchorFor/tipFor
-  terrain.ts           # terrainHeight(x,z) (Ground dựng lưới) + groundHeight(x,z)=terrainHeight(x,-z) cho ĐẶT vật (z bị lật do rotateX) + rEdgeAt + VALLEY + HỆ BÁM ĐẤT: terrainNormal(x,z) + slopeQuaternion(x,z,blend) (nghiêng vật theo sườn)
+  terrain.ts           # terrainHeight(x,z) (sống núi tần số thấp, mask sin² -> sườn mượt không gấp khúc) + GROUND_SIZE 150/SEG 150 (ô 1m) + groundMeshHeight (ngoài GROUND_FADE_R=63 chìm xuống dưới lưới FarLands) + groundHeight(x,z)=terrainHeight(x,-z) cho ĐẶT vật (z bị lật do rotateX) + rEdgeAt + VALLEY + HỆ BÁM ĐẤT: terrainNormal(x,z) + slopeQuaternion(x,z,blend) (nghiêng vật theo sườn)
   branch.ts            # makeBranch() HỆ cành khô phân nhánh cong gnarled (đệ quy, ống CatmullRom thuôn) + mergeBranches() -> 1 geometry
   rock.ts              # makeRock(seed) tảng đá LIỀN KHỐI kín (icosphere + nhiễu liên tục + kéo lệch trục -> watertight, không hở)
   textures.ts          # texture PBR sinh thủ tục (canvas): vỏ cây, chùm lá sồi, cỏ + normal map
   weather.ts           # Condition, SKIES, WX_VI, PRESETS (đèn/fog), randomDayWeather (nắng 55%/mây 27%/mưa 18%), randomWind
+  skyPalette.ts        # bảng màu trời/núi xa/mây theo Condition (PALETTES) + `skyUniforms` DÙNG CHUNG cho SkyDome/núi/mây; stepSky (lerp mỗi frame), snapSky, SHADER_OUTRO (tonemapping+colorspace)
   skyPhase.ts          # mốc trời theo GIỜ VN (UTC+7): skyPhase dawn/day/dusk/night, vnClock, phaseFromUrl (?sky=), SKY_INIT_SCRIPT (inline ở layout, đặt <html data-sky> trước khi vẽ)
   windMaterial.ts      # makeWindMaterial(): MeshLambertMaterial + vertex shader gió GPU (.tick)
   profanity.ts         # containsProfanity + validateWish + validateComment (≤300) (giữ dấu, khớp theo TỪ; ưu tiên KHÔNG chặn nhầm)
@@ -211,7 +215,7 @@ firestore.indexes.json # composite index cho /api/wishes/list: (status,createdAt
 Chưa cấu hình Firebase: `getDb()`/`getAuthClient()` trả null → dùng `SEED_WISHES`, Composer ẩn nút đăng nhập; `/api/wishes` trả 503 gọn; `/api/wishes/list` phân trang SEED trong JS.
 
 ### Thời tiết
-KHÔNG gọi API thời tiết, KHÔNG có nút chuyển. `DataBridge` mỗi phút: `skyPhase()` (giờ VN, `?sky=` ghi đè để xem thử) = night → `'night'`, còn lại dùng `randomDayWeather()` (random lúc vào trang, đổi lại sau 15') → `useScene.setCond(cond)` + **`windRef.target = randomWind(cond)`** (lib/runtime). `useCondition()` = `cond`. `WeatherPanel` chỉ hiện icon + giờ VN. `SkyBackdrop`/`SceneEnv` đọc điều kiện đổi nền trời, đèn, fog, bật/tắt mưa.
+KHÔNG gọi API thời tiết, KHÔNG có nút chuyển. `DataBridge` mỗi phút: `skyPhase()` (giờ VN, `?sky=` ghi đè để xem thử; `?wx=clear|cloud|rain|night` ép thời tiết cảnh cây để QA) = night → `'night'`, còn lại dùng `randomDayWeather()` (random lúc vào trang, đổi lại sau 15') → `useScene.setCond(cond)` + **`windRef.target = randomWind(cond)`** (lib/runtime). `useCondition()` = `cond`. `WeatherPanel` chỉ hiện icon + giờ VN. `SkyBackdrop`/`SceneEnv` đọc điều kiện đổi nền trời, đèn, fog, bật/tắt mưa. Màu trời/núi xa/mây/biển mây đi qua `lib/skyPalette` (`skyUniforms`, SceneEnv lerp mỗi frame → đổi thời tiết chuyển mượt, không tạo lại material).
 
 ### Gió (mỗi frame, KHÔNG re-render)
 `SceneEnv` mỗi frame ease `windRef.current → windRef.target`. Các thành phần đọc `windRef.current`:
@@ -295,6 +299,12 @@ Rules: `read: if true` (không chứa PII), `write: false` (ghi qua `/api/presen
 Vercel: import `.env.local` khi tạo project.
 
 ## 8. Gotchas (đọc trước khi sửa)
+- **Nối lưới Ground ↔ FarLands**: Ground (vuông 150m) chỉ hiện tới r≈63 — ngoài `GROUND_FADE_R` đỉnh lưới tụt 10m xuống DƯỚI lưới xa; lưới xa ở mép trong hạ 0,3m để nằm dưới Ground (không z-fight) và màu mép về tông cỏ (`NEAR`). `farHeight` PHẢI dùng `terrainHeight(x, -z)` (lưới Ground lật trục z) nếu không mép nối lệch cao độ. StonePath chỉ chạy tới r=58.
+- **Thông/đá quanh đỉnh đặt ở r ≥ 22–24** vì camera giờ quỹ đạo ở r 8–19 ngang tầm cây — vật cao trong vòng đó sẽ che/đâm xuyên camera.
+- **FarLands dựng DẦN trên main thread** (tổng ~0,4s desktop / ~0,7s điện thoại, chia lát `BUDGET_MS`=6ms/khung, sau màn chờ). Tăng NR/NA hoặc số cây → núi hiện chậm hơn, không gây giật. Đừng chuyển về useMemo đồng bộ (chặn màn chờ). Núi xa KHÔNG có trong `SceneWarmup` nên shader của nó biên dịch lúc vành đầu hiện.
+- **Mây atlas: mọi búp phải nằm TRỌN trong ô** (ép tâm theo nửa bề ngang thật `r*sx`, chừa lề) + shader mờ dần sát mép billboard. Búp tràn mép ô bị clip -> mây "cụt" thẳng đứng hai đầu.
+- **Núi không được có "nét" gãy**: mọi phép gộp cao độ trong `farTerrain` dùng `smax`/`smin` + profile liên tục (`exp(-u⁴)`), ridged noise dùng |q| mềm. Dùng `Math.max/min` hoặc profile cắt cụt (u<1 ? … : 0) sẽ lộ vệt gấp trên sườn. Đừng thêm lại mặt phẳng biển mây (cắt qua núi thành vệt trắng).
+- **Cảnh xa (trời/núi/mây/biển mây) dùng ShaderMaterial tự viết, `fog:false`**, tự pha màu không khí bằng `skyUniforms` (lib/skyPalette). Muốn đổi màu trời theo thời tiết → sửa `PALETTES`, KHÔNG sửa từng material. Shader tự viết phải kết thúc bằng `SHADER_OUTRO` (tonemapping + colorspace) để khớp tông với phần cảnh lit. Truyền `{...skyUniforms}` (giữ CHUNG object uniform, đừng clone). Vòm trời đặt `gl_Position.z = w` nên bán kính vượt `camera.far` vẫn vẽ; camera far = 450 vì lớp núi ngoài cùng tới r≈300. Đổi `RINGS[0]` sẽ xê dịch thiền viện (`peakCenter(0,2)`).
 - **Cảnh nền `.pg-land` dùng `aspect-ratio` theo viewBox** (KHÔNG đặt `height` cố định: `slice` sẽ cắt ngọn thông); mỗi path có thêm khối tô đặc dưới y=320 (`overflow: visible`) để khi trồi lên theo cuộn không hở đáy. `--sy` có trần 900px, ghi trong rAF. Độ cao từng lớp chỉnh bằng thuộc tính `scale` (far 1.32 / mid 1.06 0.9 / near 0.94, gốc ở đáy) — tách khỏi `transform` parallax.
 - **Đèn trời ở PageShell bấm được dù nằm SAU lớp cuộn `.pg-scroll`:** click trên vùng không tương tác → `document.elementsFromPoint` tìm `.ld-lift` (đèn có `pointer-events:auto` trong `.pg-sky` none để được dò trúng); bỏ qua nếu `.pg-sheet` đè lên. Nâng đèn bằng `--lift` trên lớp `.ld-lift` riêng (KHÔNG đụng transform của animation bay `.ld-lantern`/lắc `i`). Ghi thẳng DOM, không setState.
 
@@ -357,7 +367,7 @@ Vercel: import `.env.local` khi tạo project.
 
 Quy ước: mỗi khi sửa xong một lỗi cảnh/đồ hoạ, ghi 1 dòng vào đây để phiên sau không lặp lại.
 
-- **Đá rơi vào đỉnh cạnh gốc cây** ("đá nằm trên cây"): trước đặt đá từ `r=11`, nhưng rìa đỉnh phẳng `rEdgeAt` tới ~11.3 → đá lọt vào mặt phẳng cạnh cây. Sửa: đá đặt từ **r≥16** (ngoài hẳn rìa, trên sườn). → `Ground.tsx` rocks.
+- **Đá rơi vào đỉnh cạnh gốc cây** ("đá nằm trên cây"): trước đặt đá từ `r=11`, nhưng rìa đỉnh phẳng `rEdgeAt` tới ~11.3 → đá lọt vào mặt phẳng cạnh cây. Sửa: đá đặt từ **r≥16** (ngoài hẳn rìa, trên sườn) — nay **r≥22** để ngoài cả quỹ đạo camera. → `Ground.tsx` rocks.
 - **Cành như "que đũa", thẳng & nhọn ở ngọn**: ban đầu twig là trụ thẳng, rồi ống cong 1 nhánh vẫn thẳng/nhọn. Sửa: `lib/branch.ts` đổi sang **hệ cành khô PHÂN NHÁNH đệ quy, uốn gnarled** (CatmullRom), Foliage dùng 3 hệ/TIP. → `lib/branch.ts`, `Foliage.tsx`.
 - **Tảng đá hình quá đơn giản / bị hở lỗ**: bản gộp 3 cục icosahedron để hở khe. Sửa: `makeRock` = **1 icosphere kín + nhiễu liên tục nhiều tần + kéo lệch trục** (watertight, không hở), nâng `detail=2`. → `lib/rock.ts`.
 - **Cảnh nhảy mỗi lần load**: scatter dùng `Math.random` → đổi sang `mulberry32(seed)` cố định cho toàn bộ cảnh tĩnh. → Meadow/Scenery/Foliage/Ground + `makeRock(seed)`/`makeBranch({rng})`.

@@ -2,7 +2,7 @@
 import { Suspense, useMemo } from 'react'
 import * as THREE from 'three'
 import { makeGrass } from '@/lib/textures'
-import { terrainHeight, groundHeight, GROUND_SIZE, GROUND_SEG } from '@/lib/terrain'
+import { groundMeshHeight, groundHeight, GROUND_SIZE, GROUND_SEG } from '@/lib/terrain'
 import { makeRock } from '@/lib/rock'
 import { mulberry32 } from '@/lib/tree'
 import { peakCenter } from '@/lib/peaks'
@@ -15,8 +15,8 @@ import { GroundTexture, ScannedRocks, type RockSpot } from './SceneAssets'
 export default function Ground() {
   const grass = useMemo(() => {
     const g = makeGrass()
-    g.map.repeat.set(60, 60)
-    g.normal.repeat.set(60, 60)
+    g.map.repeat.set(46, 46)
+    g.normal.repeat.set(46, 46)
     return g
   }, [])
 
@@ -32,7 +32,7 @@ export default function Ground() {
     for (let i = 0; i < p.count; i++) {
       const x = p.getX(i)
       const z = p.getY(i)
-      const h = terrainHeight(x, z)
+      const h = groundMeshHeight(x, z)
       p.setZ(i, h)
       // màu theo độ sâu + đốm khô ngẫu nhiên -> sườn không phẳng một màu
       const depth = THREE.MathUtils.clamp(-h / 28, 0, 1)
@@ -61,9 +61,9 @@ export default function Ground() {
     }[] = []
     for (let i = 0; i < 18; i++) {
       const a = rng() * Math.PI * 2
-      // r >= 16: NGOÀI hẳn rìa đỉnh phẳng (rEdge tối đa ~11.3) -> đá nằm trên sườn,
-      // KHÔNG bao giờ rơi vào đỉnh cạnh gốc cây.
-      const r = 16 + rng() * 18
+      // r >= 22: NGOÀI rìa đỉnh phẳng VÀ ngoài vòng quỹ đạo camera (r ≤ 19) -> đá nằm trên
+      // sườn, không rơi vào đỉnh cạnh gốc cây, không chắn/xuyên camera.
+      const r = 22 + rng() * 18
       const x = Math.cos(a) * r
       const z = Math.sin(a) * r
       const s = 0.55 + rng() * 1.2

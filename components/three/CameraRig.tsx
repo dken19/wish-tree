@@ -8,18 +8,27 @@ import { pointer } from '@/lib/runtime'
 // Tự xoay nhẹ khi không tương tác. Port từ prototype.
 // `disabled`: khi đang ở phòng Rừng Trúc, RoomCamera tiếp quản -> rig này ngừng
 // ghi camera & bỏ qua tương tác (chỉ MỘT rig ghi camera tại một thời điểm).
+// Góc ngẩng/cúi: 1.36 (cúi ~12°) .. 1.56 (gần ngang). Zoom 8..19.
+const PHI_MIN = 1.36
+const PHI_MAX = 1.56
+const PHI_DEFAULT = 1.47
+const R_MIN = 8
+const R_MAX = 19
+
 export default function CameraRig({ disabled = false }: { disabled?: boolean }) {
   const camera = useThree((s) => s.camera)
   const gl = useThree((s) => s.gl)
 
   const s = useRef({
-    target: new THREE.Vector3(0, 2.4, 0),
+    // nhìn NGANG tầm cây (phi ≈ 90°, chỉ cúi nhẹ) -> thấy trọn cây + dãy núi xa phía sau,
+    // KHÔNG cho nhìn từ trên xuống
+    target: new THREE.Vector3(0, 3.0, 0),
     theta: 0.5,
-    phi: 1.12,
-    radius: 9.2,
+    phi: PHI_DEFAULT,
+    radius: 14,
     tTheta: 0.5,
-    tPhi: 1.12,
-    tRadius: 9.2,
+    tPhi: PHI_DEFAULT,
+    tRadius: 14,
     dragging: false,
     lastX: 0,
     lastY: 0,
@@ -31,7 +40,7 @@ export default function CameraRig({ disabled = false }: { disabled?: boolean }) 
     const isMobile =
       matchMedia('(pointer:coarse)').matches || window.innerWidth < 760
     // mobile: lùi camera xa hơn -> cây nhỏ lại, thấy thêm cảnh phía sau
-    const r = isMobile ? 12.5 : 9.2
+    const r = isMobile ? 17 : 14
     s.current.radius = r
     s.current.tRadius = r
   }, [])
@@ -56,7 +65,7 @@ export default function CameraRig({ disabled = false }: { disabled?: boolean }) 
       const dy = e.clientY - st.lastY
       pointer.moved += Math.abs(dx) + Math.abs(dy)
       st.tTheta -= dx * 0.005
-      st.tPhi = Math.max(0.55, Math.min(1.5, st.tPhi - dy * 0.005))
+      st.tPhi = Math.max(PHI_MIN, Math.min(PHI_MAX, st.tPhi - dy * 0.002))
       st.lastX = e.clientX
       st.lastY = e.clientY
       st.lastInteract = now()
@@ -68,7 +77,7 @@ export default function CameraRig({ disabled = false }: { disabled?: boolean }) 
     const onWheel = (e: WheelEvent) => {
       if (disabled) return
       e.preventDefault()
-      st.tRadius = Math.max(5, Math.min(15, st.tRadius + e.deltaY * 0.006))
+      st.tRadius = Math.max(R_MIN, Math.min(R_MAX, st.tRadius + e.deltaY * 0.006))
       st.lastInteract = now()
     }
     const onTouchMove = (e: TouchEvent) => {
@@ -79,8 +88,8 @@ export default function CameraRig({ disabled = false }: { disabled?: boolean }) 
         const d = Math.hypot(dx, dy)
         if (st.pinchDist)
           st.tRadius = Math.max(
-            5,
-            Math.min(15, st.tRadius + (st.pinchDist - d) * 0.02)
+            R_MIN,
+            Math.min(R_MAX, st.tRadius + (st.pinchDist - d) * 0.02)
           )
         st.pinchDist = d
         st.lastInteract = now()

@@ -40,7 +40,7 @@ export const PRESETS: Record<Condition, LightPreset> = {
     sun: { intensity: 2.5, color: 0xfff2dc },
     ambient: 0.26,
     rain: false,
-    sky: { elevation: 26, azimuth: 135, turbidity: 5, rayleigh: 1.3, exposure: 1.0 },
+    sky: { elevation: 26, azimuth: 135, turbidity: 5, rayleigh: 1.3, exposure: 0.95 },
   },
   cloud: {
     fog: 0xc8d2da,

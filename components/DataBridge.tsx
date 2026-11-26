@@ -53,7 +53,10 @@ export default function DataBridge() {
         day = randomDayWeather()
         rolledAt = Date.now()
       }
-      const cond = (phaseFromUrl() ?? skyPhase()) === 'night' ? 'night' : day
+      // ?wx=clear|cloud|rain|night để xem thử (QA / chụp màn hình)
+      const wx = new URLSearchParams(location.search).get('wx')
+      const forced = wx === 'clear' || wx === 'cloud' || wx === 'rain' || wx === 'night' ? wx : null
+      const cond = forced ?? ((phaseFromUrl() ?? skyPhase()) === 'night' ? 'night' : day)
       windRef.target = randomWind(cond)
       setCond(cond)
     }

@@ -1,11 +1,12 @@
 'use client'
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { useFrame, useThree } from '@react-three/fiber'
-import { Sky } from '@react-three/drei'
 import * as THREE from 'three'
 import { PRESETS, type Condition } from '@/lib/weather'
 import { useCondition } from '@/store/useScene'
 import { windRef } from '@/lib/runtime'
+import { skyUniforms, snapSky, stepSky } from '@/lib/skyPalette'
+import SkyDome from './SkyDome'
 
 // Mặt trời theo GIỜ THỰC: bình minh ~6h (đông), đỉnh ~12h (nam), hoàng hôn ~18h
 // (tây), ban đêm xuống dưới chân trời. "Đêm" ép tối; chế độ ngày luôn đủ sáng.
@@ -61,13 +62,14 @@ export default function SceneEnv() {
     )
   }, [sun])
 
+  // fog lấy màu CHÂN TRỜI (skyUniforms.uHorizon, chuyển mượt) -> vật gần hoà vào trời, không lệch tông
   useEffect(() => {
     if (!fogRef.current) {
-      fogRef.current = new THREE.Fog(preset.fog, 38, 150)
+      snapSky(cond)
+      fogRef.current = new THREE.Fog(skyUniforms.uHorizon.value.clone(), 45, 170)
       scene.fog = fogRef.current
     }
-    fogRef.current.color.setHex(preset.fog)
-  }, [scene, preset.fog])
+  }, [scene, cond])
 
   useEffect(() => {
     gl.toneMappingExposure = preset.sky.exposure
@@ -77,22 +79,18 @@ export default function SceneEnv() {
     const s = sunRef.current
     if (!s) return
     s.position.copy(sunPos).multiplyScalar(60)
+    skyUniforms.uSunDir.value.copy(sunPos)
   }, [sunPos])
 
-  useFrame(() => {
+  useFrame((_, dt) => {
     windRef.current += (windRef.target - windRef.current) * 0.02
+    stepSky(cond, Math.min(dt, 0.1))
+    fogRef.current?.color.copy(skyUniforms.uHorizon.value)
   })
 
   return (
     <>
-      <Sky
-        distance={290}
-        sunPosition={sunPos}
-        turbidity={preset.sky.turbidity}
-        rayleigh={preset.sky.rayleigh}
-        mieCoefficient={0.006}
-        mieDirectionalG={0.85}
-      />
+      <SkyDome />
       <hemisphereLight
         args={[preset.hemi.color, preset.hemi.ground, preset.hemi.intensity]}
       />

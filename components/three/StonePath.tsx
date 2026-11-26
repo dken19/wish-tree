@@ -4,6 +4,7 @@ import * as THREE from 'three'
 import { RoundedBoxGeometry } from 'three/examples/jsm/geometries/RoundedBoxGeometry.js'
 import { groundHeight, slopeQuaternion } from '@/lib/terrain'
 import { peakCenter } from '@/lib/peaks'
+import { mulberry32 } from '@/lib/tree'
 
 const TAU = Math.PI * 2
 
@@ -123,34 +124,38 @@ export default function StonePath() {
     return arr
   }, [])
 
-  // DẢI ĐÁ TRẮNG: từ gốc cây chạy LIỀN MẠCH về hướng đền (đổ dốc xuống thung lũng,
-  // mờ dần vào sương). Phiến gối nhau (spacing < length) -> thành dải không đứt.
+  // LỐI ĐÁ BƯỚC (stepping stones) từ gốc cây về hướng đền: từng phiến TÁCH RỜI, giữa các phiến
+  // lộ cỏ (khoảng hở ~0,6–0,8m), so le trái/phải nhẹ như bước chân, mỗi phiến lệch góc một chút.
+  // Phiến nhỏ dần ở xa. Seed cố định -> lối đá không đổi giữa các lần load.
   const trail = useMemo<Slab[]>(() => {
+    const rng = mulberry32(0x57e9)
     const peak = peakCenter(0, 2)
     const len = Math.hypot(peak.x, peak.z) || 1
     const dx = peak.x / len
     const dz = peak.z / len
-    const px = -dz // vuông góc để uốn lượn rất nhẹ
+    const px = -dz // vuông góc với hướng đường
     const pz = dx
     const pathYaw = Math.atan2(dx, dz) // cạnh dài chạy DỌC đường
     const arr: Slab[] = []
-    const START = 4.6
-    const END = 70
-    const STEP = 0.9 // < length -> gối nhau thành dải liền
-    for (let t = START, i = 0; t <= END; t += STEP, i++) {
-      const meander = Math.sin(i * 0.22) * 0.35 // uốn rất nhẹ -> đường thẳng gọn
-      const x = dx * t + px * meander
-      const z = dz * t + pz * meander
-      // hơi rộng để đọc như một con đường, thu nhỏ dần ở xa cho tự nhiên
-      const fade = 1 - Math.min(1, (t - START) / (END - START)) * 0.35
+    const START = 5
+    const END = 58 // lưới Ground hết ở ~63m, xa hơn là địa hình xa
+    let t = START
+    for (let i = 0; t <= END; i++) {
+      const k = Math.min(1, (t - START) / (END - START))
+      const fade = 1 - k * 0.3
+      const l = (0.95 + rng() * 0.25) * fade // dọc đường
+      const side = (i % 2 ? 1 : -1) * (0.18 + rng() * 0.12) // so le như bước chân
+      const meander = Math.sin(i * 0.35) * 0.4
+      const off = side + meander
       arr.push({
-        x,
-        z,
-        yaw: pathYaw + (Math.random() - 0.5) * 0.08, // ít lệch -> đỡ gập ghềnh
-        w: (1.5 + Math.random() * 0.2) * fade, // bề NGANG đường
-        l: (1.4 + Math.random() * 0.2) * fade, // dọc đường (gối lên viên sau)
-        th: 0.07 + Math.random() * 0.02,
+        x: dx * t + px * off,
+        z: dz * t + pz * off,
+        yaw: pathYaw + (rng() - 0.5) * 0.45,
+        w: (1.05 + rng() * 0.3) * fade, // bề ngang
+        l,
+        th: 0.07 + rng() * 0.03,
       })
+      t += l + (0.6 + rng() * 0.25) * fade // chiều dài phiến + KHOẢNG HỞ cỏ
     }
     return arr
   }, [])

@@ -22,21 +22,28 @@ export function terrainHeight(x: number, z: number): number {
   const t = THREE.MathUtils.clamp((d - rEdge) / 46, 0, 1)
   const s = t * t * (3 - 2 * t)
   const base = VALLEY * s
-  const slopeMask = Math.sin(Math.PI * t)
-  const ridge =
-    (Math.sin(ang * 6) * 0.6 +
-      Math.sin(ang * 11 + 3) * 0.4 +
-      Math.sin(ang * 17 + 1) * 0.26) *
-    slopeMask *
-    5.5
+  // sin² -> biên độ sống núi bằng 0 VÀ phẳng đạo hàm ở mép đỉnh/đáy thung lũng (hết gấp khúc).
+  // Chỉ giữ tần số thấp: bước sóng luôn >> 1 ô lưới -> sườn mượt, không gãy cạnh.
+  const sm = Math.sin(Math.PI * t)
+  const slopeMask = sm * sm
+  const ridge = (Math.sin(ang * 5 + 0.4) * 0.65 + Math.sin(ang * 9 + 3) * 0.35) * slopeMask * 4.2
   const roll =
     Math.sin(x * 0.05) * Math.sin(z * 0.06) * 2.2 * Math.max(0, (d - 55) / 45)
   return base + ridge + roll
 }
 
-// Kích thước lưới Ground — PHẢI khớp PlaneGeometry trong Ground.tsx.
-export const GROUND_SIZE = 420
-export const GROUND_SEG = 130
+// Kích thước lưới Ground — PHẢI khớp PlaneGeometry trong Ground.tsx. Chỉ phủ đỉnh + sườn
+// (ô 1m -> mượt); xa hơn GROUND_FADE_R là lưới ĐỊA HÌNH XA (FarLands) tiếp quản.
+export const GROUND_SIZE = 150
+export const GROUND_SEG = 150
+export const GROUND_FADE_R = 63
+
+/** Cao độ ĐỈNH LƯỚI Ground theo toạ độ MẶT PHẲNG (x, planeY = -z thế giới): = terrainHeight, ngoài GROUND_FADE_R thì chìm xuống dưới lưới xa. */
+export function groundMeshHeight(x: number, z: number): number {
+  const h = terrainHeight(x, z)
+  const d = Math.hypot(x, z)
+  return d > GROUND_FADE_R ? h - 10 * Math.min(1, (d - GROUND_FADE_R) / 1.5) : h
+}
 const STEP = GROUND_SIZE / GROUND_SEG
 const HALF = GROUND_SIZE / 2
 
@@ -47,6 +54,7 @@ const HALF = GROUND_SIZE / 2
 //     phần sống núi tần số cao (sin(ang*17…)) dao động nhanh hơn 1 ô -> giá trị
 //     terrainHeight CHÍNH XÁC tại điểm bất kỳ KHÁC mặt lưới. Vì vậy phải lấy
 //     BILINEAR trên cùng grid (sample terrainHeight tại 4 đỉnh ô) thì mới bám sát.
+//  ⇒ mặt đất thấy được tại thế giới (x,z) = terrainHeight(x, -z) (lib/farTerrain dùng đúng vậy).
 export function groundHeight(x: number, z: number): number {
   const gx = THREE.MathUtils.clamp((x + HALF) / STEP, 0, GROUND_SEG)
   const gy = THREE.MathUtils.clamp((-z + HALF) / STEP, 0, GROUND_SEG)
@@ -58,10 +66,10 @@ export function groundHeight(x: number, z: number): number {
   const x1 = x0 + STEP
   const y0 = -HALF + iy * STEP
   const y1 = y0 + STEP
-  const h00 = terrainHeight(x0, y0)
-  const h10 = terrainHeight(x1, y0)
-  const h01 = terrainHeight(x0, y1)
-  const h11 = terrainHeight(x1, y1)
+  const h00 = groundMeshHeight(x0, y0)
+  const h10 = groundMeshHeight(x1, y0)
+  const h01 = groundMeshHeight(x0, y1)
+  const h11 = groundMeshHeight(x1, y1)
   // PlaneGeometry chia mỗi ô thành 2 TAM GIÁC theo đường chéo (0,0)-(1,1).
   // Nội suy phẳng đúng tam giác chứa điểm -> bám CHÍNH XÁC mặt lưới (lệch ~0).
   if (fx <= fy) return h00 + (h11 - h01) * fx + (h01 - h00) * fy

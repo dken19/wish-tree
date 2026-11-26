@@ -4,12 +4,13 @@ const TAU = Math.PI * 2
 
 export const VALLEY_FLOOR = -32
 
-// Hai vành núi xa. CHÂN RỘNG (base lớn so với height) -> núi đá vôi tròn, KHÔNG
-// nhọn như kim. snowAt cao = gần như không có tuyết (núi đá vôi xanh/xám).
-export const RINGS = [
-  { n: 4, r: 80, rj: 18, h0: 18, hj: 7, base: 26, snowAt: 80 },
-  { n: 6, r: 124, rj: 30, h0: 24, hj: 11, base: 34, snowAt: 80 },
-]
+// Vị trí "ngọn" gốc dùng để đặt thiền viện (peakCenter(0, 2)). Núi xa giờ là địa hình liền
+// mạch (lib/farTerrain) — farHeight dựng riêng ngọn thiền viện đúng toạ độ/cao độ này.
+// ⚠ Đổi số liệu ở đây sẽ dời thiền viện + lối đá + chỗ cỏ né lối.
+export const RINGS = [{ n: 4, r: 80, rj: 18, h0: 18, hj: 7, base: 26 }]
+
+/** Mặt "biển mây" (Clouds -> CloudSea): sương phủ đáy thung lũng giữa các dãy núi. */
+export const CLOUD_SEA_Y = -26
 
 /**
  * Tâm + đỉnh của một ngọn núi xa (CÙNG công thức với mesh để không lệch).

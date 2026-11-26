@@ -29,7 +29,7 @@ function prep(diff: THREE.Texture, nor: THREE.Texture, rx: number, ry: number) {
 export function GroundTexture({ material }: { material: THREE.MeshStandardMaterial }) {
   const [diff, nor] = useTexture(GROUND)
   useLayoutEffect(() => {
-    prep(diff, nor, 130, 130)
+    prep(diff, nor, 46, 46) // ~3,2m/ô như trước (lưới Ground 150m)
     material.map = diff
     material.normalMap = nor
     material.normalScale.set(0.8, 0.8)

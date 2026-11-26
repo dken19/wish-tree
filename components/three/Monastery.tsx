@@ -72,8 +72,6 @@ function Lantern({ x, z, glowRef }: { x: number; z: number; glowRef: (m: THREE.M
 // Ngôi đền/thiền viện cầu kỳ trên đỉnh núi xa. Bấm -> phòng Rừng Trúc.
 export default function Monastery() {
   const setRoomOpen = useScene((s) => s.setRoomOpen)
-  const haloRef = useRef<THREE.Sprite>(null)
-  const beamRef = useRef<THREE.Mesh>(null)
   const lanternL = useRef<THREE.Mesh>(null)
   const lanternR = useRef<THREE.Mesh>(null)
   const doorRef = useRef<THREE.MeshStandardMaterial>(null)
@@ -101,16 +99,6 @@ export default function Monastery() {
   useFrame((state) => {
     const t = state.clock.elapsedTime
     const k = 0.5 + 0.5 * Math.sin(t * 1.6)
-    const halo = haloRef.current
-    if (halo) {
-      ;(halo.material as THREE.SpriteMaterial).opacity = 0.55 + 0.4 * k
-      const s = 0.17 + 0.04 * k
-      halo.scale.set(s, s, 1)
-    }
-    if (beamRef.current) {
-      const m = beamRef.current.material as THREE.MeshBasicMaterial
-      m.opacity = 0.18 + 0.22 * k
-    }
     const le = 1.2 + 1.2 * (0.5 + 0.5 * Math.sin(t * 2.2))
     if (lanternL.current) (lanternL.current.material as THREE.MeshStandardMaterial).emissiveIntensity = le
     if (lanternR.current) (lanternR.current.material as THREE.MeshStandardMaterial).emissiveIntensity = le
@@ -228,19 +216,6 @@ export default function Monastery() {
       <Lantern x={-2.7} z={2.7} glowRef={(m) => (lanternL.current = m)} />
       <Lantern x={2.7} z={2.7} glowRef={(m) => (lanternR.current = m)} />
 
-      {/* ----- CỘT SÁNG mời bấm (additive, nhấp nháy) ----- */}
-      <mesh ref={beamRef} position-y={9}>
-        <cylinderGeometry args={[0.5, 1.4, 18, 12, 1, true]} />
-        <meshBasicMaterial
-          color={0xffe6a8}
-          transparent
-          opacity={0.25}
-          depthWrite={false}
-          side={THREE.DoubleSide}
-          blending={THREE.AdditiveBlending}
-        />
-      </mesh>
-
       {/* hạt sáng lơ lửng */}
       <points ref={moteRef}>
         <bufferGeometry>
@@ -248,7 +223,8 @@ export default function Monastery() {
         </bufferGeometry>
         <pointsMaterial
           map={glowTex}
-          size={1.1}
+          size={0.7}
+          opacity={0.7}
           sizeAttenuation
           transparent
           depthWrite={false}
@@ -257,16 +233,10 @@ export default function Monastery() {
         />
       </points>
 
-      {/* hào quang + vùng chạm ổn định ở xa (sizeAttenuation off) */}
-      <sprite ref={haloRef} position-y={14} scale={[0.17, 0.17, 1]} onClick={onClick}>
-        <spriteMaterial
-          map={glowTex}
-          transparent
-          depthWrite={false}
-          depthTest={false}
-          sizeAttenuation={false}
-          blending={THREE.AdditiveBlending}
-        />
+      {/* VÙNG CHẠM VÔ HÌNH, cỡ cố định trên màn hình (sizeAttenuation off) -> ở xa vẫn bấm trúng đền.
+          (Đã bỏ cột sáng + quầng sáng trên chóp: trông như vệt lỗi giữa trời.) */}
+      <sprite position-y={6} scale={[0.14, 0.14, 1]} onClick={onClick}>
+        <spriteMaterial transparent opacity={0} depthWrite={false} sizeAttenuation={false} />
       </sprite>
     </group>
   )

@@ -2,122 +2,37 @@
 import { useMemo } from 'react'
 import * as THREE from 'three'
 import { groundHeight } from '@/lib/terrain'
-import { RINGS, VALLEY_FLOOR } from '@/lib/peaks'
 import { mulberry32 } from '@/lib/tree'
+import { TEMPLE_ANG, fbm } from '@/lib/farTerrain'
 import { useIsMobile } from './useIsMobile'
 import Monastery from './Monastery'
+import FarLands from './FarLands'
 
-// Cảnh xa: VÀI dãy núi xanh (rừng phủ) THẤP & XA hơn đỉnh ta đứng, mờ vào sương.
+// Cảnh quanh đỉnh: rừng thông trên sườn, xóm nhỏ, thiền viện + FarLands (dãy núi xa liền mạch).
 const TAU = Math.PI * 2
-
-// gradient theo độ cao: rừng tối -> rừng sáng -> đá xám lam -> tuyết
-const C_FOREST_LO = new THREE.Color(0x35522f)
-const C_FOREST_HI = new THREE.Color(0x5c7d42)
-const C_ROCK = new THREE.Color(0x6b7686)
-const C_SNOW = new THREE.Color(0xeef3f8)
-const LIGHT_DIR = new THREE.Vector3(0.45, 0.72, 0.5).normalize()
-
-function mountainColor(out: THREE.Color, fy: number, tall: boolean) {
-  if (fy < 0.5) {
-    out.copy(C_FOREST_LO).lerp(C_FOREST_HI, fy / 0.5)
-  } else if (fy < 0.8) {
-    out.copy(C_FOREST_HI).lerp(C_ROCK, (fy - 0.5) / 0.3)
-  } else {
-    out.copy(C_ROCK)
-    if (tall) out.lerp(C_SNOW, (fy - 0.8) / 0.2)
-  }
-}
-
-// Núi đá vôi (karst): nón được UỐN TRÒN thành vòm — sườn vẫn dốc nhưng đỉnh
-// KHÔNG nhọn như kim; thêm nhiễu nhẹ theo góc/độ cao cho sống núi/khe gồ ghề.
-function makePeak(baseR: number, height: number, seed: number): THREE.BufferGeometry {
-  const g = new THREE.ConeGeometry(baseR, height, 14, 8)
-  const p = g.attributes.position as THREE.BufferAttribute
-  for (let i = 0; i < p.count; i++) {
-    const x = p.getX(i)
-    const y = p.getY(i)
-    const z = p.getZ(i)
-    const ang = Math.atan2(z, x)
-    const fy = THREE.MathUtils.clamp((y + height / 2) / height, 0, 1)
-    // remap bán kính nón (tuyến tính) -> vòm tròn: vai núi đầy đặn, đỉnh bo tròn
-    const linRad = baseR * (1 - fy)
-    const domeRad = baseR * Math.pow(Math.max(0, 1 - Math.pow(fy, 2.3)), 0.6)
-    const shape = linRad > 1e-3 ? Math.min(domeRad / linRad, 2.6) : 1
-    const n =
-      Math.sin(ang * 3 + seed) * 0.5 +
-      Math.sin(ang * 7 + fy * 5 + seed * 1.7) * 0.3 +
-      Math.sin(ang * 13 + seed * 2.3) * 0.2
-    const k = shape * (1 + n * 0.24 * (1 - fy * 0.45))
-    p.setX(i, x * k)
-    p.setZ(i, z * k)
-    p.setY(i, y + Math.sin(ang * 5 + seed) * 0.5 * height * 0.03)
-  }
-  g.computeVertexNormals()
-  return g
-}
 
 export default function Scenery() {
   const isMobile = useIsMobile()
 
-  const mountainGeo = useMemo(() => {
-    const positions: number[] = []
-    const colors: number[] = []
-    // ÍT núi: 2 lớp, lớp xa nhiều hơn chút. Đỉnh đều THẤP hơn ta (top < ~0).
-    const rings = RINGS
-    const col = new THREE.Color()
-    const nrm = new THREE.Vector3()
-    rings.forEach((ring, ri) => {
-      for (let i = 0; i < ring.n; i++) {
-        const a = (i / ring.n) * TAU + (i * 2.3 + ri * 1.9) * 0.21
-        const r = ring.r + ((Math.sin(i * 53.7 + ri * 11.3) + 1) / 2) * ring.rj
-        const height = ring.h0 + ((Math.sin(i * 19.1 + ri) + 1) / 2) * ring.hj
-        const baseR = ring.base + ((Math.cos(i * 7.3) + 1) / 2) * 6
-        const seed = i * 3.1 + ri * 7.7
-        const tall = height > ring.snowAt
-        const peak = makePeak(baseR, height, seed).toNonIndexed()
-        const pp = peak.attributes.position as THREE.BufferAttribute
-        const pn = peak.attributes.normal as THREE.BufferAttribute
-        const sx = 0.9 + ((Math.sin(seed) + 1) / 2) * 0.5
-        const sz = 0.9 + ((Math.cos(seed) + 1) / 2) * 0.5
-        const cx = Math.cos(a) * r
-        const cz = Math.sin(a) * r
-        const baseY = VALLEY_FLOOR + height / 2
-        for (let v = 0; v < pp.count; v++) {
-          const x = pp.getX(v) * sx
-          const y = pp.getY(v)
-          const z = pp.getZ(v) * sz
-          positions.push(cx + x, baseY + y, cz + z)
-          const fy = (y + height / 2) / height
-          mountainColor(col, THREE.MathUtils.clamp(fy, 0, 1), tall)
-          nrm.set(pn.getX(v), pn.getY(v), pn.getZ(v))
-          const shade = 0.62 + 0.38 * Math.max(0, nrm.dot(LIGHT_DIR))
-          colors.push(col.r * shade, col.g * shade, col.b * shade)
-        }
-        peak.dispose()
-      }
-    })
-    const out = new THREE.BufferGeometry()
-    out.setAttribute('position', new THREE.Float32BufferAttribute(positions, 3))
-    out.setAttribute('color', new THREE.Float32BufferAttribute(colors, 3))
-    return out
-  }, [])
-
-  // RỪNG THÔNG XA: phủ kín sườn núi + thung lũng quanh đỉnh (r 16..60), KHÔNG
-  // chạm vùng cây/cỏ ở giữa. Ngồi đúng cao độ địa hình (terrainHeight) nên không
-  // lơ lửng. Càng xa scale càng lớn để vẫn đọc được qua sương.
-  const pineCount = isMobile ? 70 : 150
+  // THÔNG NHỎ rải XUỐNG SƯỜN núi (r 24..60): ngoài vòng quỹ đạo camera (r ≤ 19) nên không bao giờ
+  // che mặt/đâm xuyên camera; cây nhỏ (cao ~1,5–3m) để đỉnh núi + cây ước là điểm nhấn. Né lối đá về
+  // thiền viện và xóm nhà. Mọc thành cụm (noise) cho tự nhiên. Seed cố định -> không đổi giữa các lần load.
+  const pineCount = isMobile ? 130 : 280
   const pineData = useMemo(() => {
-    const rng = mulberry32(0x9143 + pineCount) // seed cố định -> rừng thông KHÔNG đổi
+    const rng = mulberry32(0x9143 + pineCount)
     const arr: { p: THREE.Vector3; s: number; yaw: number }[] = []
-    for (let i = 0; i < pineCount; i++) {
+    for (let k = 0; k < pineCount * 8 && arr.length < pineCount; k++) {
       const a = rng() * TAU
-      const r = 16 + rng() * 44
+      const r = 24 + Math.pow(rng(), 0.8) * 36
       const x = Math.cos(a) * r
       const z = Math.sin(a) * r
-      const grow = (r - 16) / 44 // 0 gần -> 1 xa
+      const dPath = Math.abs(((a - TEMPLE_ANG + Math.PI * 3) % TAU) - Math.PI) * r
+      if (dPath < 4) continue
+      if (VILLAGE_SPOTS.some((v) => Math.hypot(x - Math.cos(v.a) * v.r, z - Math.sin(v.a) * v.r) < 4)) continue
+      if (fbm(x / 14, z / 14, 2, 41) < 0.42) continue // mọc theo cụm
       arr.push({
-        p: new THREE.Vector3(x, groundHeight(x, z) - 0.1, z),
-        s: 1.4 + grow * 1.9 + rng() * 0.7,
+        p: new THREE.Vector3(x, groundHeight(x, z) - 0.08, z),
+        s: 0.5 + rng() * 0.4, // cùng cỡ thật ở mọi khoảng cách (luật gần xa)
         yaw: rng() * TAU,
       })
     }
@@ -126,10 +41,8 @@ export default function Scenery() {
 
   return (
     <group>
-      {/* Núi xa xanh, unlit + vertex color (đã baked sáng) + sương mù */}
-      <mesh geometry={mountainGeo}>
-        <meshBasicMaterial vertexColors />
-      </mesh>
+      {/* Dãy núi xa LIỀN MẠCH + rừng + bản làng (địa hình chung farHeight) */}
+      <FarLands />
 
       <Pines data={pineData} />
       <Village />
@@ -247,16 +160,17 @@ function House({
   )
 }
 
+const VILLAGE_SPOTS: { a: number; r: number; rot: number; roof: number }[] = [
+  { a: -1.0, r: 25, rot: 0.4, roof: 0xc2683f },
+  { a: -1.28, r: 28.5, rot: -0.5, roof: 0xb9603a },
+  { a: -0.72, r: 30, rot: 0.9, roof: 0xcf7a48 },
+]
+
 // XÓM NHỎ Ở XA: vài nóc nhà nép dưới sườn/thung lũng, ngồi đúng địa hình -> đọc
 // như một bản làng đằng xa, KHÔNG nằm cạnh cây.
 function Village() {
   const houses = useMemo(() => {
-    const spots: { a: number; r: number; rot: number; roof: number }[] = [
-      { a: -1.0, r: 25, rot: 0.4, roof: 0xc2683f },
-      { a: -1.28, r: 28.5, rot: -0.5, roof: 0xb9603a },
-      { a: -0.72, r: 30, rot: 0.9, roof: 0xcf7a48 },
-    ]
-    return spots.map((s) => {
+    return VILLAGE_SPOTS.map((s) => {
       const x = Math.cos(s.a) * s.r
       const z = Math.sin(s.a) * s.r
       return {
