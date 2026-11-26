@@ -4,6 +4,7 @@ import { Analytics } from "@vercel/analytics/next";
 import "./globals.css";
 import "./pages.css";
 import { SKY_INIT_SCRIPT } from "@/lib/skyPhase";
+import { CONTACT_EMAIL } from "@/components/ui/LegalPage";
 
 const playfair = Playfair_Display({
   variable: "--font-playfair",
@@ -108,13 +109,59 @@ export default function RootLayout({
 }: Readonly<{
   children: React.ReactNode;
 }>) {
+  // Structured data: WebSite + Organization (liên hệ) + WebApplication (miễn phí) -> Google & AI agent
+  // biết site là gì, ai vận hành, liên hệ ở đâu. Email = email công khai ở trang Liên hệ.
+  const ORG_ID = `${SITE_URL}/#org`;
   const jsonLd = {
     "@context": "https://schema.org",
-    "@type": "WebSite",
-    name: SITE_TITLE,
-    url: SITE_URL,
-    description: SITE_DESC,
-    inLanguage: "vi-VN",
+    "@graph": [
+      {
+        "@type": "WebSite",
+        "@id": `${SITE_URL}/#website`,
+        name: SITE_TITLE,
+        url: SITE_URL,
+        description: SITE_DESC,
+        inLanguage: "vi-VN",
+        publisher: { "@id": ORG_ID },
+      },
+      {
+        "@type": "Organization",
+        "@id": ORG_ID,
+        name: SITE_TITLE,
+        url: SITE_URL,
+        logo: `${SITE_URL}/logo.png`,
+        email: CONTACT_EMAIL,
+        address: { "@type": "PostalAddress", addressCountry: "VN" },
+        contactPoint: {
+          "@type": "ContactPoint",
+          contactType: "customer support",
+          email: CONTACT_EMAIL,
+          url: `${SITE_URL}/lien-he`,
+          availableLanguage: ["vi"],
+        },
+      },
+      {
+        "@type": "WebApplication",
+        name: SITE_TITLE,
+        alternateName: "Wish Tree",
+        url: SITE_URL,
+        description: SITE_DESC,
+        applicationCategory: "LifestyleApplication",
+        operatingSystem: "Web (điện thoại, máy tính)",
+        inLanguage: "vi-VN",
+        isAccessibleForFree: true,
+        offers: { "@type": "Offer", price: "0", priceCurrency: "VND" },
+        audience: { "@type": "Audience", audienceType: "Học sinh, sinh viên, người trẻ Việt Nam" },
+        featureList: [
+          "Viết và treo điều ước lên cây 3D",
+          "Trang riêng + link chia sẻ cho mỗi điều ước",
+          "Đánh dấu điều ước Đang cố gắng / Đã đạt được",
+          "Phòng ôn bài online Rừng Trúc với Pomodoro",
+          "Kỹ năng sống cho học sinh",
+        ],
+        publisher: { "@id": ORG_ID },
+      },
+    ],
   };
 
   return (

@@ -102,6 +102,7 @@ export default function AboutPage() {
         <Link href="/gioi-thieu">Giới thiệu</Link>
         <Link href="/chinh-sach-bao-mat">Chính sách bảo mật</Link>
         <Link href="/dieu-khoan">Điều khoản</Link>
+        <Link href="/lien-he">Liên hệ</Link>
       </footer>
     </PageShell>
   );

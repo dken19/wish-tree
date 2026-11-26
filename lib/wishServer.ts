@@ -4,6 +4,7 @@ import type { Firestore, DocumentSnapshot } from 'firebase-admin/firestore'
 import { getAdminAuth } from './firebase.admin'
 import { searchTokens } from './wishMeta'
 import { isAdminEmail } from './adminAuth'
+import { isWishSkin } from './wishSkins'
 
 /** Doc đếm: { wishNo: số điều ước lớn nhất đã cấp }. */
 export const counterRef = (db: Firestore) => db.doc('meta/counters')
@@ -86,6 +87,8 @@ export function publicWish(d: DocumentSnapshot) {
     verified: typeof data.uid === 'string' && data.uid.length > 0,
     // người viết tự đánh dấu "Đã đạt được" ở /tai-khoan
     achieved: data.progress === 'achieved',
+    // giao diện trang chi tiết do chủ nhân chọn — chỉ ước của người đăng nhập mới có
+    skin: typeof data.uid === 'string' && data.uid && isWishSkin(data.skin) ? data.skin : null,
   }
 }
 export type PublicWish = ReturnType<typeof publicWish>

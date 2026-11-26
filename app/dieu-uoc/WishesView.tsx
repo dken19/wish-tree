@@ -1,6 +1,7 @@
 "use client";
 import { useCallback, useEffect, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
+import Link from "next/link";
 import { THEMES, THEME_KEYS, isThemeKey, type ThemeKey } from "@/lib/themes";
 import { formatNo, splitWishTime } from "@/lib/wishMeta";
 import AuthBridge from "@/components/AuthBridge";
@@ -341,6 +342,12 @@ export default function WishesView() {
                           <Icon name="comment" size={16} />
                           {n > 0 ? `${n} bình luận` : "Bình luận"}
                         </button>
+                        {w.no ? (
+                          <Link className="pg-act" href={`/dieu-uoc/${w.no}`}>
+                            <Icon name="link" size={16} />
+                            Mở trang · chia sẻ
+                          </Link>
+                        ) : null}
                         <ReportButton wishId={w.id} />
                       </div>
                     )}

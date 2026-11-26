@@ -13,6 +13,7 @@ Xây bằng **Next.js (App Router) + React Three Fiber + Firebase Firestore**.
 - Dưới tiêu đề có huy hiệu **số điều ước trên cây + số đang chờ duyệt** (cập nhật mỗi phút, `/api/wishes/stats`); gửi ẩn danh sẽ được báo vị trí trong hàng chờ.
 - Mỗi điều ước có **số thứ tự** (`#1`, `#888`…) và **ngày giờ gửi**; gửi xong được báo số của mình.
 - **Tài khoản / Điều ước của tôi** (`/tai-khoan`, nút **hình người** cạnh huy hiệu giờ ở trang chủ, hoặc mục trong cuộn bí kíp): đăng nhập Google → xem mọi điều ước mình đã treo (kể cả chờ duyệt / không lên cây) và tự đánh dấu **Đang cố gắng** / **Đã đạt được**; điều ước đã đạt hiện dấu "Đã đạt" công khai trên cây và `/dieu-uoc`. Ước gửi ẩn danh không gắn tài khoản nên không hiện ở đây.
+- **Trang riêng cho từng điều ước** (`/dieu-uoc/888`): nút **Sao chép link** / Chia sẻ / Facebook; dán link vào Zalo, Messenger, Facebook, X… sẽ hiện **ảnh xem trước riêng** của điều ước. Điều ước của người đăng nhập có trang lấp lánh, chữ thư pháp và chủ nhân **chọn được giao diện** (Giấy đỏ, Trăng đêm, Hoa đào, Ngọc bích, Hoàng kim).
 - **Tất cả ước nguyện** (`/dieu-uoc`): **tìm theo số `#888` hoặc từ khoá** (không cần gõ dấu), lọc theo **chủ đề** / **ngày gửi**, sắp xếp mới/cũ nhất, **phân trang** ở server.
 - **Góc xàm xí** (`/xam-xi`): điều ước vui vui không treo lên cây; admin chọn bằng nút **Xàm xí…** trong `/admin` và ghi lí do không duyệt (hiện công khai, giấu tên người viết). Có thể **gộp 2–6 tờ liên quan thành một bộ** dùng **chung một lí do** (chọn được tờ ở mọi tab, tạo bộ là tờ tự sang Xàm xí; lí do riêng từng tờ không bắt buộc; tờ đã vào bộ chỉ hiện ở tab Bộ sưu tập, không lặp ở Từng tờ) — tab **Bộ sưu tập** ở `/xam-xi`.
 - **Bình luận & báo cáo** (cần đăng nhập Google): bình luận động viên dưới mỗi điều ước (trên cây hoặc `/dieu-uoc`); tài khoản admin bình luận dưới tên **"Người giữ cây"** (đổi bằng env `ADMIN_DISPLAY_NAME`) kèm dấu triện + nhãn "Giữ cây"; báo cáo điều ước/bình luận xấu — đủ 3 tài khoản báo cáo thì tự ẩn chờ admin xem ở tab **⚑ Bị báo cáo** trong `/admin`.
@@ -22,6 +23,13 @@ Xây bằng **Next.js (App Router) + React Three Fiber + Firebase Firestore**.
 - **Menu dock** (góc dưới-phải): bấm để chuyển nhanh giữa Cây · Viết điều ước · Phòng ôn bài · **Kỹ năng sống** · **Tất cả ước nguyện** · **Góc xàm xí**.
 - **Kỹ năng sống** (`/ky-nang`): trang dạy kỹ năng cơ bản cho học sinh theo 4 nhóm — **nấu nướng** (nấu cơm, luộc rau, mì trứng, an toàn bếp…), **trồng trọt** (rau mầm, giá đỗ, hành lá, rau ban công…), **chụp ảnh** (bố cục 1/3, ánh sáng, chụp điện thoại…) và **chăm sóc da** (rửa mặt, chống nắng, da mụn…). Mỗi bài có ảnh minh hoạ (Wikimedia Commons) + nguồn tham khảo uy tín (Wikipedia, không quảng cáo). Sửa nội dung ở `lib/skills.ts`.
 - **Thiền viện → phòng Rừng Trúc**: chạm thiền viện trên đỉnh núi xa để vào một cảnh rừng trúc 3D, cùng nhau ôn bài/làm việc. Thấy nhau qua avatar người thiền, **đồng hồ phiên** hiện trên đầu; có **đồng hồ flip** và **hẹn giờ Pomodoro** (25/5, 50/10). Presence realtime ẩn danh (không cần đăng nhập). Phòng là **một map để đi dạo**: chạm xuống đất (máy tính: WASD/mũi tên) cho nhân vật đi; có ao sen, rừng trúc, bụi cây (asset CC0 Poly Haven). Cảnh cây ước dùng đất cỏ, vỏ cây và đá scan từ Poly Haven (CC0); cỏ phủ kín đồi, có đèn đá cạnh gốc cây rọi sáng khi trời tối. **Bàn thờ đá**: đi tới tượng, **vái 3 lần** để nhận một lời chúc trong ngày và hiệu ứng "được chúc phúc" 60 phút (hạt sáng vàng quanh nhân vật).
+
+## Cho AI agent / trợ lý AI
+
+- `/llms.txt` (mục lục + **khi nào nên giới thiệu** trang này) và `/llms-full.txt` (bản đầy đủ) — sinh từ `lib/agentContent.ts`.
+- Mọi trang trả **Markdown** khi gửi `Accept: text/markdown` (vd `curl -H 'Accept: text/markdown' https://cayuocnguyen.io.vn/dieu-uoc/1`), 404 cũng là Markdown.
+- JSON-LD WebSite + Organization + WebApplication ở mọi trang, CreativeWork ở trang điều ước; trang Liên hệ `/lien-he`; `/about` `/contact` `/privacy` `/terms` chuyển về trang tiếng Việt.
+- Kiểm tra mức sẵn sàng: `npx is-agentic cayuocnguyen.io.vn`.
 
 ## Bắt đầu
 

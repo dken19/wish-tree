@@ -293,10 +293,16 @@ export default function AccountView() {
                     </div>
                     {live && w.no && (
                       <div className="tk-actions">
-                        <Link className="pg-act" href={`/dieu-uoc?q=%23${w.no}`}>
-                          <Icon name="comment" size={16} />
-                          {w.commentCount > 0 ? `${w.commentCount} bình luận` : 'Xem trên trang chung'}
+                        <Link className="pg-act" href={`/dieu-uoc/${w.no}`}>
+                          <Icon name="ext" size={16} />
+                          Trang điều ước · chọn giao diện
                         </Link>
+                        {w.commentCount > 0 && (
+                          <Link className="pg-act" href={`/dieu-uoc/${w.no}`}>
+                            <Icon name="comment" size={16} />
+                            {w.commentCount} bình luận
+                          </Link>
+                        )}
                       </div>
                     )}
                   </div>

@@ -5,6 +5,8 @@ import { rateLimit } from '@/lib/ratelimit'
 import { AUTO_HIDE_REPORTS, isReportReason } from '@/lib/wishMeta'
 import { viewerFromRequest } from '@/lib/wishServer'
 
+import { revalidateWishPage } from '@/lib/wishDetail'
+
 export const runtime = 'nodejs'
 
 function deny(status: number, error: string) {
@@ -40,7 +42,9 @@ export async function POST(req: Request) {
   const reportRef = db.collection('reports').doc(`${viewer.uid}__${wishId}__${commentId ?? 'wish'}`)
 
   try {
+    let hiddenNo: unknown = null
     const result = await db.runTransaction(async (t) => {
+      hiddenNo = null
       const [target, existing] = await Promise.all([t.get(targetRef), t.get(reportRef)])
       if (!target.exists) return 'not-found' as const
       if (target.get('uid') === viewer.uid) return 'own' as const
@@ -66,11 +70,13 @@ export async function POST(req: Request) {
         if (!commentId && target.get('status') === 'approved') {
           patch.status = 'pending'
           patch.flagged = true
+          hiddenNo = target.get('no')
         }
       }
       t.update(targetRef, patch)
       return 'ok' as const
     })
+    revalidateWishPage(hiddenNo)
     if (result === 'not-found') return deny(404, 'Không tìm thấy nội dung')
     if (result === 'own') return deny(400, 'Bạn không thể báo cáo nội dung của chính mình.')
     return NextResponse.json({ ok: true, duplicate: result === 'dup' })

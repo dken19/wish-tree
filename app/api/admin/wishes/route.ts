@@ -4,6 +4,8 @@ import { getAdminDb, isAdminConfigured } from '@/lib/firebase.admin'
 import { checkAdmin } from '@/lib/adminAuth'
 import { ensureNumbering } from '@/lib/wishServer'
 
+import { revalidateWishPage } from '@/lib/wishDetail'
+
 export const runtime = 'nodejs'
 
 const PAGE_SIZE = 20
@@ -121,11 +123,9 @@ export async function PATCH(req: Request) {
     return deny(400, `Ghi lí do không duyệt (1–${NOTE_MAX} ký tự)`)
 
   const db = getAdminDb()!
+  const ref = db.collection('wishes').doc(id)
   try {
-    await db
-      .collection('wishes')
-      .doc(id)
-      .update({
+    await ref.update({
         status: next[action],
         flagged: false,
         reviewedAt: FieldValue.serverTimestamp(),
@@ -137,5 +137,7 @@ export async function PATCH(req: Request) {
   } catch {
     return deny(404, 'Không tìm thấy điều ước')
   }
+  // trang chi tiết /dieu-uoc/[no] là ISR -> làm mới ngay (bị gỡ thì thành 404)
+  revalidateWishPage((await ref.get()).get('no'))
   return NextResponse.json({ ok: true, status: next[action] })
 }

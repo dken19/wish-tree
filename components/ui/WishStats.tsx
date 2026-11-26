@@ -1,4 +1,5 @@
 'use client'
+import Link from 'next/link'
 import { useScene } from '@/store/useScene'
 import Icon from './Icon'
 
@@ -10,7 +11,7 @@ export default function WishStats() {
   const stats = useScene((s) => s.stats)
   if (!stats) return null
   return (
-    <a className="wish-stats" href="/dieu-uoc" title="Xem tất cả điều ước">
+    <Link className="wish-stats" href="/dieu-uoc" title="Xem tất cả điều ước">
       <span className="ws-item">
         <Icon name="lantern" size={14} />
         <b>{fmt(stats.approved)}</b> điều ước trên cây
@@ -19,6 +20,6 @@ export default function WishStats() {
         <Icon name="hourglass" size={14} />
         <b>{fmt(stats.pending)}</b> đang chờ duyệt
       </span>
-    </a>
+    </Link>
   )
 }

@@ -4,6 +4,8 @@ import { getAdminDb, isAdminConfigured } from '@/lib/firebase.admin'
 import { checkAdmin } from '@/lib/adminAuth'
 import { millis } from '@/lib/wishServer'
 
+import { revalidateWishPage } from '@/lib/wishDetail'
+
 export const runtime = 'nodejs'
 
 const SCAN = 300
@@ -99,9 +101,11 @@ export async function PATCH(req: Request) {
   const by = auth.email ?? 'secret'
 
   try {
+    let wishNo: unknown = null
     await db.runTransaction(async (t) => {
       const target = await t.get(targetRef)
       if (!target.exists) return
+      if (!commentId) wishNo = target.get('no')
       if (commentId) {
         const wasHidden = Boolean(target.get('hidden'))
         const hide = action === 'hide'
@@ -136,6 +140,7 @@ export async function PATCH(req: Request) {
     const batch = db.batch()
     reps.docs.forEach((d) => batch.update(d.ref, { resolved: true, resolution: action, resolvedBy: by }))
     if (reps.size) await batch.commit()
+    revalidateWishPage(wishNo)
   } catch (e) {
     console.error('[admin/reports] failed', e)
     return deny(500, 'Không cập nhật được')

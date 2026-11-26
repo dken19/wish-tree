@@ -1,5 +1,6 @@
 'use client'
 import { useState } from 'react'
+import Link from 'next/link'
 import { THEMES } from '@/lib/themes'
 import { useScene } from '@/store/useScene'
 import { formatNo, formatWishTime } from '@/lib/wishMeta'
@@ -27,31 +28,18 @@ export default function WishCard() {
         if (e.target === e.currentTarget) setOpenWish(null)
       }}
     >
-      <div
-        className={`card${showThread ? ' with-thread' : ''}${verified ? ' is-verified' : ''}`}
-      >
+      <div className={`card${showThread ? ' with-thread' : ''}${verified ? ' is-verified' : ''}`}>
         {verified && <Sparkles key={openWish!.id} />}
-        <button
-          className="close"
-          onClick={() => setOpenWish(null)}
-          aria-label="Đóng"
-        >
+        <button className="close" onClick={() => setOpenWish(null)} aria-label="Đóng">
           <Icon name="x" size={18} />
         </button>
         <div
           className="seal"
-          style={
-            theme
-              ? { color: theme.color, borderColor: theme.color }
-              : undefined
-          }
+          style={theme ? { color: theme.color, borderColor: theme.color } : undefined}
         >
           Ước
         </div>
-        <span
-          className="tag"
-          style={theme ? { background: theme.color } : undefined}
-        >
+        <span className="tag" style={theme ? { background: theme.color } : undefined}>
           {theme?.label ?? 'Điều ước'}
         </span>
         {openWish && (openWish.no || openWish.createdAt > 0) && (
@@ -73,17 +61,25 @@ export default function WishCard() {
             {openWish?.author || 'Ẩn danh'}
           </span>
         </div>
-        {openWish && !isSeed && (
+        {openWish && (openWish.no || !isSeed) && (
           <div className="card-actions">
-            <button
-              className="wt-link"
-              onClick={() => setThreadFor(showThread ? null : openWish.id)}
-              aria-expanded={!!showThread}
-            >
-              <Icon name="comment" size={16} />
-              {n > 0 ? `${n} bình luận` : 'Bình luận'}
-            </button>
-            <ReportButton key={openWish.id} wishId={openWish.id} label="Báo cáo" />
+            {openWish.no ? (
+              <Link className="wt-link" href={`/dieu-uoc/${openWish.no}`}>
+                <Icon name="link" size={16} />
+                Mở trang · chia sẻ
+              </Link>
+            ) : null}
+            {!isSeed && (
+              <button
+                className="wt-link"
+                onClick={() => setThreadFor(showThread ? null : openWish.id)}
+                aria-expanded={!!showThread}
+              >
+                <Icon name="comment" size={16} />
+                {n > 0 ? `${n} bình luận` : 'Bình luận'}
+              </button>
+            )}
+            {!isSeed && <ReportButton key={openWish.id} wishId={openWish.id} label="Báo cáo" />}
           </div>
         )}
         {showThread && (

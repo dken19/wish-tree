@@ -428,7 +428,7 @@ canvas {
   gap: 12px;
   margin-bottom: 4px;
 }
-.composer-head h3 {
+.composer-head h2 {
   margin-bottom: 0;
 }
 .composer-head .lac {
@@ -439,7 +439,7 @@ canvas {
   /* ảnh đen/nền trắng -> nhân với nền để bỏ nền trắng */
   mix-blend-mode: multiply;
 }
-.composer h3 {
+.composer h2 {
   font-family: var(--font-calli), "Dancing Script", cursive;
   font-size: 30px;
   font-weight: 700;

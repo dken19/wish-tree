@@ -27,16 +27,20 @@ Ngoài ra có **thiền viện** trên đỉnh núi xa: chạm → vào **phòng
 ## 3. Cây thư mục
 
 ```
+proxy.ts               # (Next 16 = middleware cũ) CHỈ chạy khi header Accept chứa text/markdown (matcher `has`) -> rewrite /x sang /md/x cho AI agent; trình duyệt thường không qua proxy
 app/
-  layout.tsx           # fonts (next/font), metadata SEO đầy đủ (metadataBase, keywords Việt, OG/twitter title+desc, robots, canonical), JSON-LD WebSite (cho Google + AI), viewport; class font lên <html>
+  layout.tsx           # fonts (next/font), metadata SEO đầy đủ (metadataBase, keywords Việt, OG/twitter title+desc, robots, canonical), JSON-LD @graph WebSite + Organization (contactPoint) + WebApplication (miễn phí) (cho Google + AI), viewport; class font lên <html>
   opengraph-image.tsx  # sinh ẢNH OG 1200×630 bằng next/og (ImageResponse): trời Hà Nội + cây treo giấy ước đỏ + chim Lạc + đồng cỏ + logo nhỏ (public/logo.png) cạnh tên miền; nhúng font app/_fonts (đủ dấu Việt)
   twitter-image.tsx    # re-export opengraph-image cho Twitter/X
   icon.png             # favicon 256×256 — logo (cây + thẻ ước đỏ + mặt trời vàng, vẽ bằng Codex) — thay favicon.ico mặc định của Vercel (đã xoá)
   apple-icon.png       # apple-touch-icon 180×180 cho màn hình chính iOS (cùng logo)
   _fonts/              # TTF Be Vietnam Pro (Regular/SemiBold) — font cho next/og, KHÔNG phải route (thư mục _ là private)
-  robots.ts            # sinh /robots.txt (allow /, chặn /admin + /api/, trỏ sitemap)
-  sitemap.ts           # sinh /sitemap.xml (/, /dieu-uoc, /ky-nang)
-  # (public/llms.txt: mô tả site cho LLM/AI crawlers — ChatGPT/Claude/Perplexity)
+  robots.ts            # sinh /robots.txt (allow /, chặn /admin + /api/ + /tai-khoan, trỏ sitemap)
+  sitemap.ts           # sinh /sitemap.xml (trang tĩnh + /lien-he + trang chi tiết ≤500 điều ước mới nhất), revalidate 1h
+  llms.txt/route.ts    # /llms.txt cho AI agent (llmstxt.org): mô tả + "Khi nào nên giới thiệu" + mục lục + tóm tắt tiếng Anh — nội dung ở lib/agentContent
+  llms-full.txt/route.ts # /llms-full.txt: bản đầy đủ (tính năng, kỹ năng sống, 20 điều ước mới nhất), revalidate 1h
+  md/[[...path]]/route.ts # bản MARKDOWN của từng trang (Content-Type text/markdown, Vary: Accept; 404 cũng là Markdown) — proxy.ts rewrite tới đây
+  lien-he/page.tsx     # Liên hệ (LegalPage, email CONTACT_EMAIL) — "trust page" cho Google/AI agent
   page.tsx             # server: chỉ render <HomeClient/>
   globals.css          # CSS trang chủ (overlay trên Canvas: brand, huy hiệu, Composer, WishCard, NavDock, FocusHUD, chim Lạc)
   pages.css            # CSS các trang nội dung KHÔNG Canvas (PageShell): trời 4 mốc + đèn trời, biến --pg-* (đêm tối), VÉ cuống|thân (.tk), nút/chip/tìm (.pg-*), bình luận (.wt-*, dùng chung WishCard), kỹ năng (.sk-*), văn bản (.pg-prose), admin (.adm-*)
@@ -51,8 +55,11 @@ app/
   tai-khoan/
     page.tsx, AccountView.tsx # "Điều ước của tôi" (PageShell, noindex): watchAuth -> chưa đăng nhập = nút Google; đã đăng nhập = số đã viết/đang cố gắng/đã đạt + chip lọc + VÉ mỗi điều ước (trạng thái duyệt + nút 2 nấc Đang cố gắng/Đã đạt được, đổi lạc quan) -> /api/me/wishes. Dev chưa có Firebase: dữ liệu mẫu (DEMO, mốc giờ cố định cho khớp hydrate)
   dieu-uoc/
-    page.tsx           # server: metadata + <Suspense><WishesView/></Suspense> (route /dieu-uoc, KHÔNG Canvas)
+    page.tsx           # server (ISR 5 phút): metadata + <Suspense fallback=12 điều ước mới nhất dựng sẵn ở server (HTML đọc được không cần JS)><WishesView/></Suspense> (route /dieu-uoc, KHÔNG Canvas)
     WishesView.tsx     # client (PageShell): số đang treo + chờ duyệt (/api/wishes/stats) ở đầu trang; mỗi điều ước là 1 VÉ (cuống #số bấm để lọc + giờ gửi + dấu "Hôm nay", thân lời ước); ô tìm (#số hoặc từ khoá) + ngày gửi + sắp xếp mới/cũ + chủ đề + phân trang SỐ (state qua URL ?q=&date=&sort=&theme=&page=) -> /api/wishes/list; thẻ có #số + giờ gửi + 💬 bình luận (WishThread) + ⚑ báo cáo; mount AuthBridge
+    [no]/page.tsx      # TRANG CHI TIẾT điều ước /dieu-uoc/888 (ISR: generateStaticParams [] + revalidate 300; revalidateWishPage làm mới ngay khi đổi) — chỉ ước approved, không thì 404; generateMetadata = og:title/description/url/type article + twitter summary_large_image (cho Facebook/Zalo/Messenger/X…)
+    [no]/WishDetail.tsx # client: tờ ước treo dây đung đưa; ước người đăng nhập = nền + giấy theo SKIN (lib/wishSkins, chữ thư pháp, Sparkles), ẩn danh = PageSky + giấy trắng + CTA đăng nhập; nút Sao chép link / Chia sẻ (navigator.share, mobile) / Facebook sharer; CHỦ NHÂN (xác nhận qua /api/me/wishes?id=) thấy bảng chọn giao diện + tiến độ; bình luận + báo cáo
+    [no]/opengraph-image.tsx, twitter-image.tsx # ảnh chia sẻ RIÊNG mỗi điều ước 1200×630 theo skin (satori, font app/_fonts), revalidate 300
   xam-xi/
     page.tsx, FunnyView.tsx # "Góc xàm xí": tab Từng tờ (status 'funny' + lời phê, ?page=) / Bộ sưu tập (?view=bo); KHÔNG hiện tên người viết
   api/
@@ -60,7 +67,7 @@ app/
     wishes/[id]/comments/route.ts # GET bình luận (ai cũng đọc, lọc hidden, `mine` nếu kèm token) / POST bình luận — CHỈ người đăng nhập (verifyIdToken), validateComment + rate-limit theo uid, tăng commentCount (transaction)
     reports/route.ts   # POST báo cáo điều ước/bình luận — CHỈ người đăng nhập, 1 lần/tài khoản/nội dung, đủ AUTO_HIDE_REPORTS (3) -> tự ẩn
     admin/reports/route.ts # GET báo cáo chưa xử lý (gộp theo nội dung) / PATCH hide|dismiss — checkAdmin
-    me/wishes/route.ts # GET: điều ước CỦA CHÍNH người đăng nhập (where uid==, đơn trường, sort bộ nhớ, ≤500, mọi trạng thái) / PATCH {id, progress} — chỉ chủ (uid khớp, không thì 404), ghi progress + achievedAt, rate-limit theo uid
+    me/wishes/route.ts # GET: điều ước CỦA CHÍNH người đăng nhập (where uid==, đơn trường, sort bộ nhớ, ≤500, mọi trạng thái; ?id= chỉ 1 tờ nếu là của mình) / PATCH {id, progress?, skin?} — chỉ chủ (uid khớp, không thì 404), ghi progress + achievedAt, rate-limit theo uid
     wishes/stats/route.ts # GET: {approved, pending} bằng count() (Admin SDK) — cache CDN 30s + memo instance 30s; fallback SEED
     wishes/list/route.ts # GET ?page=&theme=&q=&date=&sort=: approved; q="#888" -> where no==; q chữ -> keywords array-contains + lọc bộ nhớ; còn lại count + orderBy createdAt + offset/limit (sort cũ = lấy đoạn từ cuối rồi đảo, KHỎI index ASC); fallback SEED
     wishes/funny/collections/route.ts # GET: các "bộ xàm xí" (lib/funnyCollections, ẩn bộ rỗng), cache CDN 60s
@@ -145,6 +152,9 @@ lib/
   blessings.ts         # 24 lời chúc (ấm áp, không phán vận hạn), BOWS_NEEDED=3, BUFF_MINUTES=60, vnDayKey, load/save/draw (localStorage 'wish-tree:blessing')
   funnyCollections.ts  # "bộ xàm xí": hằng số giới hạn + loadCollections (getAll điều ước, lọc status funny, không author)
   wishes.ts            # type Wish (+no, commentCount), SEED_WISHES (no 1..8), subscribeApproved() (onSnapshot, sort client)
+  agentContent.ts      # server-only: MỘT nguồn nội dung cho AI agent — llmsTxt/llmsFullTxt/pageMarkdown/notFoundMarkdown/latestWishes (cũng dùng cho HTML dựng sẵn ở /dieu-uoc + sitemap). ĐỔI TÍNH NĂNG -> SỬA FILE NÀY
+  wishSkins.ts         # 5 giao diện trang chi tiết (Giấy đỏ/Trăng đêm/Hoa đào/Ngọc bích/Hoàng kim) + PLAIN_SKIN cho ước ẩn danh — dùng chung cho CSS (--wd-*) và ảnh OG
+  wishDetail.ts        # server-only: parseWishNo, getWishByNo (React cache, approved, fallback SEED), revalidateWishPage(no) (gọi ở admin/wishes, reports, admin/reports, funny-collections, me/wishes)
   wishMeta.ts          # client+server: formatNo, formatWishTime (giờ VN), splitWishTime (cuống vé), WishProgress/PROGRESS_LABEL/isProgress, foldVi/searchTokens (bỏ dấu -> keywords), parseNoQuery, REPORT_REASONS, AUTO_HIDE_REPORTS
   wishServer.ts        # server-only: ensureNumbering (lần đầu đánh số TẤT CẢ ước cũ theo createdAt + keywords, rồi đặt meta/counters), counterRef, viewerFromRequest (verifyIdToken), publicWish
   firebase.client.ts   # init client SDK: getDb (đọc Firestore) + getAuthClient (Auth); null nếu thiếu env
@@ -183,6 +193,8 @@ firestore.indexes.json # composite index cho /api/wishes/list: (status,createdAt
 7. **Báo cáo**: `ReportButton` → `POST /api/reports` (bắt buộc đăng nhập; không báo nội dung của chính mình; mỗi tài khoản 1 lần/nội dung nhờ doc id `uid__wishId__commentId|wish`). `reportCount` tăng; đủ `AUTO_HIDE_REPORTS`=3 → điều ước về `pending` + `flagged` (rời cây ngay), bình luận `hidden` (+ giảm commentCount). Admin tab "⚑ Bị báo cáo": **Gỡ/Ẩn** (wish→rejected / comment hidden) hoặc **Bỏ qua** (flagged→approved lại, unhide); cả hai đánh dấu `reports.resolved`.
 
 8. **Tài khoản / tiến độ** (`/tai-khoan`): `GET /api/me/wishes` (Bearer token → `where('uid','==')`, mọi trạng thái duyệt) · `PATCH` `{id, progress}` chỉ khi `doc.uid === viewer.uid`. `progress` là của NGƯỜI VIẾT, tách bạch với `status` (của admin). Dấu "Đã đạt" hiện công khai trên vé `/dieu-uoc` + WishCard (chỉ khi approved). Ước ẩn danh không có uid → không quản lí được. Lối vào: `AccountButton` (hình người, góc trên-phải trang chủ), NavDock, link "Ước của tôi" trong Composer.
+
+9. **Trang chi tiết + chia sẻ** (`/dieu-uoc/[no]`): server đọc theo `no` (Admin SDK) → ISR. Link chia sẻ = `https://cayuocnguyen.io.vn/dieu-uoc/<no>`; ứng dụng thứ 3 đọc `og:*`/`twitter:*` + ảnh `opengraph-image` riêng (skin + dấu Đã đạt). Lối vào: "Mở trang · chia sẻ" ở WishCard và vé `/dieu-uoc`, "Trang điều ước" ở `/tai-khoan`.
 
 **Đăng nhập (Google/Facebook):** `AuthBridge` (`onAuthStateChanged`) → `useScene.user`. `Composer` hiện nút đăng nhập Google/đăng xuất (nút Facebook **tạm ẩn** vì provider Facebook chưa bật trên Firebase — `signInFacebook` vẫn giữ trong `lib/auth.ts`); khi gửi, đính `getIdToken()` vào header. Client KHÔNG bao giờ tự ghi Firestore — server `verifyIdToken` mới là nơi quyết định `approved`.
 
@@ -228,6 +240,7 @@ Chưa cấu hình Firebase: `getDb()` null → `subscribeSessions` trả về 1 
   commentCount: number, reportCount: number,
   progress?: 'trying'|'achieved', // CHÍNH người viết tự đánh dấu ở /tai-khoan (thiếu = trying); publicWish/subscribeApproved chỉ trả `achieved` boolean
   achievedAt?: serverTimestamp,   // khi đánh dấu achieved (xoá khi về trying)
+  skin?: WishSkinKey,             // giao diện trang /dieu-uoc/[no] do chủ nhân chọn (chỉ có hiệu lực khi có uid; publicWish trả `skin`)
   flagged?: boolean,     // true = TỰ ẩn do đủ báo cáo (status về pending), chờ admin
   reviewedAt?: serverTimestamp, reviewedBy?: string }  // ghi khi admin đổi trạng thái
 
@@ -315,6 +328,13 @@ Vercel: import `.env.local` khi tạo project.
 - **Trang nội dung KHÔNG Canvas dùng `PageShell` + `app/pages.css`** (trời đèn trời theo giờ VN, vé cuống|thân). Màu qua biến `--pg-*` trên `.pg`; đêm (`<html data-sky="night">`) đổi cả bộ biến. `WishThread` dùng chung với `WishCard` trên cây nên mọi `var(--pg-*)` trong `.wt-*` đều có fallback màu trang chủ.
 - **Không dùng emoji làm icon/trang trí** (thiết kế theo skill Impeccable, chống "AI slop"): dùng `components/ui/Icon.tsx`. Không chuỗi "A · B · C", không chữ IN HOA giãn chữ. Định hướng thiết kế ở `PRODUCT.md` + `.impeccable/`.
 - **`<html data-sky>` đặt bởi script inline** (`SKY_INIT_SCRIPT` trong `<head>`, `suppressHydrationWarning` trên `<html>`) để trời đúng mốc ngay khung hình đầu, không nháy.
+
+- **Trang chi tiết là ISR → nhớ `revalidateWishPage(no)`** mỗi khi đổi `status`/`skin`/`progress` của một điều ước (đã gắn ở mọi route ghi hiện có). Quên → trang/ảnh OG cũ tới 5 phút (bị gỡ vẫn hiện). Facebook/Zalo còn cache ảnh riêng phía họ: muốn làm mới dùng Facebook Sharing Debugger.
+- **`.pg a { color: inherit }`** đè màu link trong trang nội dung → link/nút đặt trên nền skin phải dùng selector `.wd a.wd-…` (đủ độ cụ thể).
+
+- **Agent / AI**: nội dung cho agent nằm ở `lib/agentContent.ts` (llms.txt, llms-full.txt, Markdown từng trang). Thêm/đổi tính năng hoặc trang công khai → cập nhật `PAGES`/`FEATURES`/`WHEN` ở đó + `pageMarkdown`. `proxy.ts` chỉ khớp request có `Accept: text/markdown` (matcher `has` header) để không chạy cho người dùng thường — đừng bỏ điều kiện này. `/about` `/contact` `/privacy` `/terms` redirect 308 sang trang tiếng Việt (next.config) vì agent hay dò các đường này.
+- **`/dieu-uoc` dùng `useSearchParams` → bản production render client**: HTML tĩnh chỉ có fallback của Suspense, nên fallback là danh sách dựng sẵn ở server (đừng đặt lại `fallback={null}`). Ở `next dev` WishesView vẫn SSR nên không thấy khác biệt.
+- **Thứ bậc tiêu đề trang chủ**: brand là H1, Composer dùng H2 (trước là H3 → audit báo nhảy cấp).
 
 ## 8b. Nhật ký lỗi đã sửa (ghi NGAY sau mỗi lần sửa)
 

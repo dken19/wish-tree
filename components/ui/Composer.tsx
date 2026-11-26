@@ -97,7 +97,7 @@ export default function Composer() {
     <div className={`composer${open ? ' show' : ''}`}>
       <div className="composer-head">
         <LacBird className="lac" title="chim Lạc" />
-        <h3>Gửi một điều ước</h3>
+        <h2>Gửi một điều ước</h2>
         <LacBird className="lac" flip title="chim Lạc" />
       </div>
       <p className="sub">Chọn nơi treo, rồi viết điều mình mong nhất.</p>

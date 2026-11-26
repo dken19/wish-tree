@@ -4,6 +4,8 @@ import { getAdminDb, isAdminConfigured } from '@/lib/firebase.admin'
 import { checkAdmin } from '@/lib/adminAuth'
 import { FC_MAX, FC_MIN, FC_NOTE_MAX, FC_TITLE_MAX, loadCollections } from '@/lib/funnyCollections'
 
+import { revalidateWishPage } from '@/lib/wishDetail'
+
 export const runtime = 'nodejs'
 
 function deny(status: number, error: string) {
@@ -54,6 +56,7 @@ export async function POST(req: Request) {
     })
   }
   await batch.commit()
+  for (const d of docs) if (d.get('status') === 'approved') revalidateWishPage(d.get('no'))
   return NextResponse.json({ ok: true, id: ref.id })
 }
 
