@@ -7,6 +7,7 @@ import { THEMES, isThemeKey } from '@/lib/themes'
 import { isFirebaseConfigured } from '@/lib/firebase.client'
 import { SEED_WISHES } from '@/lib/wishes'
 import { REACTIONS, type ReactionCounts } from '@/lib/reactions'
+import ReactionIcon from '@/components/ui/ReactionIcon'
 import { getIdToken, signInGoogle, signOutUser, watchAuth, type AuthUser } from '@/lib/auth'
 import { PROGRESS_LABEL, formatNo, splitWishTime, type WishProgress } from '@/lib/wishMeta'
 
@@ -280,7 +281,7 @@ export default function AccountView() {
                         <span className="acc-rx" aria-label="Cảm xúc nhận được">
                           {REACTIONS.filter((r) => (w.reactions?.[r.key] ?? 0) > 0).map((r) => (
                             <span key={r.key} style={{ color: r.color }} title={r.label}>
-                              <Icon name={r.key} size={14} />
+                              <ReactionIcon kind={r.key} size={16} />
                               {w.reactions?.[r.key]}
                             </span>
                           ))}

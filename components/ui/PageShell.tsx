@@ -20,6 +20,20 @@ const LANTERNS = [
   { x: 18, s: 0.7, d: 24, delay: -1 },
 ]
 
+// Cảnh nền nhiều lớp (viewBox 1440x320, bám đáy màn hình): núi xa + chùa trên đỉnh / đồi giữa / rặng thông gần.
+// Màu theo mốc giờ (CSS --ls-*), lớp gần dịch theo chuột nhiều hơn (parallax --px/--py).
+const LAND_FAR = 'M0 320V176L70 150 150 162 250 100 330 140 420 112 520 48 600 112 690 94 790 146 880 76 980 126 1060 100 1150 152 1240 90 1340 136 1440 108V320ZM500 50h40l-6 -6h-28zM506 44h28l-5 -6h-18zM511 38h18l-9 -10zM512 50h16v8h-16z'
+const LAND_MID = 'M0 320V214C110 182 220 196 330 206S540 160 700 184 950 226 1080 196 1310 160 1440 188V320Z'
+const LAND_NEAR = 'M0 320V276C160 262 330 280 520 272S900 262 1100 270 1330 262 1440 268V320ZM30 134L49 197H11ZM30 167L57 227H3ZM30 200L65 257H-5ZM26 254h8V284h-8ZM95 94L117 174H73ZM95 136L126 212H64ZM95 178L135 250H55ZM90 246h10V284h-10ZM160 154L177 209H143ZM160 183L184 235H136ZM160 211L191 261H129ZM156 258h7V284h-7ZM215 188L228 228H202ZM215 209L233 248H197ZM215 230L239 267H191ZM212 265h6V284h-6ZM1250 174L1265 220H1235ZM1250 198L1271 242H1229ZM1250 222L1277 264H1223ZM1247 262h6V284h-6ZM1305 114L1325 185H1285ZM1305 151L1333 219H1277ZM1305 189L1341 253H1269ZM1301 250h9V284h-9ZM1370 79L1394 165H1346ZM1370 124L1403 206H1337ZM1370 169L1413 247H1327ZM1365 243h10V284h-10ZM1425 144L1443 203H1407ZM1425 175L1450 231H1400ZM1425 206L1457 259H1393ZM1421 256h8V284h-8ZM234 280a26 26 0 0 1 52 0ZM282 280a18 18 0 0 1 36 0ZM1171 280a24 24 0 0 1 48 0ZM1144 280a16 16 0 0 1 32 0ZM606 280a14 14 0 0 1 28 0ZM842 280a18 18 0 0 1 36 0Z'
+
+function Land({ layer, d }: { layer: string; d: string }) {
+  return (
+    <svg className={`pg-land ${layer}`} viewBox="0 0 1440 320" preserveAspectRatio="xMidYMax slice">
+      <path d={`${d}M0 318H1440V1400H0Z`} fill="currentColor" />
+    </svg>
+  )
+}
+
 /** Cập nhật <html data-sky> + dòng giờ mỗi phút; KHÔNG setState (ghi thẳng DOM, đỡ re-render). */
 function useSkyClock(clockRef: React.RefObject<HTMLSpanElement | null>) {
   useEffect(() => {
@@ -38,15 +52,20 @@ function useSkyClock(clockRef: React.RefObject<HTMLSpanElement | null>) {
   }, [clockRef])
 }
 
-/** Nền trời 4 mốc (bình minh / trưa / hoàng hôn / đêm) + sao + đèn trời — CSS thuần, chỉ transform. */
-export function PageSky() {
+/** Nền trời 4 mốc (bình minh / trưa / hoàng hôn / đêm) + sao + đèn trời — CSS thuần, chỉ transform.
+ *  `theme` = chủ đề điều ước (lib/themes) -> đèn đổi màu + dáng theo chủ đề (CSS [data-theme] ở pages.css). */
+export function PageSky({ theme }: { theme?: string | null }) {
   return (
-    <div className="pg-sky" aria-hidden="true">
+    <div className="pg-sky" aria-hidden="true" data-theme={theme ?? undefined}>
       <i className="pg-layer dawn" />
       <i className="pg-layer day" />
       <i className="pg-layer dusk" />
       <i className="pg-layer night" />
       <i className="pg-stars" />
+      <i className="pg-orb" />
+      <Land layer="far" d={LAND_FAR} />
+      <i className="pg-mist" />
+      <Land layer="mid" d={LAND_MID} />
       <div className="pg-lanterns">
         {LANTERNS.map((l, i) => (
           <span
@@ -61,12 +80,85 @@ export function PageSky() {
               } as React.CSSProperties
             }
           >
-            <i />
+            {/* .ld-lift: lớp nâng khi chạm (translate cộng dồn qua --lift), tách khỏi animation bay/lắc */}
+            <b className="ld-lift">
+              <i />
+            </b>
           </span>
         ))}
       </div>
+      <Land layer="near" d={LAND_NEAR} />
     </div>
   )
+}
+
+/** Chạm đèn trời phía sau: lớp cuộn che đèn nên dò bằng elementsFromPoint (đèn có pointer-events:auto
+ *  để được dò trúng). Chạm trúng -> đèn sáng bừng + vút lên một đoạn (cộng dồn, có trần).
+ *  Chuột: trời dịch nhẹ theo con trỏ (parallax) qua biến CSS --px/--py, ghi thẳng DOM trong rAF. */
+const INTERACTIVE = 'a,button,input,select,textarea,label,summary,[role="button"],[tabindex]'
+
+function lanternAt(x: number, y: number): HTMLElement | null {
+  for (const el of document.elementsFromPoint(x, y)) {
+    const lift = el.closest<HTMLElement>('.pg-lanterns .ld-lift')
+    if (lift) return lift
+  }
+  return null
+}
+
+function useLanternTouch(scrollRef: React.RefObject<HTMLDivElement | null>) {
+  useEffect(() => {
+    const root = scrollRef.current
+    const sky = document.querySelector<HTMLElement>('.pg-sky')
+    if (!root || !sky) return
+    let raf = 0
+    let mx = 0
+    let my = 0
+    const onMove = (e: PointerEvent) => {
+      if (e.pointerType !== 'mouse') return
+      mx = e.clientX
+      my = e.clientY
+      if (raf) return
+      raf = requestAnimationFrame(() => {
+        raf = 0
+        sky.style.setProperty('--px', (mx / innerWidth - 0.5).toFixed(3))
+        sky.style.setProperty('--py', (my / innerHeight - 0.5).toFixed(3))
+        const t = document.elementFromPoint(mx, my)
+        root.style.cursor = t && !t.closest(INTERACTIVE) && lanternAt(mx, my) ? 'pointer' : ''
+      })
+    }
+    const onClick = (e: MouseEvent) => {
+      if ((e.target as Element).closest(INTERACTIVE)) return
+      const lift = lanternAt(e.clientX, e.clientY)
+      if (!lift) return
+      const cur = Number(lift.dataset.lift || 0)
+      const next = Math.max(cur - 70, -280)
+      lift.dataset.lift = String(next)
+      lift.style.setProperty('--lift', `${next}px`)
+      lift.classList.remove('lit')
+      void lift.offsetWidth // khởi động lại animation sáng bừng
+      lift.classList.add('lit')
+      navigator.vibrate?.(8)
+    }
+    // Cuộn: --sy (px, trần 900) -> núi/đồi/thông trồi lên mỗi lớp một tốc độ, trăng/mặt trời lặn xuống.
+    let sraf = 0
+    const onScroll = () => {
+      if (sraf) return
+      sraf = requestAnimationFrame(() => {
+        sraf = 0
+        sky.style.setProperty('--sy', String(Math.min(root.scrollTop, 900) | 0))
+      })
+    }
+    root.addEventListener('scroll', onScroll, { passive: true })
+    root.addEventListener('pointermove', onMove, { passive: true })
+    root.addEventListener('click', onClick)
+    return () => {
+      cancelAnimationFrame(raf)
+      cancelAnimationFrame(sraf)
+      root.removeEventListener('scroll', onScroll)
+      root.removeEventListener('pointermove', onMove)
+      root.removeEventListener('click', onClick)
+    }
+  }, [scrollRef])
 }
 
 /**
@@ -80,6 +172,8 @@ export default function PageShell({
   backLabel = 'Về cây ước nguyện',
   plainTitle = false,
   stats,
+  clock = true,
+  skyTheme,
   children,
 }: {
   title: string
@@ -90,31 +184,41 @@ export default function PageShell({
   plainTitle?: boolean
   /** Khối số liệu dưới câu dẫn (vd /dieu-uoc: số điều ước đang treo + chờ duyệt). */
   stats?: React.ReactNode
+  /** Dòng giờ Hà Nội dưới tiêu đề; /dieu-uoc tắt cho gọn (người vào chỉ để xem điều ước). */
+  clock?: boolean
+  /** Chủ đề đang xem (vd /dieu-uoc?theme=yeu) -> đèn trời nền đổi kiểu theo chủ đề. */
+  skyTheme?: string | null
   children: React.ReactNode
 }) {
   const clockRef = useRef<HTMLSpanElement>(null)
+  const scrollRef = useRef<HTMLDivElement>(null)
   useSkyClock(clockRef)
+  useLanternTouch(scrollRef)
   return (
     <div className="pg">
-      <PageSky />
-      <div className="pg-scroll">
+      <PageSky theme={skyTheme} />
+      <div className="pg-scroll" ref={scrollRef}>
         <header className="pg-hero">
           <div className="pg-wrap">
-            <Link href="/" className="pg-back">
-              <Icon name="back" size={16} />
-              {backLabel}
-            </Link>
+            {/* Nút về cây CÙNG DÒNG tiêu đề, căn giữa theo dòng tiêu đề (header thấp, dễ bấm back). */}
             <div className="pg-hero-row">
+              <Link href="/" className="pg-back" aria-label={backLabel} title={backLabel}>
+                <Icon name="back" size={20} />
+              </Link>
               {aside}
-              <div>
-                <h1 className={plainTitle ? 'plain' : undefined}>{title}</h1>
+              <h1 className={plainTitle ? 'plain' : undefined}>{title}</h1>
+            </div>
+            {(lead || stats || clock) && (
+              <div className="pg-hero-sub">
                 {lead && <p className="pg-lead">{lead}</p>}
                 {stats}
-                <p className="pg-clock">
-                  <span ref={clockRef} />
-                </p>
+                {clock && (
+                  <p className="pg-clock">
+                    <span ref={clockRef} />
+                  </p>
+                )}
               </div>
-            </div>
+            )}
           </div>
         </header>
         <main className="pg-sheet">

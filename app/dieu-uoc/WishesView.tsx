@@ -1,14 +1,15 @@
 "use client";
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { THEMES, THEME_KEYS, isThemeKey, type ThemeKey } from "@/lib/themes";
 import { formatNo, splitWishTime } from "@/lib/wishMeta";
 import AuthBridge from "@/components/AuthBridge";
-import WishThread, { ReportButton } from "@/components/ui/WishThread";
+import { ReportButton } from "@/components/ui/WishThread";
 import PageShell from "@/components/ui/PageShell";
 import Icon from "@/components/ui/Icon";
 import Sparkles from "@/components/ui/Sparkles";
+import SeDuyenCard from "@/components/ui/SeDuyenCard";
 import Reactions, { useMyReactions } from "@/components/ui/Reactions";
 import type { ReactionCounts } from "@/lib/reactions";
 
@@ -69,8 +70,6 @@ export default function WishesView() {
   const cur: Filters = { theme, q, date, sort, page };
 
   const [qInput, setQInput] = useState(q);
-  const [openThread, setOpenThread] = useState<string | null>(null);
-  const [counts, setCounts] = useState<Record<string, number>>({});
   // mốc "hôm nay" cho dấu mộc: lấy 1 lần lúc mount (không đổi giữa các lần render)
   const [now] = useState(() => Date.now());
 
@@ -80,7 +79,7 @@ export default function WishesView() {
 
   // Cập nhật URL (?theme=&q=&date=&sort=&page=) -> điều khiển dữ liệu + chia sẻ link + nút back.
   const go = useCallback(
-    (f: Filters) => {
+    (f: Filters, replace = false) => {
       const u = new URLSearchParams();
       if (f.theme) u.set("theme", f.theme);
       if (f.q.trim()) u.set("q", f.q.trim());
@@ -88,13 +87,16 @@ export default function WishesView() {
       if (f.sort === "old") u.set("sort", "old");
       if (f.page > 1) u.set("page", String(f.page));
       const qs = u.toString();
-      router.push(qs ? `/dieu-uoc?${qs}` : "/dieu-uoc");
+      const url = qs ? `/dieu-uoc?${qs}` : "/dieu-uoc";
+      // gõ tìm kiếm -> replace (không nhồi lịch sử, nút back vẫn về trang trước)
+      if (replace) router.replace(url, { scroll: false });
+      else router.push(url, { scroll: false });
     },
     [router],
   );
   // đổi bộ lọc -> về trang 1
-  const setFilter = (patch: Partial<Filters>) =>
-    go({ ...cur, page: 1, ...patch });
+  const setFilter = (patch: Partial<Filters>, replace = false) =>
+    go({ ...cur, page: 1, ...patch }, replace);
   const goPage = (p: number) => go({ ...cur, page: p });
   const hasFilter = Boolean(theme || q || date || sort === "old");
 
@@ -125,29 +127,67 @@ export default function WishesView() {
     };
   }, [theme, page, q, date, sort]);
 
-  // Số điều ước đang treo + đang chờ duyệt (người gửi ẩn danh biết ước của mình đang được duyệt)
-  const [stats, setStats] = useState<{
-    approved: number;
-    pending: number;
-  } | null>(null);
+
+  // Tìm ngay khi gõ (chờ 450ms ngừng gõ); URL đổi từ ngoài (back/bấm #số) -> đồng bộ lại ô nhập.
   useEffect(() => {
-    let alive = true;
-    fetch("/api/wishes/stats")
-      .then((r) => (r.ok ? r.json() : null))
-      .then((j) => {
-        if (
-          alive &&
-          j &&
-          typeof j.approved === "number" &&
-          typeof j.pending === "number"
-        )
-          setStats({ approved: j.approved, pending: j.pending });
-      })
-      .catch(() => {});
+    if (qInput.trim() === q) return;
+    const t = setTimeout(() => go({ theme, date, sort, page: 1, q: qInput }, true), 450);
+    return () => clearTimeout(t);
+  }, [qInput, q, theme, date, sort, go]);
+  useEffect(() => {
+    setQInput((v) => (v.trim() === q ? v : q));
+  }, [q]);
+
+  const dateRef = useRef<HTMLInputElement>(null);
+  const chipsRef = useRef<HTMLDivElement>(null);
+  // chip chủ đề đang chọn luôn nằm trong tầm nhìn của dải cuộn ngang
+  useEffect(() => {
+    chipsRef.current
+      ?.querySelector<HTMLElement>('[aria-pressed="true"]')
+      ?.scrollIntoView({ block: "nearest", inline: "center", behavior: "smooth" });
+  }, [theme]);
+  const clearAll = (
+    <button
+      type="button"
+      className="wf-reset"
+      onClick={() => {
+        setQInput("");
+        go({ theme: null, q: "", date: "", sort: "new", page: 1 });
+      }}
+    >
+      <Icon name="x" size={14} />
+      Bỏ lọc
+    </button>
+  );
+  // Dải chủ đề: con lăn dọc -> cuộn ngang (chuột desktop), mũi tên ‹ › chỉ hiện khi còn chip bị khuất.
+  const [edge, setEdge] = useState({ l: false, r: false });
+  useEffect(() => {
+    const el = chipsRef.current;
+    if (!el) return;
+    const upd = () =>
+      setEdge({
+        l: el.scrollLeft > 4,
+        r: el.scrollLeft + el.clientWidth < el.scrollWidth - 4,
+      });
+    const onWheel = (e: WheelEvent) => {
+      if (Math.abs(e.deltaY) <= Math.abs(e.deltaX) || el.scrollWidth <= el.clientWidth) return;
+      e.preventDefault();
+      el.scrollLeft += e.deltaY;
+    };
+    upd();
+    el.addEventListener("scroll", upd, { passive: true });
+    el.addEventListener("wheel", onWheel, { passive: false });
+    window.addEventListener("resize", upd);
     return () => {
-      alive = false;
+      el.removeEventListener("scroll", upd);
+      el.removeEventListener("wheel", onWheel);
+      window.removeEventListener("resize", upd);
     };
   }, []);
+  const nudge = (dir: 1 | -1) =>
+    chipsRef.current?.scrollBy({ left: dir * 240, behavior: "smooth" });
+
+  const dateLabel = date ? date.split("-").reverse().join("/") : "Ngày";
 
   const totalPages = data?.totalPages ?? 1;
   const [myRx, setMyRx] = useMyReactions(data?.items.map((w) => w.id) ?? []);
@@ -155,123 +195,158 @@ export default function WishesView() {
   return (
     <PageShell
       title="Tất cả điều ước"
-      lead="Những điều ước đã treo lên cây. Tìm theo số hoặc từ khoá, lọc theo chủ đề và ngày gửi."
-      stats={
-        stats && (
-          <dl className="pg-stats">
-            <div>
-              <dt>đang treo trên cây</dt>
-              <dd>{stats.approved.toLocaleString("vi-VN")}</dd>
-            </div>
-            <div>
-              <dt>đang chờ duyệt</dt>
-              <dd>{stats.pending.toLocaleString("vi-VN")}</dd>
-            </div>
-          </dl>
-        )
-      }
+      clock={false}
+      skyTheme={theme}
     >
       <AuthBridge />
 
-      <form
-        className="pg-search"
-        role="search"
-        onSubmit={(e) => {
-          e.preventDefault();
-          setFilter({ q: qInput });
-        }}
-      >
-        <Icon name="search" />
-        <input
-          type="search"
-          inputMode="search"
-          placeholder="Số #888, hoặc từ khoá như thi, mẹ, Hà Nội"
-          value={qInput}
-          onChange={(e) => setQInput(e.target.value)}
-          aria-label="Tìm điều ước"
-        />
-        <button type="submit" className="pg-btn primary">
-          Tìm
-        </button>
-      </form>
+      {/* Bộ lọc gọn: 1 khung = ô tìm (tự tìm khi gõ) + Ngày + Mới/Cũ, dưới là dải chủ đề cuộn ngang. */}
+      <div className="wf">
+        <form
+          className="wf-row"
+          role="search"
+          onSubmit={(e) => {
+            e.preventDefault();
+            setFilter({ q: qInput });
+          }}
+        >
+          <label className="wf-search">
+            <Icon name="search" />
+            <input
+              type="search"
+              inputMode="search"
+              enterKeyHint="search"
+              placeholder="Tìm #số hoặc từ khoá"
+              value={qInput}
+              onChange={(e) => setQInput(e.target.value)}
+              aria-label="Tìm điều ước theo số hoặc từ khoá"
+            />
+            {qInput && (
+              <button
+                type="button"
+                className="wf-clear"
+                aria-label="Xoá từ khoá"
+                onClick={() => {
+                  setQInput("");
+                  setFilter({ q: "" }, true);
+                }}
+              >
+                <Icon name="x" size={15} />
+              </button>
+            )}
+          </label>
 
-      <div className="pg-tools">
-        <label>
-          Ngày
-          <input
-            type="date"
-            value={date}
-            onChange={(e) => setFilter({ date: e.target.value })}
-          />
-        </label>
-        <label>
-          <select
-            aria-label="Thứ tự"
-            value={sort}
-            onChange={(e) =>
-              setFilter({ sort: e.target.value === "old" ? "old" : "new" })
-            }
-          >
-            <option value="new">Mới nhất</option>
-            <option value="old">Cũ nhất</option>
-          </select>
-        </label>
-        {hasFilter && (
+          <span className={`wf-btn wf-date${date ? " on" : ""}`}>
+            <button
+              type="button"
+              title="Lọc theo ngày gửi"
+              onClick={() => {
+                const el = dateRef.current;
+                if (!el) return;
+                try {
+                  el.showPicker();
+                } catch {
+                  el.focus();
+                }
+              }}
+            >
+              <Icon name="calendar" size={16} />
+              <span className="wf-lbl">{dateLabel}</span>
+            </button>
+            {date && (
+              <button
+                type="button"
+                className="wf-x"
+                aria-label="Bỏ lọc ngày"
+                onClick={() => setFilter({ date: "" })}
+              >
+                <Icon name="x" size={13} />
+              </button>
+            )}
+            <input
+              ref={dateRef}
+              type="date"
+              tabIndex={-1}
+              aria-hidden="true"
+              value={date}
+              onChange={(e) => setFilter({ date: e.target.value })}
+            />
+          </span>
+
           <button
-            className="pg-btn ghost"
-            onClick={() => {
-              setQInput("");
-              go({ theme: null, q: "", date: "", sort: "new", page: 1 });
-            }}
+            type="button"
+            className={`wf-btn${sort === "old" ? " on" : ""}`}
+            title="Đổi thứ tự"
+            aria-label={`Thứ tự: ${sort === "old" ? "cũ nhất trước" : "mới nhất trước"}. Bấm để đổi`}
+            onClick={() => setFilter({ sort: sort === "old" ? "new" : "old" })}
           >
-            <Icon name="x" size={16} />
-            Bỏ lọc
+            <Icon name="sort" size={16} />
+            <span className="wf-lbl">{sort === "old" ? "Cũ nhất" : "Mới nhất"}</span>
+          </button>
+        </form>
+
+        <div className={`wf-strip${edge.l ? " l" : ""}${edge.r ? " r" : ""}`}>
+        {edge.l && (
+          <button type="button" className="wf-arrow l" aria-label="Chủ đề trước" onClick={() => nudge(-1)}>
+            <Icon name="back" size={16} />
           </button>
         )}
+        <div className="wf-chips" ref={chipsRef} role="group" aria-label="Lọc theo chủ đề">
+          <button
+            className="wf-chip"
+            aria-pressed={!theme}
+            onClick={() => setFilter({ theme: null })}
+          >
+            Tất cả
+          </button>
+          {THEME_KEYS.map((k) => (
+            <button
+              key={k}
+              className="wf-chip"
+              aria-pressed={k === theme}
+              style={{ "--c": THEMES[k].color } as React.CSSProperties}
+              onClick={() => setFilter({ theme: k === theme ? null : k })}
+            >
+              <i />
+              {THEMES[k].label}
+            </button>
+          ))}
+        </div>
+        {edge.r && (
+          <button type="button" className="wf-arrow r" aria-label="Chủ đề tiếp" onClick={() => nudge(1)}>
+            <Icon name="back" size={16} />
+          </button>
+        )}
+        </div>
       </div>
 
-      <div className="pg-chips" role="group" aria-label="Lọc theo chủ đề">
-        <button
-          className="pg-chip"
-          aria-pressed={!theme}
-          onClick={() => setFilter({ theme: null })}
-        >
-          Tất cả chủ đề
-        </button>
-        {THEME_KEYS.map((k) => (
-          <button
-            key={k}
-            className="pg-chip"
-            aria-pressed={k === theme}
-            onClick={() => setFilter({ theme: k })}
-          >
-            <i className="pg-dot" style={{ background: THEMES[k].color }} />
-            {THEMES[k].label}
-          </button>
-        ))}
-      </div>
+      {theme === "yeu" && <SeDuyenCard />}
 
       {loading && <p className="pg-status">Đang tải điều ước…</p>}
       {error && <p className="pg-status err">{error}</p>}
       {!loading && !error && data && data.items.length === 0 && (
-        <p className="pg-status">
-          {hasFilter
-            ? "Không có điều ước nào khớp. Thử bỏ bớt bộ lọc hoặc đổi từ khoá."
-            : "Chưa có điều ước nào. Ra cây và treo điều ước đầu tiên nhé."}
-        </p>
+        <div className="pg-status">
+          <p>
+            {hasFilter
+              ? "Không có điều ước nào khớp. Thử bỏ bớt bộ lọc hoặc đổi từ khoá."
+              : "Chưa có điều ước nào. Ra cây và treo điều ước đầu tiên nhé."}
+          </p>
+          {hasFilter && clearAll}
+        </div>
       )}
 
       {!loading && !error && data && data.items.length > 0 && (
         <>
-          <p className="pg-count">
-            {data.total.toLocaleString("vi-VN")} điều ước
-            {totalPages > 1 ? `, trang ${page} trên ${totalPages}` : ""}
-          </p>
+          <div className="wf-meta">
+            <p className="pg-count">
+              {data.total.toLocaleString("vi-VN")} điều ước
+              {totalPages > 1 ? ` · trang ${page}/${totalPages}` : ""}
+            </p>
+            {hasFilter && clearAll}
+          </div>
           <ol className="wl">
             {data.items.map((w) => {
               const tk = isThemeKey(w.theme) ? w.theme : null;
-              const open = openThread === w.id;
-              const n = counts[w.id] ?? w.commentCount;
               const isSeed = w.id.startsWith("seed-");
               const fresh =
                 w.createdAt > 0 && now - w.createdAt < 24 * 3600_000;
@@ -347,14 +422,6 @@ export default function WishesView() {
                     </div>
                     {!isSeed && (
                       <div className="tk-actions">
-                        <button
-                          className="pg-act"
-                          onClick={() => setOpenThread(open ? null : w.id)}
-                          aria-expanded={open}
-                        >
-                          <Icon name="comment" size={16} />
-                          {n > 0 ? `${n} bình luận` : "Bình luận"}
-                        </button>
                         {w.no ? (
                           <Link className="pg-act" href={`/dieu-uoc/${w.no}`}>
                             <Icon name="link" size={16} />
@@ -363,12 +430,6 @@ export default function WishesView() {
                         ) : null}
                         <ReportButton wishId={w.id} />
                       </div>
-                    )}
-                    {open && (
-                      <WishThread
-                        wishId={w.id}
-                        onCount={(c) => setCounts((m) => ({ ...m, [w.id]: c }))}
-                      />
                     )}
                   </div>
                 </li>

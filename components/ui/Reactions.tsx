@@ -4,7 +4,7 @@ import { useScene } from '@/store/useScene'
 import { getIdToken, signInGoogle } from '@/lib/auth'
 import { isFirebaseConfigured } from '@/lib/firebase.client'
 import { REACTIONS, type MyReactions, type ReactionCounts, type ReactionKey } from '@/lib/reactions'
-import Icon from './Icon'
+import ReactionIcon from './ReactionIcon'
 
 // Bản dev chưa có Firebase: bấm thử được (chỉ đổi trong bộ nhớ) để xem giao diện.
 const DEMO = !isFirebaseConfigured && process.env.NODE_ENV !== 'production'
@@ -128,7 +128,7 @@ export default function Reactions({
             disabled={busy === r.key}
             onClick={() => toggle(r.key)}
           >
-            <Icon name={r.key} size={compact ? 16 : 18} />
+            <ReactionIcon kind={r.key} size={compact ? 18 : 22} />
             <span className="rx-n">{n > 0 ? n.toLocaleString('vi-VN') : compact ? '' : r.label}</span>
           </button>
         )

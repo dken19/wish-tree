@@ -23,7 +23,7 @@ export default async function DieuUocPage() {
   const fallback = (
     <PageShell
       title="Tất cả điều ước"
-      lead="Những điều ước đã treo lên cây. Tìm theo số hoặc từ khoá, lọc theo chủ đề và ngày gửi."
+      clock={false}
     >
       <h2 className="pg-count">Điều ước mới nhất</h2>
       <ol className="wl">

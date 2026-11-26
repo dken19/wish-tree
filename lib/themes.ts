@@ -15,7 +15,7 @@ export type Theme = { label: string; color: string }
 export const THEMES: Record<ThemeKey, Theme> = {
   thi: { label: 'Thi cử', color: '#d6243a' },
   diem: { label: 'Điểm số', color: '#e0792b' },
-  yeu: { label: 'Tình học trò', color: '#d6457a' },
+  yeu: { label: 'Tình yêu', color: '#d6457a' },
   nha: { label: 'Gia đình', color: '#c79a2e' },
   khoe: { label: 'Sức khỏe', color: '#3f9d6b' },
   mo: { label: 'Ước mơ', color: '#6b6cc2' },

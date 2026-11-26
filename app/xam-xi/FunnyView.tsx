@@ -141,12 +141,7 @@ export default function FunnyView() {
   return (
     <PageShell
       title="Góc xàm xí"
-      stats={
-        <p className="fx-lead">
-          Những điều ước không được treo lên cây, nhưng đọc thì vui. Mỗi tờ (hoặc cả bộ) có kèm lời phê của người giữ cây.
-          Tên người viết được giấu đi.
-        </p>
-      }
+      lead="Những điều ước không được treo lên cây, nhưng đọc thì vui. Mỗi tờ (hoặc cả bộ) có kèm lời phê của người giữ cây. Tên người viết được giấu đi."
     >
       <div className="pg-chips fx-tabs" role="group" aria-label="Cách xem">
         <button className="pg-chip" aria-pressed={view === 'to'} onClick={() => router.push('/xam-xi')}>

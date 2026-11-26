@@ -18,7 +18,7 @@ const u = (p: string) => `${SITE}${p}`
 /** Các trang công khai (đường dẫn, tên, mô tả ngắn) — dùng cho mục lục llms.txt. */
 export const PAGES = [
   { path: '/', name: 'Cây ước nguyện 3D (trang chủ)', desc: 'Viết và treo điều ước lên cây 3D có gió + trời theo giờ Hà Nội; vào phòng ôn bài Rừng Trúc.' },
-  { path: '/dieu-uoc', name: 'Tất cả điều ước', desc: 'Đọc điều ước mọi người đã treo; tìm theo số #N hoặc từ khoá, lọc chủ đề/ngày.' },
+  { path: '/dieu-uoc', name: 'Tất cả điều ước', desc: 'Đọc điều ước mọi người đã treo; tìm theo số #N hoặc từ khoá, lọc chủ đề/ngày. Chủ đề Tình yêu có lối sang trang Se duyên (mai-moi.online).' },
   { path: '/ky-nang', name: 'Kỹ năng sống', desc: 'Hướng dẫn ngắn nấu nướng, trồng rau, chụp ảnh, chăm sóc da cho học sinh, có nguồn Wikipedia.' },
   { path: '/xam-xi', name: 'Góc xàm xí', desc: 'Những điều ước vui không lên cây, kèm lời phê hài hước (ẩn tên người viết).' },
   { path: '/gioi-thieu', name: 'Giới thiệu', desc: 'Cây Ước Nguyện là gì, làm được gì, đăng nhập dùng để làm gì.' },

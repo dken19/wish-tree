@@ -150,7 +150,7 @@ export default function WishDetail({ wish }: { wish: PublicWish }) {
   return (
     <div className={`pg wd${verified ? ' wd-fancy' : ' wd-plain'}`} style={skinVars(look)} data-skin={verified ? skin : 'plain'}>
       <AuthBridge />
-      {verified ? <div className="wd-bg" aria-hidden /> : <PageSky />}
+      {verified ? <div className="wd-bg" aria-hidden /> : <PageSky theme={wish.theme} />}
 
       <div className="pg-scroll wd-scroll">
         <nav className="wd-top">
