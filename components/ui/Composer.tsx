@@ -190,6 +190,14 @@ export default function Composer() {
                 Thẻ lấp lánh
               </li>
               <li>
+                <Icon name="camera" size={14} />
+                Kèm ảnh
+              </li>
+              <li>
+                <Icon name="lock" size={14} />
+                Riêng tư
+              </li>
+              <li>
                 <Icon name="comment" size={14} />
                 Bình luận
               </li>

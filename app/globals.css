@@ -430,6 +430,19 @@ canvas {
 }
 .composer-head h2 {
   margin-bottom: 0;
+  white-space: nowrap;
+}
+/* màn hẹp (≤380px): chim Lạc + tiêu đề nhỏ lại để tiêu đề không xuống dòng */
+@media (max-width: 380px) {
+  .composer-head {
+    gap: 8px;
+  }
+  .composer-head .lac {
+    width: 44px;
+  }
+  .composer-head h2 {
+    font-size: 26px;
+  }
 }
 .composer-head .lac {
   width: 64px;

@@ -101,7 +101,7 @@ export default function AccountButton() {
             <>
               <p className="acct-who">
                 <b>Đăng nhập để</b>
-                <span>điều ước hiện ngay, thẻ lấp lánh, và đánh dấu ước nào đã đạt được.</span>
+                <span>điều ước hiện ngay, thẻ lấp lánh, kèm ảnh, để riêng tư (chỉ ai có link mới xem), và đánh dấu ước nào đã đạt được.</span>
               </p>
               <button className="acct-item primary" role="menuitem" disabled={busy} onClick={login}>
                 <Icon name="user" size={16} />
