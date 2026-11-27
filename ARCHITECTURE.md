@@ -186,7 +186,8 @@ scripts/seed.mjs       # seed vài điều ước 'approved' vào Firestore
 scripts/seed-sample.mjs # `npm run seed:mau`: đưa ước MẪU "Xuân Phong" (ảnh public/samples/xuan-phong-lam-viec.webp: ảnh chụp "Laptop and coffee on a desk" (Wikimedia Commons, CC0 — không cần ghi nguồn, không có người), skin Trăng đêm, khung Mây lành) lên Firestore + Storage thật; doc id cố định (chạy lại không trùng); yêu cầu meta/counters đã có
 public/samples/        # ảnh minh hoạ cho dữ liệu mẫu (WebP đã nén như server)
 firestore.rules        # client read 'approved' (wishes) + read sessions; write = false (ghi qua Admin SDK)
-firebase.json          # trỏ firestore.rules + firestore.indexes.json cho `firebase deploy`
+storage.rules          # Firebase Storage: client read/write = false (upload chỉ qua API/Admin SDK; ảnh xem bằng URL token)
+firebase.json          # trỏ firestore.rules + firestore.indexes.json + storage.rules cho `firebase deploy`
 firestore.indexes.json # composite index cho /api/wishes/list: (status,createdAt) + (status,theme,createdAt)
 .github/workflows/ci.yml # CI: lint + build mỗi push/PR vào master
 ```
@@ -384,7 +385,7 @@ Vercel: import `.env.local` khi tạo project.
 - **Đổi tên/ảnh**: tên + ảnh được CHÉP vào doc lúc gửi (wishes.author, comments.author/photo) → `/api/me/profile` cập nhật lại (≤500 ước + ≤500 bình luận). Bình luận dùng `collectionGroup('comments').where('uid')` → cần field override trong `firestore.indexes.json` (`firebase deploy --only firestore:indexes`); thiếu index chỉ log cảnh báo, bình luận cũ giữ tên cũ. Client PHẢI `refreshAuthUser()` (reload + getIdToken(true)) sau khi đổi, không thì token cũ còn tên cũ ≤1 giờ.
 - **Ảnh đại diện**: nén ở CẢ hai đầu — client thu ≤512px (đỡ mạng, dưới 4,5 MB body Vercel), server `sharp` nén lại WebP 256px (không tin file client, bỏ EXIF/GPS) → ~10–20 KB/ảnh. Mỗi lần đổi là file mới (URL mới, cache immutable 1 năm), file cũ bị xoá. `sharp` khai báo thẳng trong dependencies (trước chỉ là phụ thuộc của next).
 
-- **Ảnh điều ước**: chỉ người đăng nhập (ẩn danh bị 401 nếu gửi kèm ảnh) → ước có ảnh được ĐĂNG NGAY như mọi ước đăng nhập, kiểm soát bằng báo cáo (3 báo cáo tự ẩn) + admin thấy ảnh thumbnail. Client thu ≤1600px (`shrinkImage`), server nén lại WebP ≤1280px q72 (~100–250 KB). Gửi multipart thì client KHÔNG tự đặt Content-Type (trình duyệt thêm boundary). Admin gỡ/bỏ điều ước KHÔNG xoá file ảnh trên Storage (URL có token nhưng không còn chỗ nào trỏ tới). Điều ước mẫu #9 "Xuân Phong" (SEED_WISHES, ảnh `public/samples/xuan-phong-lam-viec.webp`: ảnh chụp CC0 từ Wikimedia Commons, không người) minh hoạ ước có ảnh + skin + khung; lên Firestore thật bằng `npm run seed:mau`.
+- **Ảnh điều ước**: chỉ người đăng nhập (ẩn danh bị 401 nếu gửi kèm ảnh) → ước có ảnh được ĐĂNG NGAY như mọi ước đăng nhập, kiểm soát bằng báo cáo (3 báo cáo tự ẩn) + admin thấy ảnh thumbnail. Server giới hạn ≤10 ảnh/giờ/uid (`wish-img:<uid>`); `storage.rules` chặn mọi đọc/ghi trực tiếp từ client. Client thu ≤1600px (`shrinkImage`), server nén lại WebP ≤1280px q72 (~100–250 KB). Gửi multipart thì client KHÔNG tự đặt Content-Type (trình duyệt thêm boundary). Admin gỡ/bỏ điều ước KHÔNG xoá file ảnh trên Storage (URL có token nhưng không còn chỗ nào trỏ tới). Điều ước mẫu #9 "Xuân Phong" (SEED_WISHES, ảnh `public/samples/xuan-phong-lam-viec.webp`: ảnh chụp CC0 từ Wikimedia Commons, không người) minh hoạ ước có ảnh + skin + khung; lên Firestore thật bằng `npm run seed:mau`.
 
 - **Tên class CSS dùng chung toàn cục** (globals.css + pages.css cùng nạp ở mọi trang): trước khi đặt tiền tố mới, `grep` cả hai file. Đã từng đặt khung tờ ước là `.wf` → trùng bộ lọc `.wf` của `/dieu-uoc` (`.wf svg {width:100%}` làm kính lúp phóng to cả màn hình) → đổi sang `wfr`.
 

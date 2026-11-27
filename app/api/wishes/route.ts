@@ -89,6 +89,9 @@ export async function POST(req: Request) {
   let webp: Awaited<ReturnType<typeof toWebp>> | null = null
   if (imageFile) {
     if (!uid) return NextResponse.json({ error: 'Đăng nhập để đính kèm ảnh nhé' }, { status: 401 })
+    // chặn spam ảnh: tối đa 10 ảnh / giờ / tài khoản (ngoài giới hạn gửi ước theo IP)
+    if (!rateLimit(`wish-img:${uid}`, 10, 60 * 60_000).ok)
+      return NextResponse.json({ error: 'Bạn đã gửi nhiều ảnh quá, nghỉ chút rồi thử lại nhé' }, { status: 429 })
     if (!getAdminBucket())
       return NextResponse.json({ error: 'Máy chủ chưa cấu hình nơi lưu ảnh (Firebase Storage)' }, { status: 503 })
     if (!imageFile.type.startsWith('image/') || imageFile.size > MAX_UPLOAD)

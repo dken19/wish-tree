@@ -1,0 +1,13 @@
+rules_version = '2';
+// Firebase Storage: client KHÔNG được đọc/ghi/liệt kê trực tiếp bất cứ thứ gì.
+// - Mọi tải lên đi qua API route (Admin SDK, bỏ qua rules này): bắt đăng nhập, ≤4 MB, giới hạn lượt,
+//   sharp giải mã + nén lại WebP (file không phải ảnh bị loại, EXIF/GPS bị xoá).
+// - Ảnh hiển thị qua URL có token tải (firebaseStorageDownloadTokens) do server cấp -> không cần quyền read.
+// => Không ai dùng Firebase SDK phía client (kể cả có apiKey công khai) để upload linh tinh hay dò file.
+service firebase.storage {
+  match /b/{bucket}/o {
+    match /{allPaths=**} {
+      allow read, write: if false;
+    }
+  }
+}

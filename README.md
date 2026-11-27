@@ -56,7 +56,7 @@ npm run dev                        # http://localhost:3000
 2. Lấy config web app → điền các biến `NEXT_PUBLIC_FIREBASE_*`.
 3. Vào *Project settings > Service accounts > Generate new private key* → điền `FIREBASE_PROJECT_ID`, `FIREBASE_CLIENT_EMAIL`, `FIREBASE_PRIVATE_KEY`.
 4. (Tuỳ chọn) `ADMIN_EMAILS` — email Google được vào `/admin` (phân tách dấu phẩy; mặc định `khuctruonghuy2000@gmail.com`). `ADMIN_SECRET` vẫn dùng được làm mã dự phòng cho API.
-5. Triển khai security rules: nội dung trong `firestore.rules` (client đọc bản `approved` của `wishes` + đọc `sessions`; mọi ghi qua Admin SDK).
+5. Triển khai security rules: nội dung trong `firestore.rules` (client đọc bản `approved` của `wishes` + đọc `sessions`; mọi ghi qua Admin SDK) và `storage.rules` (client không đọc/ghi Storage; upload chỉ qua API: đăng nhập, ≤4 MB, ≤10 ảnh/giờ, nén lại WebP). Deploy: `firebase deploy --only firestore:indexes,firestore:rules,storage --project <id>` (Storage cần gói Blaze, bucket vùng US để có hạn mức miễn phí).
 6. **Index cho trang "Tất cả ước nguyện"**: deploy `firestore.indexes.json` bằng `firebase deploy --only firestore:indexes --project <project-id>` (thêm `--account <email>` nếu CLI đăng nhập nhiều tài khoản), **hoặc** mở `/dieu-uoc` lần đầu rồi bấm link tạo index mà Firestore báo trong log server.
 
 ## Đăng nhập (tự đăng ngay, khỏi chờ duyệt)
