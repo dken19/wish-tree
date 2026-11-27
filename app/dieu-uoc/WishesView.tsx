@@ -3,6 +3,9 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { THEMES, THEME_KEYS, isThemeKey, type ThemeKey } from "@/lib/themes";
+
+// Bộ lọc chủ đề: "Tình yêu" đứng ngay sau "Tất cả" (được xem nhiều nhất), còn lại giữ thứ tự gốc.
+const FILTER_KEYS: ThemeKey[] = ["yeu", ...THEME_KEYS.filter((k) => k !== "yeu")];
 import { formatNo, splitWishTime, type WishImage } from "@/lib/wishMeta";
 import WishPhoto from "@/components/ui/WishPhoto";
 import WishFrame from "@/components/ui/WishFrame";
@@ -306,7 +309,7 @@ export default function WishesView() {
           >
             Tất cả
           </button>
-          {THEME_KEYS.map((k) => (
+          {FILTER_KEYS.map((k) => (
             <button
               key={k}
               className="wf-chip"
