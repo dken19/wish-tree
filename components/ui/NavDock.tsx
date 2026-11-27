@@ -128,6 +128,17 @@ export default function NavDock() {
             </span>
           </button>
         ))}
+        {/* link pháp lý/giới thiệu: dời từ màn hình chính vào cuối menu (luôn có trong DOM cho crawler) */}
+        <nav
+          className="nav-legal"
+          aria-label="Thông tin"
+          style={{ transitionDelay: navOpen ? `${ITEMS.length * 38}ms` : '0ms' }}
+        >
+          <a href="/gioi-thieu">Giới thiệu</a>
+          <a href="/chinh-sach-bao-mat">Bảo mật</a>
+          <a href="/dieu-khoan">Điều khoản</a>
+          <a href="/lien-he">Liên hệ</a>
+        </nav>
       </div>
 
       <button

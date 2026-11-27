@@ -139,7 +139,7 @@ export async function PATCH(req: Request) {
 
   // hide-wishes
   const db = getAdminDb()!
-  const snap = await db.collection('wishes').where('uid', '==', uid).where('status', '==', 'approved').get()
+  const snap = await db.collection('wishes').where('uid', '==', uid).where('status', 'in', ['approved', 'private']).get()
   const by = auth.email ?? 'secret'
   for (let i = 0; i < snap.docs.length; i += 400) {
     const batch = db.batch()
@@ -152,6 +152,6 @@ export async function PATCH(req: Request) {
       })
     await batch.commit()
   }
-  snap.docs.forEach((d) => revalidateWishPage(d.get('no')))
+  snap.docs.forEach((d) => revalidateWishPage(d.get('no'), d.get('shareKey')))
   return NextResponse.json({ ok: true, hidden: snap.size })
 }

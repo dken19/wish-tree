@@ -522,6 +522,37 @@ canvas {
 .wish-field textarea:focus {
   border: none;
 }
+/* chọn Công khai / Riêng tư (chỉ người đăng nhập) */
+.vis-row {
+  display: flex;
+  gap: 6px;
+  margin-top: 12px;
+  padding: 4px;
+  border-radius: 14px;
+  background: #f4ede2;
+}
+.vis-row button {
+  flex: 1;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  font: inherit;
+  font-size: 12.5px;
+  font-weight: 500;
+  padding: 8px 10px;
+  border: none;
+  border-radius: 10px;
+  background: transparent;
+  color: #7a6557;
+  cursor: pointer;
+  transition: background 0.2s, color 0.2s, box-shadow 0.2s;
+}
+.vis-row button.on {
+  background: #fff;
+  color: #43352d;
+  box-shadow: 0 2px 8px -3px rgba(70, 45, 20, 0.35);
+}
 .composer .row {
   display: flex;
   gap: 10px;
@@ -1428,6 +1459,39 @@ canvas {
   color: #c01730;
 }
 
+/* hàng link Giới thiệu · Bảo mật · Điều khoản · Liên hệ ở cuối menu */
+.nav-legal {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 4px 10px;
+  max-width: 260px;
+  margin-top: 2px;
+  padding: 5px 12px;
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.72);
+  backdrop-filter: blur(8px);
+  box-shadow: var(--shadow);
+  font-size: 11px;
+  opacity: 0;
+  transform: translateY(14px) scale(0.9);
+  pointer-events: none;
+  transition: opacity 0.28s ease, transform 0.28s cubic-bezier(0.2, 0.9, 0.3, 1.3);
+}
+.navdock.open .nav-legal {
+  opacity: 1;
+  transform: translateY(0) scale(1);
+  pointer-events: auto;
+}
+.nav-legal a {
+  color: #6e5a4c;
+  text-decoration: none;
+}
+.nav-legal a:hover {
+  color: #c01730;
+  text-decoration: underline;
+}
+
 /* nút xòe (FAB) = CUỘN GIẤY BÍ KÍP (thuần CSS) */
 .nav-fab {
   position: relative;
@@ -1566,20 +1630,6 @@ canvas {
 }
 
 /* Link nhỏ dưới tiêu đề trang chủ (server render, đọc được khi chưa đăng nhập) */
-.brand .brand-links {
-  display: flex;
-  gap: 12px;
-  margin-top: 6px;
-  font-size: 11px;
-  letter-spacing: 0.5px;
-  text-transform: none;
-}
-.brand .brand-links a {
-  color: #fff;
-  text-decoration: underline;
-  text-shadow: 0 1px 6px rgba(70, 40, 30, 0.5);
-}
-
 /* ---------- Huy hiệu số điều ước (dưới tiêu đề trang chủ) ---------- */
 .brand .wish-stats {
   display: inline-flex;
@@ -1866,7 +1916,7 @@ canvas {
 .card.is-verified::before {
   border-color: rgba(201, 149, 46, 0.55);
 }
-.card.is-verified .seal {
+.card.is-verified:not(.has-skin) .seal {
   color: #fff8e6 !important;
   border-color: #b98522 !important;
   background: radial-gradient(circle at 35% 30%, #ffe9a8, #d9a33a 55%, #a8741c);
@@ -1938,4 +1988,534 @@ canvas {
   .spk-sheen { display: none; }
   .spk-star { animation: none; opacity: 0.85; transform: translate(-50%, -50%) scale(0.8); }
   .spk-ring::before, .spk-glow { animation: none; }
+}
+
+/* ---------- Ảnh đính kèm điều ước (WishPhoto) — dùng ở thẻ đọc, vé danh sách, trang chi tiết, admin ----------
+   Khung có aspect-ratio (inline, kẹp theo variant). Ảnh chính: contain (KHÔNG cắt) — trừ vé danh sách (cover).
+   Ảnh lệch tỉ lệ khung -> .wp-fill = chính ảnh đó cover + blur lấp dải trống (kiểu Instagram/Zalo). */
+.wp {
+  position: relative;
+  display: block;
+  width: 100%;
+  padding: 0;
+  border: none;
+  background: color-mix(in srgb, currentColor 7%, transparent); /* giữ chỗ trong lúc ảnh tải */
+  cursor: zoom-in;
+  overflow: hidden;
+  isolation: isolate;
+}
+.wp img {
+  position: absolute;
+  inset: 0;
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+.wp-main {
+  object-fit: contain;
+}
+.wp-fill {
+  z-index: -1;
+  object-fit: cover;
+  filter: blur(18px) saturate(1.15) brightness(0.92);
+  transform: scale(1.15); /* giấu viền mờ trong suốt do blur */
+}
+.wp-card {
+  margin: 4px 0 6px;
+  border-radius: 12px;
+  box-shadow: 0 6px 16px -10px rgba(70, 45, 20, 0.6);
+}
+.tk-body:has(.wp-thumb) {
+  display: flow-root; /* chứa ảnh float */
+}
+.wp-thumb {
+  float: right;
+  width: 76px;
+  margin: 2px 0 6px 12px;
+  border-radius: 10px;
+}
+.wp-thumb .wp-main {
+  object-fit: cover;
+}
+.wp-detail {
+  margin: 6px 0 14px;
+  border-radius: 10px;
+  /* ảnh dọc trên màn hình thấp: không cao quá 70% màn hình (khung thu hẹp lại, vẫn đúng tỉ lệ) */
+  max-height: 70vh;
+  max-height: 70dvh;
+}
+.wp:focus-visible {
+  outline: 2px solid var(--gold, #caa45a);
+  outline-offset: 2px;
+}
+@media (prefers-reduced-transparency: reduce) {
+  .wp-fill {
+    display: none;
+  }
+}
+.wp-box {
+  position: fixed;
+  inset: 0;
+  z-index: 60;
+  display: grid;
+  place-items: center;
+  padding: 24px;
+  background: rgba(20, 14, 10, 0.86);
+  cursor: zoom-out;
+  animation: wp-in 0.18s ease-out;
+}
+.wp-box img {
+  max-width: 100%;
+  max-height: 100%;
+  width: auto;
+  height: auto;
+  border-radius: 8px;
+  box-shadow: 0 20px 60px -20px #000;
+}
+.wp-close {
+  position: absolute;
+  top: max(14px, env(safe-area-inset-top));
+  right: 14px;
+  width: 42px;
+  height: 42px;
+  display: grid;
+  place-items: center;
+  border: none;
+  border-radius: 50%;
+  color: #fff;
+  background: rgba(255, 255, 255, 0.16);
+  cursor: pointer;
+}
+@keyframes wp-in {
+  from {
+    opacity: 0;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .wp-box {
+    animation: none;
+  }
+}
+
+/* chọn ảnh trong bảng viết (chỉ người đăng nhập) */
+.img-pick {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-top: 10px;
+}
+.img-pick-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font: inherit;
+  font-size: 12.5px;
+  font-weight: 500;
+  padding: 8px 12px;
+  border: 1px dashed rgba(154, 132, 114, 0.6);
+  border-radius: 10px;
+  background: #fffdf9;
+  color: #7a6557;
+  cursor: pointer;
+}
+.img-pick-btn:disabled {
+  opacity: 0.6;
+  cursor: progress;
+}
+.img-pick-prev {
+  position: relative;
+  width: 56px;
+  height: 56px;
+  flex: none;
+}
+.img-pick-prev img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  border-radius: 10px;
+  border: 1px solid rgba(154, 132, 114, 0.35);
+}
+.img-pick-x {
+  position: absolute;
+  top: -7px;
+  right: -7px;
+  width: 22px;
+  height: 22px;
+  display: grid;
+  place-items: center;
+  padding: 0;
+  border: 2px solid #fff;
+  border-radius: 50%;
+  background: #43352d;
+  color: #fff;
+  cursor: pointer;
+}
+.img-pick-note {
+  font-size: 11.5px;
+  color: #9a8472;
+}
+
+/* ---------- KHUNG trang trí tờ ước (components/ui/WishFrame, lib/wishFrames) ----------
+   .wfr nằm trong tờ giấy (.wd-paper trang chi tiết / .card thẻ đọc), z-index -1 trong stacking context của
+   tờ giấy -> trên nền giấy, dưới chữ. Màu: --wfr-c (điểm nhấn skin / màu chủ đề), nền che: --wfr-bg (màu giấy).
+   Cỡ hoạ tiết theo --wfr-k (1 = trang chi tiết, thẻ đọc nhỏ hơn). */
+.wfr {
+  --wfr-k: 1;
+  position: absolute;
+  inset: calc(12px * var(--wfr-k));
+  z-index: -1;
+  pointer-events: none;
+  color: var(--wfr-c, #c8102e);
+  border-radius: 8px;
+}
+.wfr > span {
+  position: absolute;
+  display: block;
+  line-height: 0;
+}
+.wfr svg {
+  display: block;
+  width: 100%;
+  height: auto;
+  overflow: visible;
+}
+/* 4 góc: vẽ cho góc trên-trái, lật cho 3 góc còn lại */
+.wfr .wfr-tl {
+  top: 0;
+  left: 0;
+}
+.wfr .wfr-tr {
+  top: 0;
+  right: 0;
+  transform: scaleX(-1);
+}
+.wfr .wfr-bl {
+  bottom: 0;
+  left: 0;
+  transform: scaleY(-1);
+}
+.wfr .wfr-br {
+  bottom: 0;
+  right: 0;
+  transform: scale(-1, -1);
+}
+
+/* Đông Sơn: viền kép + dải răng cưa trên/dưới + mặt trời trống đồng 4 góc */
+.wfr-dong-son {
+  border: 1.5px solid color-mix(in srgb, currentColor 75%, transparent);
+}
+.wfr-dong-son::after {
+  content: "";
+  position: absolute;
+  inset: 5px;
+  border: 1px solid color-mix(in srgb, currentColor 40%, transparent);
+  border-radius: 5px;
+}
+.wfr-dong-son::before {
+  content: "";
+  position: absolute;
+  inset: 10px calc(44px * var(--wfr-k));
+  opacity: 0.45;
+  background:
+    conic-gradient(from 135deg at 50% 0, currentColor 90deg, transparent 0) top / 14px 7px repeat-x,
+    conic-gradient(from -45deg at 50% 100%, currentColor 90deg, transparent 0) bottom / 14px 7px repeat-x;
+}
+.wfr-dong-son .wfr-c {
+  width: calc(32px * var(--wfr-k));
+  margin: 4px;
+  opacity: 0.8;
+}
+.wfr-dong-son .wfr-tr,
+.wfr-dong-son .wfr-bl,
+.wfr-dong-son .wfr-br {
+  transform: none; /* mặt trời đối xứng, khỏi lật */
+}
+
+/* Mây lành: viền mảnh bo tròn + mây cuộn 4 góc */
+.wfr-may {
+  inset: calc(8px * var(--wfr-k));
+  border: 1px solid color-mix(in srgb, currentColor 30%, transparent);
+  border-radius: 14px;
+}
+.wfr-may .wfr-c {
+  width: calc(66px * var(--wfr-k));
+  margin: -3px;
+  opacity: 0.7;
+}
+
+/* Tre xanh: 2 thân tre có đốt hai bên + lá tre góc trên-trái, dưới-phải */
+.wfr-tre::before,
+.wfr-tre::after {
+  content: "";
+  position: absolute;
+  top: 6px;
+  bottom: 6px;
+  width: calc(8px * var(--wfr-k));
+  border-radius: 4px;
+  opacity: 0.8;
+  background:
+    linear-gradient(90deg, transparent 20%, rgba(255, 255, 255, 0.45) 42%, transparent 64%),
+    repeating-linear-gradient(
+      180deg,
+      color-mix(in srgb, currentColor 70%, transparent) 0 42px,
+      currentColor 42px 45px,
+      transparent 45px 47px
+    );
+}
+.wfr-tre::before {
+  left: -2px;
+}
+.wfr-tre::after {
+  right: -2px;
+}
+.wfr-tre .wfr-leaf {
+  width: calc(84px * var(--wfr-k));
+  opacity: 0.75;
+}
+.wfr-tre .wfr-tl {
+  top: -4px;
+  left: 2px;
+}
+.wfr-tre .wfr-br {
+  bottom: -4px;
+  right: 2px;
+}
+
+/* Chỉ thêu: đường khâu nét đứt + chỉ lót + mũi thêu chữ thập ở góc */
+.wfr-chi-theu {
+  border: 2px dashed color-mix(in srgb, currentColor 70%, transparent);
+  outline: 1px solid color-mix(in srgb, currentColor 25%, transparent);
+  outline-offset: 5px;
+}
+.wfr-chi-theu .wfr-c {
+  width: calc(20px * var(--wfr-k));
+  margin: -11px;
+  padding: 2px;
+  background: var(--wfr-bg, #fff);
+  border-radius: 50%;
+}
+.wfr-chi-theu .wfr-tr,
+.wfr-chi-theu .wfr-bl,
+.wfr-chi-theu .wfr-br {
+  transform: none;
+}
+
+/* Hoa sen: viền đôi + đoá sen nở giữa chân khung (bên trong viền) */
+.wfr-sen {
+  border: 1px solid color-mix(in srgb, currentColor 50%, transparent);
+}
+.wfr-sen::before {
+  content: "";
+  position: absolute;
+  inset: 5px;
+  border: 1px solid color-mix(in srgb, currentColor 25%, transparent);
+  border-radius: 5px;
+}
+.wfr-sen .wfr-lotus {
+  left: 50%;
+  bottom: calc(8px * var(--wfr-k));
+  width: calc(96px * var(--wfr-k));
+  transform: translateX(-50%);
+  opacity: 0.85;
+}
+
+/* chừa chỗ cho khung: trang chi tiết */
+.wd-paper {
+  --wfr-c: var(--wd-accent);
+  --wfr-bg: var(--wd-paper);
+}
+.wd-paper:has(> .wfr) {
+  padding: 46px 46px 40px;
+}
+.wd-paper:has(> .wfr-sen) {
+  padding-bottom: 56px;
+}
+@media (max-width: 520px) {
+  .wd-paper .wfr {
+    --wfr-k: 0.8;
+  }
+  .wd-paper:has(> .wfr) {
+    padding: 40px 32px 34px;
+  }
+}
+/* thẻ đọc trên cây: hoạ tiết nhỏ hơn, bỏ viền trong mặc định của thẻ */
+.card {
+  --wfr-bg: #fff7eb;
+}
+.card .wfr {
+  --wfr-k: 0.75;
+}
+.card:has(> .wfr)::before {
+  display: none;
+}
+.card:has(> .wfr) {
+  padding: 34px 32px 30px;
+}
+.card:has(> .wfr-sen) {
+  padding-bottom: 44px;
+}
+
+/* ---------- Thẻ đọc: nội dung dài -> CUỘN trong chữ ước, tờ giấy giữ nguyên dáng ----------
+   Thẻ là cột flex cao tối đa = màn hình; mọi phần (ảnh, nhãn, nút) giữ cỡ, CHỈ đoạn chữ co lại + cuộn.
+   Đang mở bình luận: cả thẻ cuộn (.card.with-thread) như cũ, chữ hiện đủ. */
+.card {
+  display: flex;
+  flex-direction: column;
+  max-height: calc(100dvh - 48px);
+  --sb: var(--wd-accent, var(--wfr-c, #caa45a));
+}
+.card > * {
+  flex-shrink: 0;
+}
+.card > .tag {
+  align-self: flex-start;
+}
+.card > .wish-done {
+  align-self: flex-start;
+}
+.card > .text {
+  flex-shrink: 1;
+  min-height: 3em;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  padding-right: 6px;
+  margin-right: -6px;
+}
+.card.with-thread > .text {
+  flex-shrink: 0;
+  overflow: visible;
+  mask-image: none;
+}
+.card > .text.fade-bottom {
+  mask-image: linear-gradient(#000 calc(100% - 1.6em), transparent);
+}
+.card > .text.fade-top {
+  mask-image: linear-gradient(transparent, #000 1.2em);
+}
+.card > .text.fade-top.fade-bottom {
+  mask-image: linear-gradient(transparent, #000 1.2em, #000 calc(100% - 1.6em), transparent);
+}
+/* màn hình thấp: ảnh nhường chỗ cho chữ (khung ảnh dẹt lại, lớp mờ .wp-fill lấp hai bên) */
+.card > .wp-card {
+  max-height: 30dvh;
+}
+/* thanh cuộn hợp màu tờ ước: mảnh, màu điểm nhấn (skin) / màu chủ đề, rãnh trong suốt */
+.card > .text,
+.card.with-thread {
+  scrollbar-width: thin;
+  scrollbar-color: color-mix(in srgb, var(--sb) 55%, transparent) transparent;
+}
+.card > .text::-webkit-scrollbar,
+.card.with-thread::-webkit-scrollbar {
+  width: 6px;
+}
+.card > .text::-webkit-scrollbar-track,
+.card.with-thread::-webkit-scrollbar-track {
+  background: transparent;
+}
+.card > .text::-webkit-scrollbar-thumb,
+.card.with-thread::-webkit-scrollbar-thumb {
+  background: color-mix(in srgb, var(--sb) 55%, transparent);
+  border-radius: 99px;
+}
+
+/* ---------- Giao diện (skin) chủ nhân chọn — thẻ đọc trên cây + vé danh sách ----------
+   Biến --wd-* đặt inline từ lib/wishSkins (skinVars). Chỉ khi ĐÃ chọn skin (chưa chọn: giữ giấy vàng mặc định).
+   Thẻ đọc: viền dày 6px = NỀN skin (nhận ra skin ngay, kể cả Trăng đêm), giấy bên trong = màu giấy skin.
+   Vé: cuống = nền skin, thân = màu giấy. --wd-deep = điểm nhấn đậm cho chữ nhỏ (tương phản ≥4.5:1). */
+.card.is-verified.has-skin {
+  --wfr-c: var(--wd-accent);
+  --wfr-bg: var(--wd-paper);
+  border: 6px solid transparent;
+  background:
+    radial-gradient(120% 120% at 50% 0%, color-mix(in srgb, var(--wd-paper) 70%, #fff) 0%, var(--wd-paper) 55%,
+      color-mix(in srgb, var(--wd-paper) 86%, var(--wd-accent)) 100%) padding-box,
+    var(--wd-bg) border-box;
+}
+.card.is-verified.has-skin::before {
+  inset: 3px;
+  border-color: color-mix(in srgb, var(--wd-accent) 45%, transparent);
+}
+.card.has-skin .text {
+  color: var(--wd-ink);
+}
+.card.has-skin .wish-no,
+.card.has-skin .meta {
+  color: var(--wd-soft);
+}
+.card.is-verified.has-skin .meta {
+  border-top-color: color-mix(in srgb, var(--wd-accent) 45%, transparent);
+}
+.card.is-verified.has-skin .seal {
+  color: var(--wd-paper);
+  border-color: var(--wd-accent);
+  background: radial-gradient(circle at 35% 30%, color-mix(in srgb, var(--wd-accent) 55%, #fff),
+    var(--wd-accent) 60%, color-mix(in srgb, var(--wd-accent) 70%, #000));
+  box-shadow: 0 2px 8px color-mix(in srgb, var(--wd-accent) 45%, transparent),
+    inset 0 0 0 2px color-mix(in srgb, var(--wd-paper) 60%, transparent);
+  text-shadow: none;
+}
+.card.has-skin .spk-name {
+  color: var(--wd-deep);
+  text-shadow: none;
+}
+.card.has-skin .wt-link {
+  color: var(--wd-deep);
+}
+
+/* Vé /dieu-uoc. `:root .pg .tk.tk-skin` (0,5,0) để thắng luật vàng cả bản đêm (`:root[data-sky=night] .pg .tk-verified .x`). */
+.pg .tk.tk-skin {
+  background: linear-gradient(115deg, var(--wd-paper), color-mix(in srgb, var(--wd-paper) 88%, var(--wd-accent)));
+}
+/* trời đêm: giấy dịu xuống một chút cho đỡ chói giữa các vé tối */
+:root[data-sky="night"] .pg .tk.tk-skin {
+  background: linear-gradient(115deg, color-mix(in srgb, var(--wd-paper) 93%, #1b2233),
+    color-mix(in srgb, var(--wd-paper) 87%, var(--wd-accent)));
+}
+:root .pg .tk.tk-skin .tk-stub {
+  background:
+    repeating-radial-gradient(circle at 0 0, transparent 0 7px, rgba(255, 255, 255, 0.08) 7px 8px),
+    var(--wd-bg);
+  border-right-color: color-mix(in srgb, var(--wd-accent) 55%, transparent);
+}
+:root .pg .tk.tk-skin :is(.tk-no, .tk-date, .tk-stamp) {
+  color: var(--wd-on-bg);
+  /* bóng mờ: chữ sáng vẫn đọc được ở đầu nhạt của gradient (Hoàng kim, Hoa đào) */
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.35);
+}
+:root .pg .tk.tk-skin .tk-stamp {
+  border-color: currentColor;
+}
+:root .pg .tk.tk-skin .tk-text {
+  color: var(--wd-ink);
+}
+:root .pg .tk.tk-skin :is(.tk-meta, .pg-act, .rx) {
+  color: var(--wd-soft);
+}
+:root .pg .tk.tk-skin .spk-name {
+  color: var(--wd-deep);
+  text-shadow: none;
+}
+/* sao lấp lánh ở vé: không drop-shadow (filter không chạy trên compositor -> nặng khi danh sách dài) */
+.spk-compact .spk-star {
+  filter: none;
+}
+/* khung thu nhỏ trong thân vé: chỉ viền + hoạ tiết góc, GIỮ padding gốc -> hàng đều nhau */
+.tk-body:has(> .wfr) {
+  position: relative;
+  isolation: isolate;
+}
+.tk-body > .wfr {
+  --wfr-k: 0.45;
+  --wfr-c: var(--wd-accent, #b98522);
+  --wfr-bg: var(--wd-paper, #fdf3dc);
+  inset: 3px;
+  opacity: 0.75;
+}
+/* ở cỡ vé: bỏ dải răng cưa, đốt tre hai bên (trông như thanh cuộn), đoá sen (đẩy cao hàng) — giữ viền + góc */
+.tk-body > .wfr-dong-son::before,
+.tk-body > .wfr-tre::before,
+.tk-body > .wfr-tre::after,
+.tk-body > .wfr-sen .wfr-lotus {
+  display: none;
 }

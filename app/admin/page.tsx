@@ -6,7 +6,9 @@ import { onAuthStateChanged, type User } from 'firebase/auth'
 import { THEMES, isThemeKey } from '@/lib/themes'
 import { getAuthClient } from '@/lib/firebase.client'
 import { signInGoogle, signOutUser } from '@/lib/auth'
+import type { WishImage } from '@/lib/wishMeta'
 import ReportsPanel from './ReportsPanel'
+import WishPhoto from '@/components/ui/WishPhoto'
 import FunnyCollectionsPanel from './FunnyCollectionsPanel'
 import UsersPanel from './UsersPanel'
 
@@ -17,6 +19,7 @@ type Item = {
   id: string
   no: number | null
   text: string
+  image?: WishImage | null
   theme: string
   author: string | null
   status: string
@@ -54,6 +57,7 @@ const STATUS_LABEL: Record<string, { text: string; color: string }> = {
   approved: { text: 'Đã duyệt', color: '#3f9d6b' },
   rejected: { text: 'Đã bỏ', color: '#9a8472' },
   funny: { text: 'Xàm xí', color: '#b5652a' },
+  private: { text: 'Riêng tư', color: '#5b6b8c' },
 }
 
 const fmt = (ms: number) =>
@@ -280,6 +284,7 @@ export default function AdminPage() {
                   {st && <span className="tk-stamp">{st.text}</span>}
                 </div>
                 <div className="tk-body">
+                  {it.image && <WishPhoto image={it.image} variant="thumb" />}
                   <p className="tk-text">{it.text}</p>
                   <div className="tk-meta">
                     <span className="tk-theme">
@@ -311,7 +316,7 @@ export default function AdminPage() {
                     ) : null}
                   </div>
                   <div className="adm-acts">
-                    {it.status !== 'approved' && (
+                    {it.status !== 'approved' && it.status !== 'private' && (
                       <button className="pg-btn primary" disabled={!!busy} onClick={() => act(it.id, 'approve')}>
                         <Icon name="check" size={16} />
                         Duyệt
@@ -319,7 +324,7 @@ export default function AdminPage() {
                     )}
                     {it.status !== 'rejected' && (
                       <button className="pg-btn ghost" disabled={!!busy} onClick={() => act(it.id, 'reject')}>
-                        {it.status === 'approved' ? 'Gỡ khỏi cây' : 'Bỏ'}
+                        {it.status === 'approved' ? 'Gỡ khỏi cây' : it.status === 'private' ? 'Gỡ' : 'Bỏ'}
                       </button>
                     )}
                     {it.status !== 'pending' && (

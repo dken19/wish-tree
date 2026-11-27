@@ -2,9 +2,10 @@ import { NextResponse } from 'next/server'
 import { FieldValue } from 'firebase-admin/firestore'
 import { getAdminDb, isAdminConfigured } from '@/lib/firebase.admin'
 import { rateLimit } from '@/lib/ratelimit'
-import { isProgress } from '@/lib/wishMeta'
-import { millis, viewerFromRequest } from '@/lib/wishServer'
+import { readWishImage, isProgress, isShareKey, isVisibility, privateWishPath } from '@/lib/wishMeta'
+import { millis, newShareKey, viewerFromRequest } from '@/lib/wishServer'
 import { isWishSkin } from '@/lib/wishSkins'
+import { isWishFrame } from '@/lib/wishFrames'
 import { readCounts } from '@/lib/reactions'
 import { revalidateWishPage } from '@/lib/wishDetail'
 import type { DocumentSnapshot } from 'firebase-admin/firestore'
@@ -24,13 +25,18 @@ function ownItem(d: DocumentSnapshot) {
     id: d.id,
     no: typeof x.no === 'number' ? x.no : null,
     text: String(x.text ?? ''),
+    image: readWishImage(x.image),
     theme: String(x.theme ?? ''),
     // trạng thái duyệt (bị báo cáo tự ẩn -> 'pending' + flagged)
     status: String(x.status ?? 'pending'),
     flagged: Boolean(x.flagged),
+    visibility: x.status === 'private' ? 'private' : 'public',
+    // link bí mật CHỈ trả cho chủ (route này luôn lọc theo uid)
+    privateUrl: x.status === 'private' && isShareKey(x.shareKey) ? privateWishPath(x.shareKey) : null,
     progress: isProgress(x.progress) ? x.progress : 'trying',
     achievedAt: millis(x.achievedAt),
     skin: isWishSkin(x.skin) ? x.skin : null,
+    frame: isWishFrame(x.frame) ? x.frame : null,
     reactions: readCounts(x.reactions),
     commentCount: typeof x.commentCount === 'number' ? x.commentCount : 0,
     createdAt: millis(x.createdAt),
@@ -59,19 +65,25 @@ export async function GET(req: Request) {
   return NextResponse.json({ items, configured: true })
 }
 
-// PATCH { id, progress?: 'trying'|'achieved', skin?: WishSkinKey } — CHỈ chủ điều ước (uid khớp).
-// progress = tiến độ tự đánh dấu; skin = giao diện trang chi tiết /dieu-uoc/[no].
+// PATCH { id, progress?: 'trying'|'achieved', skin?: WishSkinKey, visibility?: 'public'|'private' } — CHỈ chủ điều ước (uid khớp).
+// progress = tiến độ tự đánh dấu; skin = giao diện trang chi tiết; visibility = công khai (status approved)
+// hoặc riêng tư (status private + shareKey, chỉ mở qua link bí mật). Chỉ đổi được khi ước đang approved/private
+// (chờ duyệt / bị gỡ / xàm xí / bị báo cáo tạm ẩn là quyết định của admin -> không cho chủ tự đưa lên).
 export async function PATCH(req: Request) {
   if (!isAdminConfigured) return deny(503, 'Máy chủ chưa cấu hình lưu trữ (Firebase Admin)')
   const viewer = await viewerFromRequest(req, true)
   if (!viewer) return deny(401, 'Đăng nhập để cập nhật điều ước nhé')
 
-  const body = (await req.json().catch(() => ({}))) as { id?: unknown; progress?: unknown; skin?: unknown }
+  const body = (await req.json().catch(() => ({}))) as { id?: unknown; progress?: unknown; skin?: unknown; frame?: unknown; visibility?: unknown }
   const id = typeof body.id === 'string' ? body.id : ''
   if (!id || id.includes('/')) return deny(400, 'Thiếu điều ước')
   const hasProgress = body.progress !== undefined
   const hasSkin = body.skin !== undefined
-  if (!hasProgress && !hasSkin) return deny(400, 'Không có gì để cập nhật')
+  const hasVis = body.visibility !== undefined
+  const hasFrame = body.frame !== undefined
+  if (hasFrame && !isWishFrame(body.frame)) return deny(400, 'Khung không hợp lệ')
+  if (!hasProgress && !hasSkin && !hasVis && !hasFrame) return deny(400, 'Không có gì để cập nhật')
+  if (hasVis && !isVisibility(body.visibility)) return deny(400, 'Chế độ hiển thị không hợp lệ')
   if (hasProgress && !isProgress(body.progress)) return deny(400, 'Trạng thái không hợp lệ')
   if (hasSkin && !isWishSkin(body.skin)) return deny(400, 'Giao diện không hợp lệ')
   if (!rateLimit(`progress:${viewer.uid}`, 40).ok)
@@ -89,11 +101,25 @@ export async function PATCH(req: Request) {
     patch.achievedAt = achieved ? FieldValue.serverTimestamp() : FieldValue.delete()
   }
   if (hasSkin) patch.skin = body.skin
+  if (hasFrame) patch.frame = body.frame
+  let shareKey: string | null = isShareKey(doc.get('shareKey')) ? doc.get('shareKey') : null
+  if (hasVis) {
+    const st = doc.get('status')
+    if ((st !== 'approved' && st !== 'private') || doc.get('flagged'))
+      return deny(409, 'Điều ước đang chờ duyệt hoặc tạm ẩn nên chưa đổi chế độ được')
+    patch.status = body.visibility === 'private' ? 'private' : 'approved'
+    // giữ shareKey cũ khi quay lại riêng tư -> link đã gửi bạn bè vẫn mở được
+    if (body.visibility === 'private' && !shareKey) patch.shareKey = shareKey = newShareKey()
+  }
   await ref.update(patch)
-  revalidateWishPage(doc.get('no'))
+  revalidateWishPage(doc.get('no'), shareKey)
   return NextResponse.json({
     ok: true,
+    ...(hasVis
+      ? { visibility: body.visibility, privateUrl: body.visibility === 'private' && shareKey ? privateWishPath(shareKey) : null }
+      : {}),
     ...(hasProgress ? { progress: body.progress, achievedAt: achieved ? Date.now() : 0 } : {}),
     ...(hasSkin ? { skin: body.skin } : {}),
+    ...(hasFrame ? { frame: body.frame } : {}),
   })
 }

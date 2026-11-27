@@ -60,6 +60,53 @@ export async function POST(req: Request) {
   return NextResponse.json({ ok: true, id: ref.id })
 }
 
+// PATCH { id, wishIds[] }: THÊM tờ vào một bộ CÓ SẴN (tổng không quá FC_MAX tờ còn hiển thị). Tờ chưa ở
+// mục Xàm xí được chuyển sang như khi tạo bộ. Tờ đang thuộc bộ KHÁC bị từ chối (tránh 1 tờ nằm ở 2 bộ).
+export async function PATCH(req: Request) {
+  const auth = await checkAdmin(req)
+  if (!auth.ok) return deny(auth.status, auth.error)
+  if (!isAdminConfigured) return deny(503, 'Máy chủ chưa cấu hình Firebase Admin')
+  const body = (await req.json().catch(() => ({}))) as { id?: unknown; wishIds?: unknown }
+  const id = typeof body.id === 'string' ? body.id : ''
+  const add = Array.isArray(body.wishIds)
+    ? [...new Set(body.wishIds.filter((x): x is string => typeof x === 'string' && x.length > 0 && x.length < 200))]
+    : []
+  if (!id || add.length === 0 || add.length > FC_MAX) return deny(400, 'bad request')
+
+  const db = getAdminDb()!
+  const ref = db.collection('funnyCollections').doc(id)
+  const snap = await ref.get()
+  if (!snap.exists) return deny(404, 'Bộ này không còn tồn tại')
+  const current = ((snap.get('wishIds') as string[] | undefined) ?? []).filter((w) => !add.includes(w))
+
+  // đếm tờ CÒN hiển thị trong bộ (tờ đã rời trạng thái funny / bị xoá không tính) -> dọn luôn khỏi bộ
+  const curDocs = current.length ? await db.getAll(...current.map((w) => db.collection('wishes').doc(w))) : []
+  const keep = curDocs.filter((d) => d.exists && d.get('status') === 'funny' && d.get('funnyGroup') === id).map((d) => d.id)
+  if (keep.length + add.length > FC_MAX)
+    return deny(400, `Bộ "${snap.get('title')}" đã có ${keep.length} tờ, chỉ thêm được ${Math.max(0, FC_MAX - keep.length)} tờ nữa`)
+
+  const docs = await db.getAll(...add.map((w) => db.collection('wishes').doc(w)))
+  if (docs.some((d) => !d.exists)) return deny(404, 'Có điều ước không còn tồn tại')
+  if (docs.some((d) => d.get('funnyGroup') && d.get('funnyGroup') !== id))
+    return deny(409, 'Có tờ đang thuộc bộ khác, gỡ khỏi bộ đó trước')
+
+  const by = auth.email ?? 'secret'
+  const batch = db.batch()
+  batch.update(ref, { wishIds: [...keep, ...add] })
+  for (const d of docs) {
+    const moved = d.get('status') !== 'funny'
+    batch.update(d.ref, {
+      funnyGroup: id,
+      ...(moved
+        ? { status: 'funny', flagged: false, reviewedAt: FieldValue.serverTimestamp(), reviewedBy: by }
+        : {}),
+    })
+  }
+  await batch.commit()
+  for (const d of docs) if (d.get('status') === 'approved') revalidateWishPage(d.get('no'))
+  return NextResponse.json({ ok: true })
+}
+
 // DELETE { id }: xoá bộ. Các tờ vẫn ở mục Xàm xí; tờ nào không có lí do riêng thì nhận lí do chung của bộ
 // làm lí do riêng (không tờ nào bị mất lí do).
 export async function DELETE(req: Request) {

@@ -5,7 +5,7 @@ import { rateLimit } from '@/lib/ratelimit'
 import { AUTO_HIDE_REPORTS, isReportReason } from '@/lib/wishMeta'
 import { viewerFromRequest } from '@/lib/wishServer'
 
-import { revalidateWishPage } from '@/lib/wishDetail'
+import { revalidatePrivatePage, revalidateWishPage } from '@/lib/wishDetail'
 
 export const runtime = 'nodejs'
 
@@ -43,6 +43,7 @@ export async function POST(req: Request) {
 
   try {
     let hiddenNo: unknown = null
+    let hiddenKey: unknown = null
     const result = await db.runTransaction(async (t) => {
       hiddenNo = null
       const [target, existing] = await Promise.all([t.get(targetRef), t.get(reportRef)])
@@ -67,16 +68,21 @@ export async function POST(req: Request) {
           patch.hidden = true
           t.update(wishRef, { commentCount: FieldValue.increment(-1) })
         }
-        if (!commentId && target.get('status') === 'approved') {
+        const st = target.get('status')
+        if (!commentId && (st === 'approved' || st === 'private')) {
           patch.status = 'pending'
           patch.flagged = true
+          // nhớ chế độ cũ: admin "Bỏ qua" thì trả về đúng riêng tư/công khai
+          patch.flaggedFrom = st
           hiddenNo = target.get('no')
+          hiddenKey = target.get('shareKey')
         }
       }
       t.update(targetRef, patch)
       return 'ok' as const
     })
     revalidateWishPage(hiddenNo)
+    revalidatePrivatePage(hiddenKey)
     if (result === 'not-found') return deny(404, 'Không tìm thấy nội dung')
     if (result === 'own') return deny(400, 'Bạn không thể báo cáo nội dung của chính mình.')
     return NextResponse.json({ ok: true, duplicate: result === 'dup' })

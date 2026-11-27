@@ -74,13 +74,15 @@ export async function GET(req: Request) {
       id: w.id,
       no: i + 1,
       text: w.text,
+      image: w.image ?? null,
+      frame: w.frame ?? null,
       theme: w.theme,
       author: w.author ?? null,
       createdAt: w.createdAt,
       commentCount: 0,
       verified: !!w.verified,
       achieved: !!w.achieved,
-      skin: null,
+      skin: w.skin ?? null,
       reactions: {},
     }))
     if (no) return NextResponse.json(pageOf(seeds.filter((w) => w.no === no), 1))

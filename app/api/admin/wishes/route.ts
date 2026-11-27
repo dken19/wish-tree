@@ -5,6 +5,7 @@ import { checkAdmin } from '@/lib/adminAuth'
 import { ensureNumbering } from '@/lib/wishServer'
 
 import { revalidateWishPage } from '@/lib/wishDetail'
+import { readWishImage } from '@/lib/wishMeta'
 
 export const runtime = 'nodejs'
 
@@ -61,6 +62,7 @@ export async function GET(req: Request) {
         id: d.id,
         no: typeof data.no === 'number' ? data.no : null,
         text: String(data.text ?? ''),
+        image: readWishImage(data.image),
         theme: String(data.theme ?? ''),
         author: data.author ? String(data.author) : null,
         status: String(data.status ?? ''),
@@ -124,9 +126,15 @@ export async function PATCH(req: Request) {
 
   const db = getAdminDb()!
   const ref = db.collection('wishes').doc(id)
+  const cur = await ref.get()
+  if (!cur.exists) return deny(404, 'Không tìm thấy điều ước')
+  // "Duyệt" ước mà CHỦ đã chọn riêng tư -> giữ riêng tư (admin không tự công khai hộ người viết)
+  const wasPrivate = cur.get('status') === 'private' || cur.get('flaggedFrom') === 'private'
+  const status: string = action === 'approve' && wasPrivate ? 'private' : next[action]
   try {
     await ref.update({
-        status: next[action],
+        status,
+        flaggedFrom: FieldValue.delete(),
         flagged: false,
         reviewedAt: FieldValue.serverTimestamp(),
         reviewedBy: auth.email ?? 'secret',
@@ -138,6 +146,7 @@ export async function PATCH(req: Request) {
     return deny(404, 'Không tìm thấy điều ước')
   }
   // trang chi tiết /dieu-uoc/[no] là ISR -> làm mới ngay (bị gỡ thì thành 404)
-  revalidateWishPage((await ref.get()).get('no'))
-  return NextResponse.json({ ok: true, status: next[action] })
+  const after = await ref.get()
+  revalidateWishPage(after.get('no'), after.get('shareKey'))
+  return NextResponse.json({ ok: true, status })
 }

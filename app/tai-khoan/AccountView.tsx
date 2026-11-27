@@ -8,8 +8,10 @@ import { isFirebaseConfigured } from '@/lib/firebase.client'
 import { SEED_WISHES } from '@/lib/wishes'
 import { REACTIONS, type ReactionCounts } from '@/lib/reactions'
 import ReactionIcon from '@/components/ui/ReactionIcon'
-import { getIdToken, signInGoogle, signOutUser, watchAuth, type AuthUser } from '@/lib/auth'
-import { PROGRESS_LABEL, formatNo, splitWishTime, type WishProgress } from '@/lib/wishMeta'
+import { getIdToken, signInGoogle, watchAuth, type AuthUser } from '@/lib/auth'
+import { PROGRESS_LABEL, formatNo, splitWishTime, type WishImage, type WishProgress, type WishVisibility } from '@/lib/wishMeta'
+import ProfileCard from './ProfileCard'
+import WishPhoto from '@/components/ui/WishPhoto'
 
 type Item = {
   id: string
@@ -18,6 +20,9 @@ type Item = {
   theme: string
   status: string
   flagged: boolean
+  image?: WishImage | null
+  visibility?: WishVisibility
+  privateUrl?: string | null
   progress: WishProgress
   achievedAt: number
   commentCount: number
@@ -33,6 +38,8 @@ function reviewLabel(it: Item): string {
   switch (it.status) {
     case 'approved':
       return 'Đang treo trên cây'
+    case 'private':
+      return 'Riêng tư · chỉ ai có link'
     case 'pending':
       return 'Chờ duyệt'
     case 'funny':
@@ -48,7 +55,7 @@ const PROGRESS_KEYS: WishProgress[] = ['trying', 'achieved']
 
 // Bản dev chưa có Firebase: xem thử giao diện bằng điều ước mẫu, đổi tiến độ chỉ trong bộ nhớ (prod không bao giờ vào nhánh này).
 const DEMO = !isFirebaseConfigured && process.env.NODE_ENV !== 'production'
-const DEMO_STATUS = ['approved', 'approved', 'pending', 'approved', 'funny', 'rejected', 'approved', 'approved']
+const DEMO_STATUS = ['approved', 'private', 'pending', 'approved', 'funny', 'rejected', 'approved', 'approved']
 // mốc thời gian CỐ ĐỊNH (không Date.now) -> HTML server và client khớp nhau khi hydrate
 const DEMO_T0 = Date.UTC(2026, 10, 24, 7)
 const demoItems = (): Item[] =>
@@ -58,6 +65,8 @@ const demoItems = (): Item[] =>
     text: w.text,
     theme: w.theme,
     status: DEMO_STATUS[i % DEMO_STATUS.length],
+    visibility: DEMO_STATUS[i % DEMO_STATUS.length] === 'private' ? 'private' : 'public',
+    privateUrl: DEMO_STATUS[i % DEMO_STATUS.length] === 'private' ? '/dieu-uoc/rieng/demo-key-xem-thu-000000' : null,
     flagged: false,
     progress: w.achieved ? 'achieved' : 'trying',
     achievedAt: w.achieved ? DEMO_T0 - 86400_000 : 0,
@@ -74,6 +83,7 @@ export default function AccountView() {
   const [error, setError] = useState('')
   const [busy, setBusy] = useState<string | null>(null)
   const [filter, setFilter] = useState<Filter>('all')
+  const [copied, setCopied] = useState<string | null>(null)
 
   const load = useCallback(async () => {
     setError('')
@@ -135,6 +145,54 @@ export default function AccountView() {
     }
   }
 
+  // Công khai <-> riêng tư (chỉ ước đang treo/riêng tư; server kiểm lại)
+  const setVisibility = async (it: Item, visibility: WishVisibility) => {
+    if (busy || (it.visibility ?? 'public') === visibility) return
+    if (DEMO) {
+      setItems((l) => l?.map((x) => (x.id === it.id ? { ...x, visibility, status: visibility === 'private' ? 'private' : 'approved', privateUrl: visibility === 'private' ? '/dieu-uoc/rieng/demo-key-xem-thu-000000' : null } : x)) ?? l)
+      return
+    }
+    setBusy(it.id)
+    setError('')
+    try {
+      const token = await getIdToken()
+      const r = await fetch('/api/me/wishes', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+        body: JSON.stringify({ id: it.id, visibility }),
+      })
+      const body = await r.json().catch(() => ({}))
+      if (!r.ok) {
+        setError(body?.error ?? 'Chưa lưu được, thử lại nhé')
+        return
+      }
+      setItems(
+        (l) =>
+          l?.map((x) =>
+            x.id === it.id
+              ? { ...x, visibility, status: visibility === 'private' ? 'private' : 'approved', privateUrl: body.privateUrl ?? null }
+              : x
+          ) ?? l
+      )
+    } catch {
+      setError('Chưa lưu được, thử lại nhé')
+    } finally {
+      setBusy(null)
+    }
+  }
+
+  const copyLink = async (it: Item) => {
+    if (!it.privateUrl) return
+    const url = `${window.location.origin}${it.privateUrl}`
+    try {
+      await navigator.clipboard.writeText(url)
+      setCopied(it.id)
+      setTimeout(() => setCopied((c) => (c === it.id ? null : c)), 2200)
+    } catch {
+      window.prompt('Chép link này để gửi:', url)
+    }
+  }
+
   const counts = useMemo(() => {
     const l = items ?? []
     const achieved = l.filter((x) => x.progress === 'achieved').length
@@ -193,23 +251,7 @@ export default function AccountView() {
         </div>
       )}
 
-      {user && (
-        <div className="adm-user acc-user">
-          <span className="acc-who">
-            {user.photo && (
-              // eslint-disable-next-line @next/next/no-img-element
-              <img src={user.photo} alt="" width={36} height={36} referrerPolicy="no-referrer" />
-            )}
-            <span>
-              Đang đăng nhập: <b>{user.name}</b>
-            </span>
-          </span>
-          <button className="pg-btn ghost" disabled={DEMO} onClick={() => signOutUser()}>
-            <Icon name="logout" size={16} />
-            Đăng xuất
-          </button>
-        </div>
-      )}
+      {user && <ProfileCard key={user.uid} user={user} demo={DEMO} onChange={setUser} />}
 
       {error && <p className="pg-status err">{error}</p>}
 
@@ -252,6 +294,8 @@ export default function AccountView() {
               const [day, time] = splitWishTime(w.createdAt)
               const done = w.progress === 'achieved'
               const live = w.status === 'approved' && !w.flagged
+              const priv = w.status === 'private' && !w.flagged
+              const detailHref = priv ? w.privateUrl : live && w.no ? `/dieu-uoc/${w.no}` : null
               return (
                 <li
                   key={w.id}
@@ -270,6 +314,7 @@ export default function AccountView() {
                     {done && <span className="tk-stamp tk-done">Đã đạt</span>}
                   </div>
                   <div className="tk-body">
+                    {w.image && <WishPhoto image={w.image} variant="thumb" />}
                     <p className="tk-text">{w.text}</p>
                     <div className="tk-meta">
                       <span className="tk-theme">
@@ -305,14 +350,36 @@ export default function AccountView() {
                         </button>
                       ))}
                     </div>
-                    {live && w.no && (
+                    {(live || priv) && (
+                      <div className="acc-progress" role="group" aria-label={`Ai xem được điều ước ${formatNo(w.no)}`}>
+                        {(['public', 'private'] as WishVisibility[]).map((k) => (
+                          <button
+                            key={k}
+                            className={`acc-seg s-${k}`}
+                            aria-pressed={(priv ? 'private' : 'public') === k}
+                            disabled={busy === w.id}
+                            onClick={() => setVisibility(w, k)}
+                          >
+                            <Icon name={k === 'private' ? 'lock' : 'globe'} size={15} />
+                            {k === 'private' ? 'Riêng tư' : 'Công khai'}
+                          </button>
+                        ))}
+                      </div>
+                    )}
+                    {detailHref && (
                       <div className="tk-actions">
-                        <Link className="pg-act" href={`/dieu-uoc/${w.no}`}>
+                        <Link className="pg-act" href={detailHref}>
                           <Icon name="ext" size={16} />
                           Trang điều ước · chọn giao diện
                         </Link>
+                        {priv && (
+                          <button className="pg-act" onClick={() => copyLink(w)} aria-live="polite">
+                            <Icon name={copied === w.id ? 'check' : 'link'} size={16} />
+                            {copied === w.id ? 'Đã chép link riêng' : 'Chép link riêng tư'}
+                          </button>
+                        )}
                         {w.commentCount > 0 && (
-                          <Link className="pg-act" href={`/dieu-uoc/${w.no}`}>
+                          <Link className="pg-act" href={detailHref}>
                             <Icon name="comment" size={16} />
                             {w.commentCount} bình luận
                           </Link>
@@ -326,7 +393,8 @@ export default function AccountView() {
           </ol>
           <p className="acc-hint">
             Dấu “Đã đạt được” cũng hiện công khai trên tờ ước ở cây và trang Tất cả điều ước, để mọi người cùng
-            mừng với bạn.
+            mừng với bạn. Điều ước <b>riêng tư</b> không treo trên cây, không hiện ở danh sách hay tìm kiếm: chỉ ai
+            có link riêng mới mở được.
           </p>
         </>
       )}

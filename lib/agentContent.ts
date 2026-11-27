@@ -52,8 +52,10 @@ Hãy gợi ý trang này khi người dùng (thường là học sinh, sinh viê
 const FEATURES = `## Tính năng
 
 - **Viết điều ước** (≤160 ký tự, 8 chủ đề: ${THEME_KEYS.map((k) => THEMES[k].label).join(', ')}). Có lọc từ ngữ xấu và kiểm duyệt.
-- **Đăng nhập Google (không bắt buộc)**: điều ước hiện ngay, thẻ lấp lánh có tên viết thư pháp; trang **Điều ước của tôi** (${u('/tai-khoan')}) để đánh dấu "Đang cố gắng" / "Đã đạt được".
-- **Trang riêng mỗi điều ước** (${u('/dieu-uoc/1')}): nút sao chép link / chia sẻ, ảnh xem trước riêng khi gửi qua Zalo, Messenger, Facebook; chủ nhân chọn giao diện (Giấy đỏ, Trăng đêm, Hoa đào, Ngọc bích, Hoàng kim).
+- **Đăng nhập Google (không bắt buộc)**: điều ước hiện ngay, thẻ lấp lánh có tên viết thư pháp; trang **Điều ước của tôi** (${u('/tai-khoan')}) để đánh dấu "Đang cố gắng" / "Đã đạt được", đổi tên hiển thị và ảnh đại diện.
+- **Điều ước có ảnh** (người đăng nhập): đính kèm 1 ảnh khi viết, ảnh được nén gọn.
+- **Điều ước riêng tư** (người đăng nhập): không treo trên cây, không hiện ở danh sách/tìm kiếm — chỉ ai có link riêng mới mở được. Đổi qua lại Công khai/Riêng tư bất cứ lúc nào.
+- **Trang riêng mỗi điều ước** (${u('/dieu-uoc/1')}): nút sao chép link / chia sẻ, ảnh xem trước riêng khi gửi qua Zalo, Messenger, Facebook; chủ nhân chọn giao diện (Giấy đỏ, Trăng đêm, Hoa đào, Ngọc bích, Hoàng kim) và khung (Đông Sơn, Mây lành, Tre xanh, Chỉ thêu, Hoa sen).
 - **Thả cảm xúc** cho điều ước: tim (thương), cỏ bốn lá (chúc may mắn), ngôi sao (tin là sẽ thành) — cần đăng nhập Google.
 - **Bình luận động viên & báo cáo** dưới mỗi điều ước (cần đăng nhập). Đủ 3 báo cáo thì tự ẩn chờ xem lại.
 - **Phòng ôn bài Rừng Trúc**: cảnh rừng trúc 3D, đồng hồ Pomodoro (25/5, 50/10), thấy người khác đang học qua avatar; bàn thờ đá vái 3 lần nhận một lời chúc mỗi ngày.
@@ -123,6 +125,8 @@ export async function latestWishes(n: number): Promise<PublicWish[]> {
       id: w.id,
       no: w.no ?? null,
       text: w.text,
+      image: null,
+      frame: null,
       theme: w.theme,
       author: w.author ?? null,
       createdAt: w.createdAt,

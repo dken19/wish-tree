@@ -102,10 +102,14 @@ export async function PATCH(req: Request) {
 
   try {
     let wishNo: unknown = null
+    let wishKey: unknown = null
     await db.runTransaction(async (t) => {
       const target = await t.get(targetRef)
       if (!target.exists) return
-      if (!commentId) wishNo = target.get('no')
+      if (!commentId) {
+        wishNo = target.get('no')
+        wishKey = target.get('shareKey')
+      }
       if (commentId) {
         const wasHidden = Boolean(target.get('hidden'))
         const hide = action === 'hide'
@@ -122,7 +126,8 @@ export async function PATCH(req: Request) {
         })
       } else {
         t.update(targetRef, {
-          ...(target.get('flagged') ? { status: 'approved' } : {}),
+          ...(target.get('flagged') ? { status: target.get('flaggedFrom') === 'private' ? 'private' : 'approved' } : {}),
+          flaggedFrom: FieldValue.delete(),
           flagged: false,
           reportCount: 0,
           reviewedBy: by,
@@ -140,7 +145,7 @@ export async function PATCH(req: Request) {
     const batch = db.batch()
     reps.docs.forEach((d) => batch.update(d.ref, { resolved: true, resolution: action, resolvedBy: by }))
     if (reps.size) await batch.commit()
-    revalidateWishPage(wishNo)
+    revalidateWishPage(wishNo, wishKey)
   } catch (e) {
     console.error('[admin/reports] failed', e)
     return deny(500, 'Không cập nhật được')

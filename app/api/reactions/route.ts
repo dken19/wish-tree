@@ -5,6 +5,8 @@ import { rateLimit } from '@/lib/ratelimit'
 import { REACTION_KEYS, isReactionKey, readCounts, type MyReactions } from '@/lib/reactions'
 import { viewerFromRequest } from '@/lib/wishServer'
 
+import { isLiveStatus } from '@/lib/wishMeta'
+
 export const runtime = 'nodejs'
 
 const MAX_IDS = 30
@@ -52,7 +54,7 @@ export async function POST(req: Request) {
   try {
     const res = await db.runTransaction(async (t) => {
       const [w, m] = await Promise.all([t.get(wishRef), t.get(mineRef)])
-      if (!w.exists || w.get('status') !== 'approved') return null
+      if (!w.exists || !isLiveStatus(w.get('status'))) return null
       const on = m.get(kind) !== true
       const counts = readCounts(w.get('reactions'))
       counts[kind] = Math.max(0, (counts[kind] ?? 0) + (on ? 1 : -1))

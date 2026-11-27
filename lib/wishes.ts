@@ -9,8 +9,11 @@ import {
 import { getDb } from './firebase.client'
 import type { ThemeKey } from './themes'
 import { readCounts, type ReactionCounts } from './reactions'
+import { readWishImage, type WishImage } from './wishMeta'
+import { isWishFrame, type WishFrameKey } from './wishFrames'
+import { isWishSkin, type WishSkinKey } from './wishSkins'
 
-export type WishStatus = 'pending' | 'approved' | 'rejected' | 'funny'
+export type WishStatus = 'pending' | 'approved' | 'rejected' | 'funny' | 'private'
 
 export type Wish = {
   id: string
@@ -23,6 +26,9 @@ export type Wish = {
   verified?: boolean // người đăng nhập gửi (có uid) -> thẻ lấp lánh
   reactions?: ReactionCounts // số tim / cỏ bốn lá / sao (lib/reactions)
   achieved?: boolean // người viết tự đánh dấu "Đã đạt được" (/tai-khoan)
+  image?: WishImage | null // ảnh đính kèm (chỉ người đăng nhập)
+  frame?: WishFrameKey | null // khung trang trí do chủ nhân chọn (chỉ người đăng nhập)
+  skin?: WishSkinKey | null // giao diện do chủ nhân chọn (chỉ người đăng nhập) -> thẻ đọc + vé danh sách + trang chi tiết
 }
 
 // Số tờ tối đa render cùng lúc (nhẹ cho mobile)
@@ -39,6 +45,19 @@ export const SEED_WISHES: Wish[] = ([
   { id: 'seed-6', theme: 'mo', text: 'Lớn lên con muốn đi thật xa, nhưng vẫn nhớ đường về lớp học cũ.', createdAt: 0 },
   { id: 'seed-7', theme: 'ban', text: 'Mong nhóm mình mãi không tan, dù sau này mỗi đứa học một trường.', createdAt: 0 },
   { id: 'seed-8', theme: 'tam', text: 'Có hôm mệt lắm, chỉ muốn ai đó nói "cố lên, ổn mà". Mình tự nói với mình vậy.', createdAt: 0 },
+  // ĐIỀU ƯỚC MẪU có ảnh + giao diện + khung (kiểu ước của người đăng nhập). Ảnh: ảnh chụp "Laptop and coffee on a desk" (Wikimedia
+  // Commons, CC0 — không cần ghi nguồn, không có người), nén WebP như server. Bản Firestore thật: `npm run seed:mau` (scripts/seed-sample.mjs).
+  {
+    id: 'seed-9',
+    theme: 'tam',
+    text: 'Đi làm về muộn, người mệt rã rời, có hôm chỉ muốn buông hết. Nhưng mình ước mai thức dậy vẫn đủ sức cố thêm một chút. Chậm cũng được, miễn là không dừng lại.',
+    author: 'Xuân Phong',
+    verified: true,
+    skin: 'trang-dem',
+    frame: 'may',
+    image: { url: '/samples/xuan-phong-lam-viec.webp', w: 1280, h: 851 },
+    createdAt: 0,
+  },
 ] as Wish[]).map((w, i) => ({
   ...w,
   no: i + 1,
@@ -93,6 +112,9 @@ export function subscribeApproved(cb: (wishes: Wish[]) => void): () => void {
             verified: typeof data.uid === 'string' && data.uid.length > 0,
             achieved: data.progress === 'achieved',
             reactions: readCounts(data.reactions),
+            image: readWishImage(data.image),
+            frame: typeof data.uid === 'string' && data.uid && isWishFrame(data.frame) ? data.frame : null,
+            skin: typeof data.uid === 'string' && data.uid && isWishSkin(data.skin) ? data.skin : null,
           }
         })
         .sort((a, b) => b.createdAt - a.createdAt)

@@ -5,6 +5,7 @@ import { validateComment } from '@/lib/profanity'
 import { rateLimit } from '@/lib/ratelimit'
 import { millis, viewerFromRequest } from '@/lib/wishServer'
 import { adminDisplayName } from '@/lib/adminAuth'
+import { isLiveStatus } from '@/lib/wishMeta'
 
 export const runtime = 'nodejs'
 
@@ -21,7 +22,7 @@ export async function GET(req: Request, ctx: { params: Promise<{ id: string }> }
   if (!isAdminConfigured) return NextResponse.json({ items: [] })
   const db = getAdminDb()!
   const wish = await db.collection('wishes').doc(id).get()
-  if (!wish.exists || wish.get('status') !== 'approved') return deny(404, 'Không tìm thấy điều ước')
+  if (!wish.exists || !isLiveStatus(wish.get('status'))) return deny(404, 'Không tìm thấy điều ước')
 
   const viewer = await viewerFromRequest(req)
   const snap = await wish.ref.collection('comments').orderBy('createdAt', 'asc').limit(MAX_LIST).get()
@@ -66,7 +67,7 @@ export async function POST(req: Request, ctx: { params: Promise<{ id: string }> 
   try {
     await db.runTransaction(async (t) => {
       const w = await t.get(wishRef)
-      if (!w.exists || w.get('status') !== 'approved') throw new Error('not-found')
+      if (!w.exists || !isLiveStatus(w.get('status'))) throw new Error('not-found')
       t.set(ref, {
         text,
         uid: viewer.uid,

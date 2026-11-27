@@ -3,7 +3,11 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { THEMES, THEME_KEYS, isThemeKey, type ThemeKey } from "@/lib/themes";
-import { formatNo, splitWishTime } from "@/lib/wishMeta";
+import { formatNo, splitWishTime, type WishImage } from "@/lib/wishMeta";
+import WishPhoto from "@/components/ui/WishPhoto";
+import WishFrame from "@/components/ui/WishFrame";
+import { WISH_SKINS, isWishSkin, skinVars, type WishSkinKey } from "@/lib/wishSkins";
+import type { WishFrameKey } from "@/lib/wishFrames";
 import AuthBridge from "@/components/AuthBridge";
 import { ReportButton } from "@/components/ui/WishThread";
 import PageShell from "@/components/ui/PageShell";
@@ -14,6 +18,9 @@ import Reactions, { useMyReactions } from "@/components/ui/Reactions";
 import type { ReactionCounts } from "@/lib/reactions";
 
 type Item = {
+  image?: WishImage | null;
+  skin?: WishSkinKey | null;
+  frame?: WishFrameKey | null;
   id: string;
   no: number | null;
   text: string;
@@ -351,17 +358,20 @@ export default function WishesView() {
               const fresh =
                 w.createdAt > 0 && now - w.createdAt < 24 * 3600_000;
               const [day, time] = splitWishTime(w.createdAt);
+              // giao diện chủ nhân chọn -> vé nhận màu skin (cuống = nền skin, thân = màu giấy); chưa chọn -> vàng mặc định
+              const skin = w.verified && isWishSkin(w.skin) ? w.skin : null;
               return (
                 <li
                   key={w.id}
-                  className={`tk${w.verified ? " tk-verified" : ""}`}
+                  className={`tk${w.verified ? " tk-verified" : ""}${skin ? " tk-skin" : ""}`}
                   style={
                     {
                       "--tk-c": tk ? THEMES[tk].color : undefined,
+                      ...(skin ? skinVars(WISH_SKINS[skin]) : {}),
                     } as React.CSSProperties
                   }
                 >
-                  {w.verified && <Sparkles glow={false} />}
+                  {w.verified && <Sparkles glow={false} compact />}
                   <div className="tk-stub">
                     {w.no ? (
                       <button
@@ -392,7 +402,16 @@ export default function WishesView() {
                     )}
                   </div>
                   <div className="tk-body">
-                    <p className="tk-text">{w.text}</p>
+                    {w.verified && <WishFrame frame={w.frame} />}
+                    {w.image && <WishPhoto image={w.image} variant="thumb" />}
+                    {w.no ? (
+                      // bấm vào chữ ước -> mở trang chi tiết
+                      <Link className="tk-text tk-open" href={`/dieu-uoc/${w.no}`}>
+                        {w.text}
+                      </Link>
+                    ) : (
+                      <p className="tk-text">{w.text}</p>
+                    )}
                     <div className="tk-meta">
                       <span className="tk-theme">
                         <i
@@ -420,7 +439,7 @@ export default function WishesView() {
                         onMine={(m) => setMyRx((x) => ({ ...x, [w.id]: m }))}
                       />
                     </div>
-                    {!isSeed && (
+                    {(w.no || !isSeed) && (
                       <div className="tk-actions">
                         {w.no ? (
                           <Link className="pg-act" href={`/dieu-uoc/${w.no}`}>
@@ -428,7 +447,7 @@ export default function WishesView() {
                             Mở trang · chia sẻ
                           </Link>
                         ) : null}
-                        <ReportButton wishId={w.id} />
+                        {!isSeed && <ReportButton wishId={w.id} />}
                       </div>
                     )}
                   </div>

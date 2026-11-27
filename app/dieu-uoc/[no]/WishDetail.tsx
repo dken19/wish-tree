@@ -1,24 +1,28 @@
 'use client'
 import { useEffect, useState } from 'react'
 import Link from 'next/link'
+import { useRouter } from 'next/navigation'
 import AuthBridge from '@/components/AuthBridge'
 import { PageSky } from '@/components/ui/PageShell'
 import Icon from '@/components/ui/Icon'
 import Sparkles from '@/components/ui/Sparkles'
+import WishPhoto from '@/components/ui/WishPhoto'
+import WishFrame from '@/components/ui/WishFrame'
+import { DEFAULT_FRAME, WISH_FRAMES, WISH_FRAME_KEYS, isWishFrame, type WishFrameKey } from '@/lib/wishFrames'
 import WishThread, { ReportButton } from '@/components/ui/WishThread'
 import Reactions, { useMyReactions } from '@/components/ui/Reactions'
 import { useScene } from '@/store/useScene'
 import { getIdToken } from '@/lib/auth'
 import { isFirebaseConfigured } from '@/lib/firebase.client'
 import { THEMES, isThemeKey } from '@/lib/themes'
-import { PROGRESS_LABEL, formatNo, formatWishTime, type WishProgress } from '@/lib/wishMeta'
+import { PROGRESS_LABEL, formatNo, formatWishTime, privateWishPath, type WishProgress, type WishVisibility } from '@/lib/wishMeta'
 import {
   DEFAULT_SKIN,
   PLAIN_SKIN,
   WISH_SKINS,
   WISH_SKIN_KEYS,
   isWishSkin,
-  type WishSkin,
+  skinVars,
   type WishSkinKey,
 } from '@/lib/wishSkins'
 import type { PublicWish } from '@/lib/wishServer'
@@ -26,27 +30,21 @@ import type { PublicWish } from '@/lib/wishServer'
 // Bản dev chưa có Firebase: ai cũng "xem thử" đổi giao diện của tờ mẫu có tên (chỉ trong bộ nhớ).
 const DEMO = !isFirebaseConfigured && process.env.NODE_ENV !== 'production'
 
-const skinVars = (s: WishSkin) =>
-  ({
-    '--wd-bg': s.bg,
-    '--wd-paper': s.paper,
-    '--wd-ink': s.ink,
-    '--wd-soft': s.soft,
-    '--wd-accent': s.accent,
-    '--wd-on-bg': s.onBg,
-  }) as React.CSSProperties
+type Own = { progress: WishProgress; skin: WishSkinKey | null; visibility: WishVisibility }
 
-type Own = { progress: WishProgress; skin: WishSkinKey | null }
-
-export default function WishDetail({ wish }: { wish: PublicWish }) {
+/** `privateKey`: đang xem qua link bí mật của ước RIÊNG TƯ (/dieu-uoc/rieng/<key>). */
+export default function WishDetail({ wish, privateKey }: { wish: PublicWish; privateKey?: string }) {
+  const router = useRouter()
+  const isPrivate = !!privateKey
   const user = useScene((s) => s.user)
   const showToast = useScene((s) => s.showToast)
   const verified = wish.verified
   const isSeed = wish.id.startsWith('seed-')
 
   // chủ nhân điều ước? (server xác nhận qua /api/me/wishes?id=) -> hiện bảng chỉnh
-  const [own, setOwn] = useState<Own | null>(DEMO && verified ? { progress: wish.achieved ? 'achieved' : 'trying', skin: null } : null)
+  const [own, setOwn] = useState<Own | null>(DEMO && verified ? { progress: wish.achieved ? 'achieved' : 'trying', skin: null, visibility: isPrivate ? 'private' : 'public' } : null)
   const [skin, setSkin] = useState<WishSkinKey>(isWishSkin(wish.skin) ? wish.skin : DEFAULT_SKIN)
+  const [frame, setFrame] = useState<WishFrameKey>(isWishFrame(wish.frame) ? wish.frame : DEFAULT_FRAME)
   const [achieved, setAchieved] = useState(wish.achieved)
   const [busy, setBusy] = useState(false)
   const [copied, setCopied] = useState(false)
@@ -72,7 +70,15 @@ export default function WishDetail({ wish }: { wish: PublicWish }) {
       .then((j) => {
         const it = j?.items?.[0]
         if (!alive) return
-        setOwn(it ? { progress: it.progress === 'achieved' ? 'achieved' : 'trying', skin: isWishSkin(it.skin) ? it.skin : null } : null)
+        setOwn(
+          it
+            ? {
+                progress: it.progress === 'achieved' ? 'achieved' : 'trying',
+                skin: isWishSkin(it.skin) ? it.skin : null,
+                visibility: it.visibility === 'private' ? 'private' : 'public',
+              }
+            : null
+        )
       })
       .catch(() => {})
     return () => {
@@ -81,8 +87,8 @@ export default function WishDetail({ wish }: { wish: PublicWish }) {
   }, [user, verified, isSeed, wish.id])
   const isOwner = !!own && (DEMO || !!user)
 
-  const save = async (patch: { skin?: WishSkinKey; progress?: WishProgress }) => {
-    if (DEMO) return true
+  const save = async (patch: { skin?: WishSkinKey; frame?: WishFrameKey; progress?: WishProgress; visibility?: WishVisibility }) => {
+    if (DEMO) return {}
     setBusy(true)
     try {
       const token = await getIdToken()
@@ -94,12 +100,12 @@ export default function WishDetail({ wish }: { wish: PublicWish }) {
       if (!r.ok) {
         const b = await r.json().catch(() => ({}))
         showToast(b?.error ?? 'Chưa lưu được, thử lại nhé')
-        return false
+        return null
       }
-      return true
+      return ((await r.json().catch(() => ({}))) ?? {}) as { privateUrl?: string | null }
     } catch {
       showToast('Chưa lưu được, thử lại nhé')
-      return false
+      return null
     } finally {
       setBusy(false)
     }
@@ -111,6 +117,12 @@ export default function WishDetail({ wish }: { wish: PublicWish }) {
     setSkin(k)
     if (!(await save({ skin: k }))) setSkin(prev)
   }
+  const pickFrame = async (k: WishFrameKey) => {
+    if (k === frame || busy) return
+    const prev = frame
+    setFrame(k)
+    if (!(await save({ frame: k }))) setFrame(prev)
+  }
   const pickProgress = async (p: WishProgress) => {
     if (busy || (p === 'achieved') === achieved) return
     const prev = achieved
@@ -118,7 +130,27 @@ export default function WishDetail({ wish }: { wish: PublicWish }) {
     if (!(await save({ progress: p }))) setAchieved(prev)
   }
 
-  const shareUrl = () => `${window.location.origin}/dieu-uoc/${wish.no}`
+  // Đổi công khai <-> riêng tư: chuyển sang đúng địa chỉ mới (link #số không mở được ước riêng tư và ngược lại)
+  const pickVisibility = async (v: WishVisibility) => {
+    if (busy || !own || own.visibility === v) return
+    if (DEMO) {
+      setOwn({ ...own, visibility: v })
+      return
+    }
+    const res = await save({ visibility: v })
+    if (!res) return
+    setOwn({ ...own, visibility: v })
+    if (v === 'private' && res.privateUrl) {
+      showToast('Đã chuyển riêng tư. Chỉ ai có link mới xem được.')
+      router.replace(res.privateUrl)
+    } else if (v === 'public') {
+      showToast('Đã công khai, điều ước lên lại cây.')
+      router.replace(`/dieu-uoc/${wish.no}`)
+    }
+  }
+
+  const sharePath = privateKey ? privateWishPath(privateKey) : `/dieu-uoc/${wish.no}`
+  const shareUrl = () => `${window.location.origin}${sharePath}`
   const copy = async () => {
     const url = shareUrl()
     try {
@@ -145,10 +177,10 @@ export default function WishDetail({ wish }: { wish: PublicWish }) {
 
   const theme = isThemeKey(wish.theme) ? THEMES[wish.theme] : null
   const look = verified ? WISH_SKINS[skin] : PLAIN_SKIN
-  const fbHref = `https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(`https://cayuocnguyen.io.vn/dieu-uoc/${wish.no}`)}`
+  const fbHref = `https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(`https://cayuocnguyen.io.vn${sharePath}`)}`
 
   return (
-    <div className={`pg wd${verified ? ' wd-fancy' : ' wd-plain'}`} style={skinVars(look)} data-skin={verified ? skin : 'plain'}>
+    <div className={`pg wd${verified ? ' wd-fancy' : ' wd-plain'}`} style={skinVars(look) as React.CSSProperties} data-skin={verified ? skin : 'plain'}>
       <AuthBridge />
       {verified ? <div className="wd-bg" aria-hidden /> : <PageSky theme={wish.theme} />}
 
@@ -165,6 +197,7 @@ export default function WishDetail({ wish }: { wish: PublicWish }) {
         </nav>
 
         <article className={`wd-paper${verified ? ' is-verified' : ''}`}>
+          {verified && <WishFrame frame={frame} />}
           <span className="wd-string" aria-hidden />
           {verified && <Sparkles key={skin} />}
           <header className="wd-head">
@@ -178,6 +211,13 @@ export default function WishDetail({ wish }: { wish: PublicWish }) {
               Ước
             </span>
           </header>
+          {isPrivate && (
+            <span className="wd-private">
+              <Icon name="lock" size={14} />
+              Riêng tư · chỉ ai có link mới xem được
+            </span>
+          )}
+          {wish.image && <WishPhoto image={wish.image} variant="detail" />}
           <p className="wd-text">“{wish.text}”</p>
           <footer className="wd-foot">
             <span className={verified && wish.author ? 'wd-author spk-name' : 'wd-author'}>
@@ -246,6 +286,44 @@ export default function WishDetail({ wish }: { wish: PublicWish }) {
               </div>
             </div>
             <div className="wd-row">
+              <span className="wd-label">Khung</span>
+              <div className="wd-swatches" role="radiogroup" aria-label="Khung tờ ước">
+                {WISH_FRAME_KEYS.map((k) => (
+                  <button
+                    key={k}
+                    role="radio"
+                    aria-checked={k === frame}
+                    className="wd-swatch wd-frame-opt"
+                    disabled={busy}
+                    onClick={() => pickFrame(k)}
+                    title={WISH_FRAMES[k].hint}
+                  >
+                    <i className="wd-frame-mini" aria-hidden>
+                      <WishFrame frame={k} />
+                    </i>
+                    <span>{WISH_FRAMES[k].label}</span>
+                  </button>
+                ))}
+              </div>
+            </div>
+            <div className="wd-row">
+              <span className="wd-label">Hiển thị</span>
+              <div className="acc-progress" role="group" aria-label="Chế độ hiển thị">
+                {(['public', 'private'] as WishVisibility[]).map((k) => (
+                  <button
+                    key={k}
+                    className={`acc-seg s-${k}`}
+                    aria-pressed={own?.visibility === k}
+                    disabled={busy}
+                    onClick={() => pickVisibility(k)}
+                  >
+                    <Icon name={k === 'private' ? 'lock' : 'globe'} size={15} />
+                    {k === 'private' ? 'Riêng tư' : 'Công khai'}
+                  </button>
+                ))}
+              </div>
+            </div>
+            <div className="wd-row">
               <span className="wd-label">Tiến độ</span>
               <div className="acc-progress" role="group" aria-label="Tiến độ điều ước">
                 {(['trying', 'achieved'] as WishProgress[]).map((k) => (
@@ -263,7 +341,9 @@ export default function WishDetail({ wish }: { wish: PublicWish }) {
               </div>
             </div>
             <p className="wd-note">
-              Giao diện và dấu “Đã đạt được” hiện cho mọi người mở link, kể cả ảnh xem trước khi gửi qua Zalo, Messenger.{' '}
+              {own?.visibility === 'private'
+                ? 'Riêng tư: không treo trên cây, không hiện ở danh sách hay tìm kiếm. Chỉ ai có link trên mới mở được.'
+                : 'Giao diện, khung và dấu “Đã đạt được” hiện cho mọi người mở link, kể cả ảnh xem trước khi gửi qua Zalo, Messenger.'}{' '}
               <Link href="/tai-khoan">Tất cả điều ước của tôi</Link>
             </p>
           </section>

@@ -16,15 +16,18 @@ const STARS = [
   { x: 60, y: 94, s: 10, d: 0.4 },
 ]
 
-/** `glow`: hào quang tràn ra ngoài thẻ (tắt cho vé bị mask cắt mép). */
-export default function Sparkles({ glow = true }: { glow?: boolean }) {
+/**
+ * `glow`: hào quang tràn ra ngoài thẻ (tắt cho vé bị mask cắt mép).
+ * `compact` (vé danh sách): bỏ sao ở mép trái (đè số #N ở cuống) + sao không drop-shadow -> nhẹ hơn khi danh sách dài.
+ */
+export default function Sparkles({ glow = true, compact = false }: { glow?: boolean; compact?: boolean }) {
   return (
     <>
       {glow && <span className="spk-glow" aria-hidden />}
       <span className="spk-ring" aria-hidden />
-      <span className="spk" aria-hidden>
+      <span className={`spk${compact ? ' spk-compact' : ''}`} aria-hidden>
         <span className="spk-sheen" />
-        {STARS.map((p, i) => (
+        {(compact ? STARS.filter((p) => p.x > 20) : STARS).map((p, i) => (
           <svg
             key={i}
             className="spk-star"

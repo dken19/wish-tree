@@ -57,3 +57,15 @@ export async function getIdToken(): Promise<string | null> {
   const auth = getAuthClient()
   return auth?.currentUser ? auth.currentUser.getIdToken() : null
 }
+
+/**
+ * Sau khi server đổi tên/ảnh (Admin SDK updateUser): nạp lại hồ sơ + ÉP làm mới ID token
+ * (token cũ còn mang tên cũ tới 1 giờ -> điều ước/bình luận mới sẽ ghi tên cũ). Trả user mới.
+ */
+export async function refreshAuthUser(): Promise<AuthUser | null> {
+  const u = getAuthClient()?.currentUser
+  if (!u) return null
+  await u.reload()
+  await u.getIdToken(true)
+  return toAuthUser(u)
+}

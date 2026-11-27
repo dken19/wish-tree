@@ -16,6 +16,8 @@ export type WishSkin = {
   soft: string
   /** điểm nhấn: viền, dấu "Ước", tên */
   accent: string
+  /** điểm nhấn ĐẬM cho chữ nhỏ trên giấy (tên, link) — tương phản ≥4.5:1 với paper */
+  deep: string
   /** chữ trên nền (ngoài tờ giấy) */
   onBg: string
   /** chấm màu trong bảng chọn */
@@ -30,6 +32,7 @@ export const WISH_SKINS: Record<WishSkinKey, WishSkin> = {
     ink: '#3a1d14',
     soft: '#8a5a44',
     accent: '#c8102e',
+    deep: '#a50d26',
     onBg: '#fff3e2',
     swatch: '#c8102e',
   },
@@ -40,6 +43,7 @@ export const WISH_SKINS: Record<WishSkinKey, WishSkin> = {
     ink: '#1b2440',
     soft: '#5a6385',
     accent: '#c9a23f',
+    deep: '#7a5c12',
     onBg: '#f3e6bf',
     swatch: '#18284f',
   },
@@ -50,6 +54,7 @@ export const WISH_SKINS: Record<WishSkinKey, WishSkin> = {
     ink: '#4a2230',
     soft: '#a0566b',
     accent: '#d6456b',
+    deep: '#a8284c',
     onBg: '#5a1f31',
     swatch: '#f08aa3',
   },
@@ -60,6 +65,7 @@ export const WISH_SKINS: Record<WishSkinKey, WishSkin> = {
     ink: '#13302a',
     soft: '#4b7064',
     accent: '#1f7a5c',
+    deep: '#17614a',
     onBg: '#e5f5ec',
     swatch: '#17614f',
   },
@@ -70,6 +76,7 @@ export const WISH_SKINS: Record<WishSkinKey, WishSkin> = {
     ink: '#3b2a0c',
     soft: '#8b6a2c',
     accent: '#a8761c',
+    deep: '#7a540e',
     onBg: '#fff6df',
     swatch: '#d4a441',
   },
@@ -89,6 +96,18 @@ export const PLAIN_SKIN: WishSkin = {
   ink: '#2b2a28',
   soft: '#6c6a64',
   accent: '#8a7a6a',
+  deep: '#6c5a48',
   onBg: '#2b2a28',
   swatch: '#cccccc',
 }
+
+/** Biến CSS --wd-* của 1 skin (trang chi tiết, thẻ đọc trên cây, vé danh sách dùng chung). */
+export const skinVars = (s: WishSkin): Record<string, string> => ({
+  '--wd-bg': s.bg,
+  '--wd-paper': s.paper,
+  '--wd-ink': s.ink,
+  '--wd-soft': s.soft,
+  '--wd-accent': s.accent,
+  '--wd-deep': s.deep,
+  '--wd-on-bg': s.onBg,
+})

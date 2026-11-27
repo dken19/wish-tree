@@ -74,3 +74,34 @@ export const PROGRESS_LABEL: Record<WishProgress, string> = {
   achieved: 'Đã đạt được',
 }
 export const isProgress = (v: unknown): v is WishProgress => v === 'trying' || v === 'achieved'
+
+/**
+ * Chế độ hiển thị do CHỦ điều ước chọn. Lưu bằng `status`:
+ * - 'approved' = công khai (lên cây, /dieu-uoc, tìm kiếm, sitemap)
+ * - 'private'  = riêng tư: KHÔNG hiện ở đâu cả, chỉ mở được qua link bí mật /dieu-uoc/rieng/<shareKey>
+ * Dùng status (thay vì field riêng) để mọi truy vấn/rules `status == 'approved'` sẵn có tự loại ước riêng tư.
+ */
+export type WishVisibility = 'public' | 'private'
+export const isVisibility = (v: unknown): v is WishVisibility => v === 'public' || v === 'private'
+/** Ước "đang sống" (đọc/bình luận/thả cảm xúc được): công khai, hoặc riêng tư qua link. */
+export const isLiveStatus = (s: unknown) => s === 'approved' || s === 'private'
+/** Link chia sẻ của ước riêng tư (đường dẫn tương đối). */
+export const privateWishPath = (key: string) => `/dieu-uoc/rieng/${key}`
+/** shareKey hợp lệ: 22 ký tự base64url (16 byte ngẫu nhiên). */
+export const isShareKey = (k: unknown): k is string => typeof k === 'string' && /^[A-Za-z0-9_-]{22}$/.test(k)
+
+/** Tên hiển thị người dùng tự đặt: 2–40 ký tự sau khi gọn khoảng trắng. */
+export const NAME_MIN = 2
+export const NAME_MAX = 40
+export const cleanDisplayName = (s: unknown) => String(s ?? '').replace(/\s+/g, ' ').trim()
+
+/** Ảnh đính kèm điều ước (chỉ người đăng nhập, 1 ảnh, server nén WebP ≤1280px). */
+export type WishImage = { url: string; w: number; h: number }
+/** Đọc field `image` từ doc -> chỉ nhận URL Firebase Storage do server ghi; sai dạng -> null. */
+export function readWishImage(v: unknown): WishImage | null {
+  const o = v as { url?: unknown; w?: unknown; h?: unknown } | null | undefined
+  if (!o || typeof o.url !== 'string' || !o.url.startsWith('https://firebasestorage.googleapis.com/')) return null
+  const w = Number(o.w)
+  const h = Number(o.h)
+  return { url: o.url, w: w > 0 ? w : 1, h: h > 0 ? h : 1 }
+}

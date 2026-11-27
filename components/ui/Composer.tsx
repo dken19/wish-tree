@@ -1,16 +1,21 @@
 'use client'
-import { useState } from 'react'
+import { useRef, useState } from 'react'
 import Link from 'next/link'
+import { useRouter } from 'next/navigation'
 import { THEMES, THEME_KEYS, type ThemeKey } from '@/lib/themes'
 import { MAX_WISH_LEN, validateWish } from '@/lib/profanity'
 import { useScene } from '@/store/useScene'
 import { isFirebaseConfigured } from '@/lib/firebase.client'
 import { signInGoogle, signOutUser, getIdToken } from '@/lib/auth'
 import Icon from './Icon'
+import { shrinkImage } from '@/lib/imageResize'
 import LacBird from './LacBird'
 
 // Bản dev chưa có Firebase (.env.local) vẫn hiện CTA đăng nhập để xem giao diện; prod giữ nguyên.
 const SHOW_AUTH = isFirebaseConfigured || process.env.NODE_ENV !== 'production'
+// Bản dev chưa có Firebase: nút Google đăng nhập GIẢ (user mẫu trong store) để xem giao diện người đăng nhập
+// (chọn ảnh, Công khai/Riêng tư). Gửi thật vẫn lỗi 503 vì server chưa cấu hình. Prod không bao giờ vào nhánh này.
+const DEMO_LOGIN = !isFirebaseConfigured && process.env.NODE_ENV !== 'production'
 
 // Bảng viết điều ước -> POST /api/wishes.
 // Người đăng nhập Google (Facebook tạm ẩn — provider chưa bật trên Firebase): điều ước hiện NGAY; ẩn danh: vào hàng chờ duyệt.
@@ -19,18 +24,54 @@ export default function Composer() {
   const setOpen = useScene((s) => s.setComposerOpen)
   const showToast = useScene((s) => s.showToast)
   const user = useScene((s) => s.user)
+  const setUser = useScene((s) => s.setUser)
   const stats = useScene((s) => s.stats)
   const bumpStats = useScene((s) => s.bumpStats)
 
   const [theme, setTheme] = useState<ThemeKey>('thi')
   const [text, setText] = useState('')
   const [sending, setSending] = useState(false)
-
-  async function login() {
-    if (!isFirebaseConfigured) {
-      showToast('Bản dev chưa cấu hình Firebase (.env.local) nên chưa đăng nhập được.')
+  // chỉ người đăng nhập: riêng tư = không lên cây, chỉ mở qua link bí mật
+  const [priv, setPriv] = useState(false)
+  const router = useRouter()
+  const isPrivate = !!user && priv
+  // 1 ảnh đính kèm (chỉ người đăng nhập): thu nhỏ ở client ngay khi chọn, server nén lại WebP
+  const [img, setImg] = useState<{ blob: Blob; url: string } | null>(null)
+  const [imgBusy, setImgBusy] = useState(false)
+  const fileRef = useRef<HTMLInputElement>(null)
+  const clearImg = () => {
+    if (img) URL.revokeObjectURL(img.url)
+    setImg(null)
+    if (fileRef.current) fileRef.current.value = ''
+  }
+  async function pickImg(file: File | undefined) {
+    if (!file) return
+    if (!file.type.startsWith('image/')) {
+      showToast('Chọn một file ảnh nhé')
       return
     }
+    setImgBusy(true)
+    try {
+      const blob = await shrinkImage(file, { max: 1600 })
+      if (blob.size > 4 * 1024 * 1024) {
+        showToast('Ảnh lớn quá, chọn ảnh khác nhé')
+        return
+      }
+      if (img) URL.revokeObjectURL(img.url)
+      setImg({ blob, url: URL.createObjectURL(blob) })
+    } finally {
+      setImgBusy(false)
+      if (fileRef.current) fileRef.current.value = ''
+    }
+  }
+
+  async function login() {
+    if (DEMO_LOGIN) {
+      setUser({ uid: 'demo', name: 'Người thử nghiệm', photo: null })
+      showToast('Bản dev: đăng nhập giả để xem giao diện (chưa gửi thật được).')
+      return
+    }
+    if (!isFirebaseConfigured) return
     try {
       await signInGoogle()
     } catch (e) {
@@ -59,13 +100,26 @@ export default function Composer() {
     setSending(true)
     try {
       const token = user ? await getIdToken() : null
+      const withImg = !!user && !!img
+      let body: BodyInit
+      if (withImg) {
+        // multipart: KHÔNG tự đặt Content-Type (trình duyệt tự thêm boundary)
+        const fd = new FormData()
+        fd.set('text', text.trim())
+        fd.set('theme', theme)
+        if (isPrivate) fd.set('visibility', 'private')
+        fd.set('image', img!.blob, img!.blob.type === 'image/webp' ? 'anh.webp' : 'anh.jpg')
+        body = fd
+      } else {
+        body = JSON.stringify({ text: text.trim(), theme, ...(isPrivate ? { visibility: 'private' } : {}) })
+      }
       const r = await fetch('/api/wishes', {
         method: 'POST',
         headers: {
-          'Content-Type': 'application/json',
+          ...(withImg ? {} : { 'Content-Type': 'application/json' }),
           ...(token ? { Authorization: `Bearer ${token}` } : {}),
         },
-        body: JSON.stringify({ text: text.trim(), theme }),
+        body,
       })
       const data = await r.json().catch(() => ({}))
       if (!r.ok) {
@@ -74,6 +128,13 @@ export default function Composer() {
       }
       setOpen(false)
       setText('')
+      clearImg()
+      if (data?.status === 'private' && typeof data.privateUrl === 'string') {
+        setPriv(false)
+        showToast(`Đã cất điều ước riêng tư${typeof data.no === 'number' ? ` #${data.no}` : ''}. Gửi link cho người bạn muốn nhé.`)
+        router.push(data.privateUrl)
+        return
+      }
       const approved = data?.status === 'approved'
       // Vị trí trong hàng chờ = số đang chờ (trước khi cộng) + 1
       const queuePos = stats ? stats.pending + 1 : null
@@ -111,7 +172,7 @@ export default function Composer() {
             <Link className="auth-out" href="/tai-khoan">
               Ước của tôi
             </Link>
-            <button className="auth-out" onClick={() => signOutUser()}>
+            <button className="auth-out" onClick={() => (DEMO_LOGIN ? setUser(null) : signOutUser())}>
               Đăng xuất
             </button>
           </div>
@@ -172,6 +233,38 @@ export default function Composer() {
           onChange={(e) => setText(e.target.value)}
         />
       </div>
+      {user && (
+        <div className="img-pick">
+          {img ? (
+            <div className="img-pick-prev">
+              {/* eslint-disable-next-line @next/next/no-img-element -- ảnh xem trước cục bộ (blob:) */}
+              <img src={img.url} alt="Ảnh sẽ đính kèm" />
+              <button type="button" className="img-pick-x" aria-label="Bỏ ảnh" onClick={clearImg}>
+                <Icon name="x" size={12} />
+              </button>
+            </div>
+          ) : (
+            <button type="button" className="img-pick-btn" disabled={imgBusy} onClick={() => fileRef.current?.click()}>
+              <Icon name="camera" size={15} />
+              {imgBusy ? 'Đang thu nhỏ ảnh…' : 'Thêm 1 ảnh'}
+            </button>
+          )}
+          <span className="img-pick-note">{img ? 'Ảnh sẽ được nén gọn khi gửi' : 'Không bắt buộc'}</span>
+          <input ref={fileRef} type="file" accept="image/*" hidden onChange={(e) => pickImg(e.target.files?.[0])} />
+        </div>
+      )}
+      {user && (
+        <div className="vis-row" role="radiogroup" aria-label="Ai xem được điều ước">
+          <button role="radio" aria-checked={!priv} className={!priv ? 'on' : ''} onClick={() => setPriv(false)}>
+            <Icon name="globe" size={14} />
+            Công khai trên cây
+          </button>
+          <button role="radio" aria-checked={priv} className={priv ? 'on' : ''} onClick={() => setPriv(true)}>
+            <Icon name="lock" size={14} />
+            Riêng tư · chỉ ai có link
+          </button>
+        </div>
+      )}
       <div className="row">
         <button
           className="btn-cancel"
@@ -180,12 +273,14 @@ export default function Composer() {
         >
           Để sau
         </button>
-        <button className="btn-send" onClick={send} disabled={sending}>
+        <button className="btn-send" onClick={send} disabled={sending || imgBusy}>
           {sending
             ? user || !SHOW_AUTH
               ? 'Đang treo…'
               : 'Đang gửi…'
-            : user || !SHOW_AUTH
+            : isPrivate
+              ? 'Cất riêng tư'
+              : user || !SHOW_AUTH
               ? 'Treo lên cây'
               : 'Gửi ẩn danh'}
         </button>

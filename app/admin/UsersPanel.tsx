@@ -45,6 +45,7 @@ const STATUS: Record<string, string> = {
   pending: 'Chờ duyệt',
   rejected: 'Đã bỏ',
   funny: 'Xàm xí',
+  private: 'Riêng tư',
 }
 
 export default function UsersPanel({ call }: { call: (input: string, init?: RequestInit) => Promise<Response> }) {

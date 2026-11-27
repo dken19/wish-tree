@@ -1,10 +1,12 @@
 // Server-only: số thứ tự điều ước (#1, #2, …), xác thực người đăng nhập, đọc doc -> JSON.
 import 'server-only'
+import { randomBytes } from 'node:crypto'
 import type { Firestore, DocumentSnapshot } from 'firebase-admin/firestore'
 import { getAdminAuth } from './firebase.admin'
-import { searchTokens } from './wishMeta'
+import { readWishImage, searchTokens } from './wishMeta'
 import { isAdminEmail } from './adminAuth'
 import { isWishSkin } from './wishSkins'
+import { isWishFrame } from './wishFrames'
 import { readCounts } from './reactions'
 
 /** Doc đếm: { wishNo: số điều ước lớn nhất đã cấp }. */
@@ -84,6 +86,8 @@ export function publicWish(d: DocumentSnapshot) {
     id: d.id,
     no: typeof data.no === 'number' ? data.no : null,
     text: String(data.text ?? ''),
+    // ảnh đính kèm (người đăng nhập, WebP do server nén) — KHÔNG trả `path` trong Storage
+    image: readWishImage(data.image),
     theme: String(data.theme ?? ''),
     author: data.author ? String(data.author) : null,
     createdAt: millis(data.createdAt),
@@ -96,8 +100,13 @@ export function publicWish(d: DocumentSnapshot) {
     // số cảm xúc (tim / cỏ bốn lá / sao) — chỉ số đếm, không lộ ai thả
     reactions: readCounts(data.reactions),
     skin: typeof data.uid === 'string' && data.uid && isWishSkin(data.skin) ? data.skin : null,
+    // khung trang trí do chủ nhân chọn (lib/wishFrames) — như skin, chỉ ước của người đăng nhập
+    frame: typeof data.uid === 'string' && data.uid && isWishFrame(data.frame) ? data.frame : null,
   }
 }
 export type PublicWish = ReturnType<typeof publicWish>
 
 export { millis }
+
+/** Khoá link bí mật cho ước riêng tư: 16 byte ngẫu nhiên -> 22 ký tự base64url (không đoán được như #số). */
+export const newShareKey = () => randomBytes(16).toString('base64url')

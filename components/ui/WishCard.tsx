@@ -1,11 +1,14 @@
 'use client'
-import { useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import Link from 'next/link'
 import { THEMES } from '@/lib/themes'
 import { useScene } from '@/store/useScene'
 import { formatNo, formatWishTime } from '@/lib/wishMeta'
 import WishThread, { ReportButton } from './WishThread'
 import Icon from './Icon'
+import WishPhoto from './WishPhoto'
+import WishFrame from './WishFrame'
+import { WISH_SKINS, skinVars } from '@/lib/wishSkins'
 import Sparkles from './Sparkles'
 import Reactions, { useMyReactions } from './Reactions'
 
@@ -21,6 +24,26 @@ export default function WishCard() {
   const n = openWish && count?.id === openWish.id ? count.n : (openWish?.commentCount ?? 0)
   const isSeed = openWish?.id.startsWith('seed-')
   const verified = !!openWish?.verified
+  const skin = verified ? (openWish?.skin ?? null) : null
+  // chữ dài hơn chỗ trống -> cuộn trong đoạn chữ; mờ dần mép trên/dưới để báo "còn nữa"
+  const textRef = useRef<HTMLParagraphElement>(null)
+  const [fade, setFade] = useState({ top: false, bottom: false })
+  const measure = () => {
+    const t = textRef.current
+    if (!t) return
+    const top = t.scrollTop > 2
+    const bottom = t.scrollTop + t.clientHeight < t.scrollHeight - 2
+    setFade((f) => (f.top === top && f.bottom === bottom ? f : { top, bottom }))
+  }
+  useEffect(() => {
+    const t = textRef.current
+    if (!t) return
+    t.scrollTop = 0
+    measure()
+    const ro = new ResizeObserver(measure)
+    ro.observe(t)
+    return () => ro.disconnect()
+  }, [openWish?.id])
   const [myRx, setMyRx] = useMyReactions(openWish ? [openWish.id] : [])
 
   return (
@@ -30,14 +53,22 @@ export default function WishCard() {
         if (e.target === e.currentTarget) setOpenWish(null)
       }}
     >
-      <div className={`card${showThread ? ' with-thread' : ''}${verified ? ' is-verified' : ''}`}>
+      <div
+        className={`card${showThread ? ' with-thread' : ''}${verified ? ' is-verified' : ''}${skin ? ' has-skin' : ''}`}
+        style={
+          // đã chọn giao diện -> màu giấy/chữ/điểm nhấn theo skin (khung ăn theo điểm nhấn);
+          // chưa chọn -> giữ giấy vàng lấp lánh, khung theo màu chủ đề
+          (skin ? skinVars(WISH_SKINS[skin]) : theme ? { '--wfr-c': theme.color } : undefined) as React.CSSProperties
+        }
+      >
+        {verified && <WishFrame frame={openWish?.frame} />}
         {verified && <Sparkles key={openWish!.id} />}
         <button className="close" onClick={() => setOpenWish(null)} aria-label="Đóng">
           <Icon name="x" size={18} />
         </button>
         <div
           className="seal"
-          style={theme ? { color: theme.color, borderColor: theme.color } : undefined}
+          style={theme && !skin ? { color: theme.color, borderColor: theme.color } : undefined}
         >
           Ước
         </div>
@@ -56,7 +87,14 @@ export default function WishCard() {
             Đã đạt được
           </div>
         )}
-        <p className="text">{openWish ? `“${openWish.text}”` : ''}</p>
+        {openWish?.image && <WishPhoto key={`img-${openWish.id}`} image={openWish.image} variant="card" />}
+        <p
+          ref={textRef}
+          className={`text${fade.top ? ' fade-top' : ''}${fade.bottom ? ' fade-bottom' : ''}`}
+          onScroll={measure}
+        >
+          {openWish ? `“${openWish.text}”` : ''}
+        </p>
         <div className="meta">
           {/* Có tên (người đăng nhập) -> thư pháp; không tên -> "Ẩn danh" chữ thường */}
           <span className={verified && openWish?.author ? 'spk-name' : undefined}>

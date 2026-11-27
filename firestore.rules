@@ -1,7 +1,7 @@
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
-    // Điều ước: client CHỈ được đọc bản đã duyệt.
+    // Điều ước: client CHỈ được đọc bản đã duyệt + công khai ('private' = riêng tư, chỉ đọc qua server bằng link bí mật).
     // Mọi ghi đi qua API route (Firebase Admin SDK) -> bỏ qua rules này.
     match /wishes/{id} {
       allow read: if resource.data.status == 'approved';

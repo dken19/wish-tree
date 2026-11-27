@@ -9,6 +9,7 @@ import {
 } from 'firebase-admin/app'
 import { getFirestore, type Firestore } from 'firebase-admin/firestore'
 import { getAuth, type Auth } from 'firebase-admin/auth'
+import { getStorage } from 'firebase-admin/storage'
 
 function readServiceAccount() {
   const projectId = process.env.FIREBASE_PROJECT_ID
@@ -45,4 +46,18 @@ export function getAdminAuth(): Auth | null {
   if (!app) return null
   adminAuth = getAuth(app)
   return adminAuth
+}
+
+/**
+ * Bucket Firebase Storage (ảnh đại diện). Tên bucket: FIREBASE_STORAGE_BUCKET, không có thì dùng lại
+ * NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET (cùng giá trị "<project>.firebasestorage.app"). null nếu thiếu.
+ */
+export const storageBucketName = () =>
+  process.env.FIREBASE_STORAGE_BUCKET || process.env.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET || ''
+
+export function getAdminBucket() {
+  const app = getAdminApp()
+  const name = storageBucketName()
+  if (!app || !name) return null
+  return getStorage(app).bucket(name)
 }

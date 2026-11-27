@@ -39,12 +39,6 @@ export default function HomeClient() {
         <div className="ui brand">
           <h1>Cây Ước Nguyện</h1>
           <p>Thả một điều ước vào gió</p>
-          <p className="brand-links">
-            <a href="/gioi-thieu">Giới thiệu</a>
-            <a href="/chinh-sach-bao-mat">Bảo mật</a>
-            <a href="/dieu-khoan">Điều khoản</a>
-            <a href="/lien-he">Liên hệ</a>
-          </p>
           <WishStats />
         </div>
       )}

@@ -54,27 +54,30 @@ app/
   chinh-sach-bao-mat/page.tsx # Chính sách bảo mật (tĩnh) — link Privacy policy của Google OAuth consent screen
   dieu-khoan/page.tsx  # Điều khoản sử dụng (tĩnh) — link Terms of service của consent screen
   tai-khoan/
-    page.tsx, AccountView.tsx # "Điều ước của tôi" (PageShell, noindex): watchAuth -> chưa đăng nhập = nút Google; đã đăng nhập = số đã viết/đang cố gắng/đã đạt + chip lọc + VÉ mỗi điều ước (trạng thái duyệt + nút 2 nấc Đang cố gắng/Đã đạt được, đổi lạc quan) -> /api/me/wishes. Dev chưa có Firebase: dữ liệu mẫu (DEMO, mốc giờ cố định cho khớp hydrate)
+    ProfileCard.tsx    # thẻ hồ sơ: ảnh đại diện (bấm đổi -> lib/imageResize thu nhỏ -> POST /api/me/profile) + Đổi tên (PATCH) + Dùng lại ảnh Google (DELETE) + Đăng xuất; xong gọi refreshAuthUser (token mới mang tên/ảnh mới)
+    page.tsx, AccountView.tsx # "Điều ước của tôi" (+ nút Công khai/Riêng tư + Chép link riêng tư mỗi ước) (PageShell, noindex): watchAuth -> chưa đăng nhập = nút Google; đã đăng nhập = số đã viết/đang cố gắng/đã đạt + chip lọc + VÉ mỗi điều ước (trạng thái duyệt + nút 2 nấc Đang cố gắng/Đã đạt được, đổi lạc quan) -> /api/me/wishes. Dev chưa có Firebase: dữ liệu mẫu (DEMO, mốc giờ cố định cho khớp hydrate)
   dieu-uoc/
     page.tsx           # server (ISR 5 phút): metadata + <Suspense fallback=12 điều ước mới nhất dựng sẵn ở server (HTML đọc được không cần JS)><WishesView/></Suspense> (route /dieu-uoc, KHÔNG Canvas)
     WishesView.tsx     # client (PageShell, header chỉ có tiêu đề: không lead/stats/giờ); tab Tình yêu (theme=yeu) hiện SeDuyenCard; mỗi điều ước là 1 VÉ (cuống #số bấm để lọc + giờ gửi + dấu "Hôm nay", thân lời ước); BỘ LỌC GỌN 1 khung `.wf` (ô tìm #số/từ khoá TỰ TÌM khi gõ, debounce 450ms + router.replace; nút Ngày mở `showPicker()` của input date ẩn; nút Mới/Cũ bấm là đảo; dải chủ đề 1 dòng cuộn ngang, con lăn -> ngang, mũi tên ‹ › khi còn chip khuất; "Bỏ lọc" cạnh số kết quả) + phân trang SỐ (state qua URL ?q=&date=&sort=&theme=&page=) -> /api/wishes/list; thẻ có #số + giờ gửi + cảm xúc + "Mở trang · chia sẻ" + ⚑ báo cáo (KHÔNG có bình luận — bình luận chỉ ở trang chi tiết /dieu-uoc/[no] và thẻ đọc trên cây); mount AuthBridge
     [no]/page.tsx      # TRANG CHI TIẾT điều ước /dieu-uoc/888 (ISR: generateStaticParams [] + revalidate 300; revalidateWishPage làm mới ngay khi đổi) — chỉ ước approved, không thì 404; generateMetadata = og:title/description/url/type article + twitter summary_large_image (cho Facebook/Zalo/Messenger/X…)
     [no]/WishDetail.tsx # client: tờ ước treo dây đung đưa; ước người đăng nhập = nền + giấy theo SKIN (lib/wishSkins, chữ thư pháp, Sparkles), ẩn danh = PageSky + giấy trắng + CTA đăng nhập; nút Sao chép link / Chia sẻ (navigator.share, mobile) / Facebook sharer; CHỦ NHÂN (xác nhận qua /api/me/wishes?id=) thấy bảng chọn giao diện + tiến độ; bình luận + báo cáo
-    [no]/opengraph-image.tsx, twitter-image.tsx # ảnh chia sẻ RIÊNG mỗi điều ước 1200×630 theo skin (satori, font app/_fonts), revalidate 300
+    [no]/opengraph-image.tsx, twitter-image.tsx # ảnh chia sẻ RIÊNG mỗi điều ước 1200×630 — vẽ ở lib/wishOg, revalidate 300
+    rieng/[key]/page.tsx (+ opengraph-image, twitter-image) # ước RIÊNG TƯ qua link bí mật (shareKey 22 ký tự, KHÔNG đoán được như #số): getWishByKey CHỈ trả khi status==='private' && !flagged (chờ duyệt/bị gỡ/báo cáo -> 404; đã về công khai -> redirect /dieu-uoc/<no>); noindex, robots chặn /dieu-uoc/rieng/, mô tả OG không chứa lời ước; dùng lại WishDetail (prop privateKey)
   xam-xi/
     page.tsx, FunnyView.tsx # "Góc xàm xí": tab Từng tờ (status 'funny' + lời phê, ?page=) / Bộ sưu tập (?view=bo); KHÔNG hiện tên người viết
   api/
-    wishes/route.ts    # POST: validate+lọc từ+rate-limit -> nếu có Bearer ID token hợp lệ thì approved (đăng ngay), không thì pending; cấp số #N (transaction meta/counters) + keywords; trả {id,no,status}
+    wishes/route.ts    # POST (JSON, hoặc multipart khi có ẢNH — chỉ người đăng nhập, 1 ảnh: lib/imageServer nén WebP ≤1280px q72 -> Storage wishes/{id}.webp, lưu `image{url,w,h,path}`; ghi doc hỏng thì xoá ảnh): validate+lọc từ+rate-limit -> nếu có Bearer ID token hợp lệ thì approved (đăng ngay), không thì pending; cấp số #N (transaction meta/counters) + keywords; trả {id,no,status}
     wishes/[id]/comments/route.ts # GET bình luận (ai cũng đọc, lọc hidden, `mine` nếu kèm token) / POST bình luận — CHỈ người đăng nhập (verifyIdToken), validateComment + rate-limit theo uid, tăng commentCount (transaction)
     reports/route.ts   # POST báo cáo điều ước/bình luận — CHỈ người đăng nhập, 1 lần/tài khoản/nội dung, đủ AUTO_HIDE_REPORTS (3) -> tự ẩn
     admin/reports/route.ts # GET báo cáo chưa xử lý (gộp theo nội dung) / PATCH hide|dismiss — checkAdmin
     reactions/route.ts # GET ?ids= (≤30): cảm xúc CỦA MÌNH (getAll wishes/{id}/reactions/{uid}) / POST {wishId, kind}: bật/tắt — chỉ người đăng nhập (verify strict), chỉ ước approved, transaction đổi doc + FieldValue.increment `reactions.<kind>`
     admin/users/route.ts # GET ?q=&filter=all|banned&page= (listUsers ≤3000 -> lọc/sort bộ nhớ, 20/trang, count() điều ước mỗi người) · GET ?uid= (điều ước của 1 người) / PATCH {uid, action: ban|unban|hide-wishes} (ban = Auth disabled + revokeRefreshTokens; không khoá admin) — checkAdmin
-    me/wishes/route.ts # GET: điều ước CỦA CHÍNH người đăng nhập (where uid==, đơn trường, sort bộ nhớ, ≤500, mọi trạng thái; ?id= chỉ 1 tờ nếu là của mình) / PATCH {id, progress?, skin?} — chỉ chủ (uid khớp, không thì 404), ghi progress + achievedAt, rate-limit theo uid
+    me/profile/route.ts # PATCH {name} (2–40 ký tự, lọc từ) -> Auth displayName + chép tên lên điều ước/bình luận cũ · POST (body ảnh) -> sharp: xoay EXIF, cắt vuông 256px, bỏ metadata, WebP q78 -> Storage avatars/{uid}/{ts}.webp (token tải Firebase, xoá file cũ) -> Auth photoURL + ảnh trên bình luận cũ · DELETE -> về ảnh Google. Đường ghi strict, rate-limit theo uid
+    me/wishes/route.ts # GET: điều ước CỦA CHÍNH người đăng nhập (where uid==, đơn trường, sort bộ nhớ, ≤500, mọi trạng thái; ?id= chỉ 1 tờ nếu là của mình) / PATCH {id, progress?, skin?, frame?, visibility?} (visibility: approved<->private + tạo shareKey, chỉ khi đang approved/private & không flagged) — chỉ chủ (uid khớp, không thì 404), ghi progress + achievedAt, rate-limit theo uid
     wishes/stats/route.ts # GET: {approved, pending} bằng count() (Admin SDK) — cache CDN 30s + memo instance 30s; fallback SEED
     wishes/list/route.ts # GET ?page=&theme=&q=&date=&sort=: approved; q="#888" -> where no==; q chữ -> keywords array-contains + lọc bộ nhớ; còn lại count + orderBy createdAt + offset/limit (sort cũ = lấy đoạn từ cuối rồi đảo, KHỎI index ASC); fallback SEED
     wishes/funny/collections/route.ts # GET: các "bộ xàm xí" (lib/funnyCollections, ẩn bộ rỗng), cache CDN 60s
-    admin/funny-collections/route.ts # GET / POST {title, note = LÍ DO CHUNG bắt buộc, wishIds 2–6 tờ ở MỌI trạng thái -> batch: tạo bộ + tờ thành 'funny' + funnyGroup} / DELETE {id} (tờ không có lí do riêng nhận lí do chung làm funnyNote rồi rời bộ) — checkAdmin
+    admin/funny-collections/route.ts # GET / POST {title, note = LÍ DO CHUNG bắt buộc, wishIds 2–6 tờ ở MỌI trạng thái -> batch: tạo bộ + tờ thành 'funny' + funnyGroup} / PATCH {id, wishIds} (THÊM tờ vào bộ cũ, tổng ≤ 6 tờ còn hiển thị, dọn id tờ đã rời bộ, từ chối tờ đang ở bộ khác) / DELETE {id} (tờ không có lí do riêng nhận lí do chung làm funnyNote rồi rời bộ) — checkAdmin
     wishes/funny/route.ts # GET ?page=: tab Từng tờ = status=='funny' KHÔNG có funnyGroup (tờ trong bộ chỉ hiện ở Bộ sưu tập); đọc tối đa 1000 rồi lọc + phân trang trong bộ nhớ (Firestore không query "thiếu trường") -> {no,text,theme,note,createdAt}, KHÔNG author; cache CDN 60s
     (app/admin/FunnyCollectionsPanel.tsx: tab Xàm xí — gộp các tờ đã tích "Chọn vào bộ" thành bộ + danh sách bộ)
     admin/wishes/route.ts # GET ?status=&page= (list + counts, có tab funny) / PATCH approve|reject|pending|funny (funny bắt buộc `note` ≤300 ký tự -> funnyNote; đổi sang trạng thái khác thì xoá funnyNote) — quyền qua lib/adminAuth
@@ -125,6 +128,8 @@ components/
     WishCard.tsx       # thẻ đọc điều ước (mở khi click giấy): #số + giờ gửi, dấu "Đã đạt được" nếu achieved, nút Bình luận mở WishThread (thẻ cuộn được), Báo cáo; `verified` -> lấp lánh + tên người gửi viết thư pháp
     ReactionIcon.tsx   # icon cảm xúc NHIỀU MÀU vẽ tay (tim đỏ, cỏ bốn lá xanh, sao vàng; gradient + điểm sáng, useId cho id gradient) — luôn hiện màu, KHÔNG phải emoji
     Reactions.tsx      # hàng nút cảm xúc (ReactionIcon; đã thả -> nền/viền/số theo màu cảm xúc, icon nảy nhẹ) + hook useMyReactions(ids) (1 request/trang); chưa đăng nhập bấm -> mở Google rồi thả; dùng ở WishCard, vé /dieu-uoc, trang chi tiết
+    WishFrame.tsx      # lớp KHUNG trang trí tờ ước (lib/wishFrames): SVG/CSS nhỏ (mặt trời Đông Sơn, mây cuộn, lá tre, mũi thêu, đoá sen) — con ĐẦU của .wd-paper/.card, z-index -1 (dưới chữ), màu --wfr-c theo điểm nhấn skin/màu chủ đề; class tiền tố `wfr` (KHÔNG `wf` — trùng bộ lọc /dieu-uoc)
+    WishPhoto.tsx      # ảnh đính kèm điều ước: variant card (thẻ đọc ở cây, khung tỉ lệ kẹp 4:3→2:1) / thumb (vé danh sách, /tai-khoan, admin: vuông, cắt) / detail (trang chi tiết, kẹp 4:5→2:1, ≤70dvh); ảnh chính CONTAIN (không cắt), lệch tỉ lệ thì lớp .wp-fill = chính ảnh đó cover + blur lấp dải trống; aspect-ratio inline (không nhảy layout), thumb lazy / còn lại eager, bấm -> lightbox (portal, Esc/chạm nền đóng); ảnh lỗi tự ẩn
     Sparkles.tsx       # làm thẻ/vé ước của người đăng nhập NỔI BẬT: viền vàng conic xoay (mask chừa mép 2px), hào quang thở (prop `glow`, tắt cho vé vì mask cắt mép), sao 4 cánh nhấp nháy, vệt sáng quét; nền giấy ánh kim + dấu "Ước" mạ vàng ở globals.css. Chỉ animate transform/opacity, tắt khi reduced-motion; tên người gửi `.spk-name` viết thư pháp, KHÔNG kèm ảnh
     WishThread.tsx     # bình luận 1 điều ước (đọc: ai cũng được; viết: đăng nhập Google) + export ReportButton (chọn lý do -> /api/reports)
     LegalPage.tsx      # khung trang pháp lý (PageShell + .pg-prose) + CONTACT_EMAIL/UPDATED_AT
@@ -164,16 +169,22 @@ lib/
   wishes.ts            # type Wish (+no, commentCount), SEED_WISHES (no 1..8), subscribeApproved() (onSnapshot, sort client)
   agentContent.ts      # server-only: MỘT nguồn nội dung cho AI agent — llmsTxt/llmsFullTxt/pageMarkdown/notFoundMarkdown/latestWishes (cũng dùng cho HTML dựng sẵn ở /dieu-uoc + sitemap). ĐỔI TÍNH NĂNG -> SỬA FILE NÀY
   reactions.ts         # REACTIONS (heart/clover/star + nhãn + màu), readCounts — client+server
+  wishFrames.ts        # 6 KHUNG tờ ước (Trơn/Đông Sơn/Mây lành/Tre xanh/Chỉ thêu/Hoa sen) — chủ nhân chọn ở trang chi tiết (cạnh Giao diện), chỉ ước có uid; client+server
   wishSkins.ts         # 5 giao diện trang chi tiết (Giấy đỏ/Trăng đêm/Hoa đào/Ngọc bích/Hoàng kim) + PLAIN_SKIN cho ước ẩn danh — dùng chung cho CSS (--wd-*) và ảnh OG
-  wishDetail.ts        # server-only: parseWishNo, getWishByNo (React cache, approved, fallback SEED), revalidateWishPage(no) (gọi ở admin/wishes, reports, admin/reports, funny-collections, me/wishes)
+  imageServer.ts       # server-only: toWebp(buf,{max,square,quality}) (sharp: xoay EXIF, bỏ metadata, WebP) + uploadWebp(path) (Storage + token tải Firebase -> URL công khai) + deleteStorageFile — dùng cho ảnh đại diện + ảnh điều ước
+  wishOg.tsx           # server-only: renderWishOg(w) vẽ ảnh chia sẻ 1200×630 (dùng chung trang công khai + riêng tư)
+  imageResize.ts       # client: shrinkImage(file, {max, square}) thu nhỏ (+ cắt vuông cho ảnh đại diện) ra WebP (Safari cũ: JPEG) trước khi tải lên
+  wishDetail.ts        # server-only: getWishByKey(shareKey) + revalidatePrivatePage, parseWishNo, getWishByNo (React cache, approved, fallback SEED), revalidateWishPage(no) (gọi ở admin/wishes, reports, admin/reports, funny-collections, me/wishes)
   wishMeta.ts          # client+server: formatNo, formatWishTime (giờ VN), splitWishTime (cuống vé), WishProgress/PROGRESS_LABEL/isProgress, foldVi/searchTokens (bỏ dấu -> keywords), parseNoQuery, REPORT_REASONS, AUTO_HIDE_REPORTS
   wishServer.ts        # server-only: ensureNumbering (lần đầu đánh số TẤT CẢ ước cũ theo createdAt + keywords, rồi đặt meta/counters), counterRef, viewerFromRequest (verifyIdToken), publicWish
   firebase.client.ts   # init client SDK: getDb (đọc Firestore) + getAuthClient (Auth); null nếu thiếu env
-  firebase.admin.ts    # init Admin SDK (server-only): getAdminDb + getAdminAuth (verifyIdToken)
+  firebase.admin.ts    # init Admin SDK (server-only): getAdminDb + getAdminAuth (verifyIdToken) + getAdminBucket (Storage, ảnh đại diện)
   adminAuth.ts         # server-only: checkAdmin(req) — Bearer ID token + email_verified ∈ ADMIN_EMAILS, hoặc x-admin-secret
 store/
   useScene.ts          # zustand: cond (thời tiết), wishes, stats (approved/pending), openWish, composerOpen, toast, loaded, roomOpen, sessions, nickname, navOpen, user, shrineOpen, bowNonce/bow(), blessedUntil, nearShrine
 scripts/seed.mjs       # seed vài điều ước 'approved' vào Firestore
+scripts/seed-sample.mjs # `npm run seed:mau`: đưa ước MẪU "Xuân Phong" (ảnh public/samples/xuan-phong-lam-viec.webp: ảnh chụp "Laptop and coffee on a desk" (Wikimedia Commons, CC0 — không cần ghi nguồn, không có người), skin Trăng đêm, khung Mây lành) lên Firestore + Storage thật; doc id cố định (chạy lại không trùng); yêu cầu meta/counters đã có
+public/samples/        # ảnh minh hoạ cho dữ liệu mẫu (WebP đã nén như server)
 firestore.rules        # client read 'approved' (wishes) + read sessions; write = false (ghi qua Admin SDK)
 firebase.json          # trỏ firestore.rules + firestore.indexes.json cho `firebase deploy`
 firestore.indexes.json # composite index cho /api/wishes/list: (status,createdAt) + (status,theme,createdAt)
@@ -248,7 +259,11 @@ Chưa cấu hình Firebase: `getDb()` null → `subscribeSessions` trả về 1 
   text: string(<=160), theme: ThemeKey, author?: string,
   keywords: string[],    // searchTokens(text): từ bỏ dấu, cho tìm kiếm array-contains
   uid?: string,  // có khi gửi bởi người đăng nhập Google/Facebook (-> auto-approve)
-  status: 'pending'|'approved'|'rejected'|'funny', createdAt: serverTimestamp,
+  status: 'pending'|'approved'|'rejected'|'funny'|'private', createdAt: serverTimestamp,
+  // 'private' = CHỦ chọn riêng tư (chỉ ước có uid): mọi truy vấn/rules `status=='approved'` tự loại ra; mở qua link bí mật
+  image?: { url, w, h, path }, // ảnh đính kèm (chỉ người đăng nhập, 1 ảnh, WebP do server nén); đọc qua readWishImage (chỉ nhận URL firebasestorage, KHÔNG trả path)
+  shareKey?: string,     // 22 ký tự base64url, tạo lần đầu chuyển riêng tư, GIỮ khi về công khai (link cũ redirect sang /dieu-uoc/<no>)
+  flaggedFrom?: 'approved'|'private', // trạng thái trước khi tự ẩn do báo cáo -> admin Bỏ qua/Duyệt trả về đúng chế độ
   funnyNote?: string,    // chỉ khi status 'funny': lí do không duyệt RIÊNG (admin ghi), hiện công khai ở /xam-xi
   funnyGroup?: string,   // id "bộ xàm xí" (funnyCollections) -> không có funnyNote thì dùng lí do chung của bộ
   commentCount: number, reportCount: number,
@@ -256,6 +271,7 @@ Chưa cấu hình Firebase: `getDb()` null → `subscribeSessions` trả về 1 
   achievedAt?: serverTimestamp,   // khi đánh dấu achieved (xoá khi về trying)
   reactions?: { heart?: n, clover?: n, star?: n }, // số cảm xúc (publicWish/subscribeApproved trả số, không lộ ai thả)
   skin?: WishSkinKey,             // giao diện trang /dieu-uoc/[no] do chủ nhân chọn (chỉ có hiệu lực khi có uid; publicWish trả `skin`)
+  frame?: WishFrameKey,           // khung trang trí (lib/wishFrames) — như skin: chủ nhân chọn, chỉ có hiệu lực khi có uid; hiện ở trang chi tiết + thẻ đọc trên cây + vé /dieu-uoc (bản thu nhỏ: chỉ viền + góc)
   flagged?: boolean,     // true = TỰ ẩn do đủ báo cáo (status về pending), chờ admin
   reviewedAt?: serverTimestamp, reviewedBy?: string }  // ghi khi admin đổi trạng thái
 
@@ -293,6 +309,7 @@ Rules: `read: if true` (không chứa PII), `write: false` (ghi qua `/api/presen
 - `ADMIN_EMAILS` — (tuỳ chọn) email Google được vào `/admin`, phân tách dấu phẩy; mặc định `khuctruonghuy2000@gmail.com` (hardcode trong `lib/adminAuth.ts`).
 - `ADMIN_SECRET` — (tuỳ chọn) mã dự phòng cho API admin qua header `x-admin-secret`; UI không còn ô nhập mã.
 - `ADMIN_DISPLAY_NAME` — (tuỳ chọn) tên hiển thị khi admin bình luận; mặc định "Người giữ cây".
+- `FIREBASE_STORAGE_BUCKET` — (tuỳ chọn) bucket lưu ảnh đại diện; bỏ trống thì dùng lại `NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET`. Cần **bật Storage** trong Firebase Console (bucket mặc định yêu cầu gói Blaze). Service account Admin SDK mặc định đã có quyền ghi.
 
 **Đăng nhập Google/Facebook KHÔNG cần biến env mới** — dùng lại `NEXT_PUBLIC_FIREBASE_*` (client) + creds Admin (`verifyIdToken`). Nhưng **CẦN cấu hình Firebase Console**: bật provider Google & Facebook (Facebook cần tạo Facebook Developer App, dán App ID/secret + OAuth redirect), và thêm **Authorized domains** (localhost + domain Vercel). Presence phòng Rừng Trúc vẫn ẩn danh, không liên quan Auth này.
 
@@ -347,7 +364,7 @@ Vercel: import `.env.local` khi tạo project.
 - **`set-state-in-effect`**: gọi một hàm `load()` (useCallback có setState) trong `useEffect` cũng bị chặn → `WishThread`/`ReportsPanel` fetch thẳng trong effect, setState chỉ trong `.then`, tải lại bằng state `nonce`.
 - **App GIỜ CÓ dùng Firebase Auth**: phải thêm Authorized domains trong Firebase Console (localhost + domain Vercel) nếu không `signInWithPopup` báo `auth/unauthorized-domain`. (Ghi chú cũ "không dùng Auth" đã hết hiệu lực.)
 
-- **Google OAuth verification**: consent screen khai home page = `/gioi-thieu` (KHÔNG dùng `/`: trang chủ là Canvas 3D + loader, HTML chứa chữ "Đăng nhập… Google" của Composer → bot Google kết luận "home page behind login" + "không nêu mục đích"). App name trên consent screen phải khớp đúng "Cây Ước Nguyện". Trang chủ có link Giới thiệu · Bảo mật · Điều khoản dưới tiêu đề (`.brand-links`).
+- **Google OAuth verification**: consent screen khai home page = `/gioi-thieu` (KHÔNG dùng `/`: trang chủ là Canvas 3D + loader, HTML chứa chữ "Đăng nhập… Google" của Composer → bot Google kết luận "home page behind login" + "không nêu mục đích"). App name trên consent screen phải khớp đúng "Cây Ước Nguyện". Link Giới thiệu · Bảo mật · Điều khoản · Liên hệ nằm ở cuối menu dock `NavDock` (`.nav-legal`, luôn có trong DOM, chỉ hiện khi mở menu) — KHÔNG để trên màn hình chính; Composer vẫn có link Điều khoản & Bảo mật cạnh nút đăng nhập.
 
 - **Trang nội dung KHÔNG Canvas dùng `PageShell` + `app/pages.css`** (trời đèn trời theo giờ VN, vé cuống|thân). Màu qua biến `--pg-*` trên `.pg`; đêm (`<html data-sky="night">`) đổi cả bộ biến. `WishThread` dùng chung với `WishCard` trên cây nên mọi `var(--pg-*)` trong `.wt-*` đều có fallback màu trang chủ.
 - **Không dùng emoji làm icon/trang trí** (thiết kế theo skill Impeccable, chống "AI slop"): dùng `components/ui/Icon.tsx`. Không chuỗi "A · B · C", không chữ IN HOA giãn chữ. Định hướng thiết kế ở `PRODUCT.md` + `.impeccable/`.
@@ -362,6 +379,17 @@ Vercel: import `.env.local` khi tạo project.
 
 - **Đường GHI mới phải dùng `viewerFromRequest(req, true)`** (strict) để tôn trọng việc admin khoá tài khoản; quên `true` thì người bị khoá vẫn ghi được tới khi token hết hạn (~1 giờ).
 - **Icon nhiều màu**: `Icon` chỉ là nét 1 màu (currentColor) cho giao diện; icon cần màu riêng (cảm xúc) vẽ ở `ReactionIcon` với gradient — id gradient phải duy nhất (`useId`) vì cùng icon lặp nhiều lần trên 1 trang.
+
+- **Riêng tư = `status:'private'`** (không phải field riêng): nhờ vậy rules client (`status=='approved'`), cây realtime, `/dieu-uoc`, tìm kiếm, sitemap, stats, llms tự loại ước riêng tư, KHÔNG cần migrate dữ liệu. Nơi nào cho đọc/bình luận/thả cảm xúc theo id dùng `isLiveStatus` (approved|private). Admin "Duyệt" ước có `flaggedFrom/status` private thì GIỮ private (admin không công khai hộ chủ). Link riêng chỉ mở khi đúng `status==='private'` → ước chờ duyệt/bị gỡ/bị báo cáo tạm ẩn có key cũng 404. Ẩn danh không chọn được riêng tư (server bỏ qua `visibility` khi không có uid).
+- **Đổi tên/ảnh**: tên + ảnh được CHÉP vào doc lúc gửi (wishes.author, comments.author/photo) → `/api/me/profile` cập nhật lại (≤500 ước + ≤500 bình luận). Bình luận dùng `collectionGroup('comments').where('uid')` → cần field override trong `firestore.indexes.json` (`firebase deploy --only firestore:indexes`); thiếu index chỉ log cảnh báo, bình luận cũ giữ tên cũ. Client PHẢI `refreshAuthUser()` (reload + getIdToken(true)) sau khi đổi, không thì token cũ còn tên cũ ≤1 giờ.
+- **Ảnh đại diện**: nén ở CẢ hai đầu — client thu ≤512px (đỡ mạng, dưới 4,5 MB body Vercel), server `sharp` nén lại WebP 256px (không tin file client, bỏ EXIF/GPS) → ~10–20 KB/ảnh. Mỗi lần đổi là file mới (URL mới, cache immutable 1 năm), file cũ bị xoá. `sharp` khai báo thẳng trong dependencies (trước chỉ là phụ thuộc của next).
+
+- **Ảnh điều ước**: chỉ người đăng nhập (ẩn danh bị 401 nếu gửi kèm ảnh) → ước có ảnh được ĐĂNG NGAY như mọi ước đăng nhập, kiểm soát bằng báo cáo (3 báo cáo tự ẩn) + admin thấy ảnh thumbnail. Client thu ≤1600px (`shrinkImage`), server nén lại WebP ≤1280px q72 (~100–250 KB). Gửi multipart thì client KHÔNG tự đặt Content-Type (trình duyệt thêm boundary). Admin gỡ/bỏ điều ước KHÔNG xoá file ảnh trên Storage (URL có token nhưng không còn chỗ nào trỏ tới). Điều ước mẫu #9 "Xuân Phong" (SEED_WISHES, ảnh `public/samples/xuan-phong-lam-viec.webp`: ảnh chụp CC0 từ Wikimedia Commons, không người) minh hoạ ước có ảnh + skin + khung; lên Firestore thật bằng `npm run seed:mau`.
+
+- **Tên class CSS dùng chung toàn cục** (globals.css + pages.css cùng nạp ở mọi trang): trước khi đặt tiền tố mới, `grep` cả hai file. Đã từng đặt khung tờ ước là `.wf` → trùng bộ lọc `.wf` của `/dieu-uoc` (`.wf svg {width:100%}` làm kính lúp phóng to cả màn hình) → đổi sang `wfr`.
+
+- **Skin/khung ngoài trang chi tiết**: thẻ đọc (`.card.has-skin`) + vé (`.tk-skin`) dùng chung biến `--wd-*` (`skinVars` ở `lib/wishSkins`; `--wd-deep` = điểm nhấn đậm cho chữ nhỏ). Ước chưa chọn skin giữ kiểu vàng lấp lánh. Luật vé dùng `:root .pg .tk.tk-skin` để thắng luật vàng bản đêm. Vé dùng `Sparkles compact` (bỏ sao đè cuống, không drop-shadow).
+- **Thẻ đọc cuộn trong chữ**: `.card` là cột flex `max-height: 100dvh-48px`, chỉ `.text` co + cuộn (mép mờ `fade-top/bottom` do WishCard đo bằng ResizeObserver), ảnh kẹp `30dvh`; thanh cuộn mảnh màu `--sb` (điểm nhấn skin/màu chủ đề). Mở bình luận thì cả thẻ cuộn như cũ.
 
 ## 8b. Nhật ký lỗi đã sửa (ghi NGAY sau mỗi lần sửa)
 

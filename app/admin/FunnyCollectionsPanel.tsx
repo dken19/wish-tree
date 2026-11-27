@@ -52,7 +52,7 @@ export default function FunnyCollectionsPanel({
     }
   }, [call])
 
-  async function send(method: 'POST' | 'DELETE', payload: object) {
+  async function send(method: 'POST' | 'PATCH' | 'DELETE', payload: object) {
     setBusy(true)
     setError('')
     try {
@@ -82,7 +82,8 @@ export default function FunnyCollectionsPanel({
         {picked.length === 0 ? (
           <p className="adm-note">
             Tích ô “Chọn vào bộ” ở các tờ liên quan nhau ({MIN}–{MAX} tờ, đẹp nhất là 3), chọn được ở mọi tab và qua
-            nhiều trang. Cả bộ dùng chung một lí do; tờ chưa ở mục Xàm xí sẽ được chuyển sang khi tạo bộ.
+            nhiều trang, rồi tạo bộ mới hoặc bấm “Thêm vào bộ này” ở một bộ cũ bên dưới. Cả bộ dùng chung một lí
+            do; tờ chưa ở mục Xàm xí sẽ được chuyển sang.
           </p>
         ) : (
           <form
@@ -111,6 +112,9 @@ export default function FunnyCollectionsPanel({
               ))}
             </ul>
             {picked.length > MAX && <p className="adm-warn">Tối đa {MAX} tờ một bộ.</p>}
+            {picked.length < MIN && items && items.some((c) => c.wishes.length + picked.length <= MAX) && (
+              <p className="adm-note">Chỉ 1 tờ thì không tạo bộ mới được, nhưng có thể thêm vào một bộ cũ bên dưới.</p>
+            )}
             <label htmlFor="fc-title">Tên bộ</label>
             <input
               id="fc-title"
@@ -147,7 +151,7 @@ export default function FunnyCollectionsPanel({
           <h2>Các bộ đã tạo ({items.length})</h2>
           <ul>
             {items.map((c) => (
-              <li key={c.id}>
+              <li key={c.id} style={{ flexWrap: 'wrap' }}>
                 <div>
                   <b>{c.title}</b>
                   <span className="adm-note">
@@ -155,6 +159,23 @@ export default function FunnyCollectionsPanel({
                     · {c.wishes.length ? c.wishes.map((w) => (w.no ? `#${w.no}` : '?')).join(', ') : 'không còn tờ nào (đã ẩn khỏi trang)'}
                   </span>
                 </div>
+                <div className="adm-acts" style={{ marginTop: 0 }}>
+                  {picked.length > 0 && (
+                    <button
+                      className="pg-btn primary"
+                      disabled={busy || c.wishes.length + picked.length > MAX}
+                      title={c.wishes.length + picked.length > MAX ? `Bộ đã có ${c.wishes.length} tờ, tối đa ${MAX}` : undefined}
+                      onClick={() =>
+                        send('PATCH', { id: c.id, wishIds: picked.map((p) => p.id) }).then((ok) => {
+                          if (!ok) return
+                          onClear()
+                          onCreated()
+                        })
+                      }
+                    >
+                      Thêm {picked.length} tờ vào bộ này
+                    </button>
+                  )}
                 <button
                   className="pg-btn ghost"
                   disabled={busy}
@@ -169,6 +190,7 @@ export default function FunnyCollectionsPanel({
                 >
                   Xoá bộ
                 </button>
+                </div>
               </li>
             ))}
           </ul>
